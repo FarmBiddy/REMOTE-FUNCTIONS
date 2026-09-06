@@ -1,0 +1,28 @@
+{
+  "farm_name": "Demo Dairy Farm",
+  "currency": "EUR",
+  "period": "annual",
+  "revenue": {
+    "milking_cows": 100,
+    "litres_per_cow": 5000,
+    "milk_price": 0.40,
+    "biss": 20000,
+    "acres": 5000,
+    "other_grants": 0,
+    "cattle_sales": 15000,
+    "lamb_sales": 0,
+    "wool": 0,
+    "other": 0
+  },
+  "costs": {
+    "feed": 80000,
+    "fertiliser": 15000,
+    "vet": 5000,
+    "contractor": 10000,
+    "labour": 40000,
+    "insurance": 4000,
+    "loan_repayments": 12000,
+    "fuel": 6000,
+    "electricity": 3000
+  }
+}

@@ -28,6 +28,6 @@ Source of truth: `docs/domain-model.md`, `docs/development.md` (how to add calcs
 ## When changing inputs or formulas
 
 - Read `docs/domain-model.md` for ownership and semantics
-- Add/update `FIELD_UNITS` for new fields used in `needs_input`
+- Add/update `INPUT_FIELD_METADATA` (units, required, min/max, description); `FIELD_UNITS` is derived from it
 - Document semantic meaning of new or materially changed inputs
 - Add or update tests for the financial behavior

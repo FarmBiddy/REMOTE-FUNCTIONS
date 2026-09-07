@@ -21,7 +21,7 @@ Every call returns one of:
 }
 ```
 
-Missing inputs are listed with field name and unit. They are never guessed. Extra fields are ignored. Full contract: [`docs/api-contract.md`](docs/api-contract.md).
+Missing inputs are listed with field name and unit. They are never guessed. Extra fields are ignored. Explicit `0` is valid; `null` and negatives are invalid. Full contract: [`docs/api-contract.md`](docs/api-contract.md).
 
 Units: **EUR**, **annual**. `profit.margin` returns a 0–1 `margin` and a `margin_pct`.
 

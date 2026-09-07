@@ -30,7 +30,19 @@ def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, A
         }
 
     known = spec.required + spec.optional
-    missing_keys = [key for key in spec.required if payload.get(key) is None]
+    null_keys = [key for key in known if key in payload and payload[key] is None]
+    if null_keys:
+        return {
+            "status": "error",
+            "function": name,
+            "message": "One or more values are invalid.",
+            "details": [
+                {"field": key, "reason": "null is not a valid value"}
+                for key in null_keys
+            ],
+        }
+
+    missing_keys = [key for key in spec.required if key not in payload]
     if missing_keys:
         return {
             "status": "needs_input",
@@ -46,7 +58,7 @@ def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, A
         return {
             "status": "error",
             "function": name,
-            "message": "One or more values are not valid numbers.",
+            "message": "One or more values are invalid.",
             "details": exc.errors(),
         }
 

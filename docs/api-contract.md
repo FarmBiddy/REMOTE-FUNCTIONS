@@ -20,6 +20,19 @@ Domain types (`FinancialModel` → `FinancialInput` → calculations → `Financ
 
 Body: JSON object of named financial inputs (numbers). Extra fields are ignored.
 
+### Zero, missing, null, and invalid
+
+| Case | Status |
+|------|--------|
+| Explicit `0` | `ok` (valid zero) |
+| Required field omitted | `needs_input` |
+| Optional field omitted | treated as `0`, then calculated |
+| `null` on a known field | `error` (invalid; not treated as missing) |
+| Negative number | `error` |
+| Wrong type (string, boolean, non-finite) | `error` (not coerced) |
+
+Numeric annual P&L inputs must be **≥ 0**. No maximum is imposed unless `INPUT_FIELD_METADATA` defines one; currently every numeric `maximum` is `null`. Units in `needs_input` and in metadata come from `FIELD_UNITS`, which is derived from `INPUT_FIELD_METADATA` in `farm_functions/schemas.py`.
+
 ## Response statuses
 
 Every calculation response uses one of:
@@ -28,7 +41,7 @@ Every calculation response uses one of:
 |--------|---------|
 | `ok` | Calculation succeeded; see `result` |
 | `needs_input` | Required inputs missing; nothing was guessed |
-| `error` | Unknown function (via runner), invalid types, or other failure |
+| `error` | Unknown function (via runner), `null`, negatives, wrong types, or other validation failure |
 
 Unknown function names via the HTTP route return **HTTP 404**; the runner itself returns `status: error` when called directly.
 
@@ -72,10 +85,12 @@ The service **MUST NOT** guess missing financial inputs.
 {
   "status": "error",
   "function": "revenue.milk",
-  "message": "One or more values are not valid numbers.",
+  "message": "One or more values are invalid.",
   "details": []
 }
 ```
+
+`error` covers unknown function (via the runner), explicit `null`, negatives, wrong types, and other validation failures.
 
 ## Versioning
 

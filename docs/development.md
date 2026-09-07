@@ -35,12 +35,12 @@ On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0
 ## Adding or changing financial calculations
 
 1. Keep formulas in `farm_functions/calcs/` pure (no I/O, HTTP, DB, auth).
-2. Declare per-function inputs in `farm_functions/schemas.py` (`REQUIRED_FIELDS` / `OPTIONAL_FIELDS`, Pydantic models, and `FIELD_UNITS` for any new fields). Annual P&L domain types (`FinancialInput`, `FinancialModel`, `FinancialResult`) live in `farm_functions/domain.py` and must stay aligned with `pl.summary` — do not change formulas to fit the types.
+2. Declare per-function inputs in `farm_functions/schemas.py` (`REQUIRED_FIELDS` / `OPTIONAL_FIELDS`, Pydantic models, and `INPUT_FIELD_METADATA` / `FIELD_UNITS`). Units belong in `INPUT_FIELD_METADATA` so `FIELD_UNITS` stays derived from that list. Annual P&L domain types (`FinancialInput`, `FinancialModel`, `FinancialResult`) live in `farm_functions/domain.py` and must stay aligned with `pl.summary` — do not change formulas to fit the types.
 3. Register the function in `farm_functions/registry.py`.
 4. Cover behavior in `tests/test_calcs.py` and/or `tests/test_runner.py`. Domain-type tests live in `tests/test_domain.py`.
 5. Update `README.md` function table and `docs/domain-model.md` / `docs/api-contract.md` when semantics or the public contract change.
 
-Never guess required missing inputs; the runner must return `needs_input`.
+Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis.
 
 ## Adding or changing API endpoints
 
@@ -59,7 +59,7 @@ Never guess required missing inputs; the runner must return `needs_input`.
 
 | Change type | Update |
 |-------------|--------|
-| Formulas / inputs | README table; domain docs if concepts change |
+| Formulas / inputs | README table; `docs/domain-model.md` for P&L meaning and validation; `INPUT_FIELD_METADATA` / `FIELD_UNITS` in `farm_functions/schemas.py` for units and constraints |
 | Request/response / statuses | `docs/api-contract.md`, README Contract |
 | Service boundary / auth / ownership | `docs/architecture.md`, `docs/security.md`, ADR |
 | How to develop locally | this file |

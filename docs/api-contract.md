@@ -3,6 +3,8 @@
 Canonical description of the Financial Service HTTP calculation contract.
 Implementation: `farm_functions/runner.py`, `farm_functions/schemas.py`, `api/app.py`.
 
+Domain types (`FinancialModel` → `FinancialInput` → calculations → `FinancialResult`) live in `farm_functions/domain.py`. They do **not** change this HTTP contract: request bodies remain a flat JSON object of numbers; statuses remain `ok` / `needs_input` / `error`.
+
 ## Endpoints
 
 | Method | Path | Purpose |

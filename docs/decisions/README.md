@@ -13,4 +13,4 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 
 - Concrete service-to-service auth mechanism (API key, mTLS, signed tokens, etc.)
 - Calculation / API versioning strategy beyond the existing `/v1` prefix
-- Formal typed `FinancialInput` / `FinancialResult` schemas as the sole public surface (vs named functions today)
+- Whether typed `FinancialInput` / `FinancialResult` become the **sole HTTP** surface (in-process types exist in `farm_functions/domain.py`; HTTP remains named functions + flat JSON)

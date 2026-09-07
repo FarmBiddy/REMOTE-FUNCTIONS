@@ -35,9 +35,9 @@ On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0
 ## Adding or changing financial calculations
 
 1. Keep formulas in `farm_functions/calcs/` pure (no I/O, HTTP, DB, auth).
-2. Declare inputs in `farm_functions/schemas.py` (`REQUIRED_FIELDS` / `OPTIONAL_FIELDS`, Pydantic models, and `FIELD_UNITS` for any new fields).
+2. Declare per-function inputs in `farm_functions/schemas.py` (`REQUIRED_FIELDS` / `OPTIONAL_FIELDS`, Pydantic models, and `FIELD_UNITS` for any new fields). Annual P&L domain types (`FinancialInput`, `FinancialModel`, `FinancialResult`) live in `farm_functions/domain.py` and must stay aligned with `pl.summary` — do not change formulas to fit the types.
 3. Register the function in `farm_functions/registry.py`.
-4. Cover behavior in `tests/test_calcs.py` and/or `tests/test_runner.py`.
+4. Cover behavior in `tests/test_calcs.py` and/or `tests/test_runner.py`. Domain-type tests live in `tests/test_domain.py`.
 5. Update `README.md` function table and `docs/domain-model.md` / `docs/api-contract.md` when semantics or the public contract change.
 
 Never guess required missing inputs; the runner must return `needs_input`.
@@ -74,8 +74,8 @@ Do **not** create empty or speculative ADRs for ideas that are still undecided.
 
 | Area | Current | Target (documented) |
 |------|---------|---------------------|
-| Calculations | Named functions + flat input dicts | Same responsibility; richer FinancialInput/Result types may evolve |
-| Persistence | None (sample JSON for demo only) | App Platform owns models/scenarios |
+| Calculations | Named functions + flat HTTP dicts; in-process `FinancialInput` / `FinancialModel` / `FinancialResult` for annual P&L | Same HTTP surface unless an explicit API decision changes it |
+| Persistence | None (`FinancialModel` is in-memory only; sample JSON for demo) | App Platform owns models/scenarios |
 | Auth | None on the API yet | Service-to-service auth; no user JWT for DB/RLS |
 | Data access | Caller supplies numbers | App Platform builds FinancialInput; this service never queries Supabase |
 

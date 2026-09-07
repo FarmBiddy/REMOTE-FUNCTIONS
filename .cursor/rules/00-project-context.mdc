@@ -26,7 +26,7 @@ Before architectural, domain, API, security, or testing changes, read the releva
 
 ## Current vs target
 
-Docs describe the **target architecture** (App Platform vs Financial Service). The **current codebase** may not yet implement every target component (e.g. service-to-service auth, typed FinancialInput). See the table in `docs/development.md`.
+Docs describe the **target architecture** (App Platform vs Financial Service). The **current codebase** may not yet implement every target component (e.g. service-to-service auth). Typed annual P&L domain models live in `farm_functions/domain.py`; HTTP remains named functions. See the table in `docs/development.md`.
 
 - Protect target **boundaries** (do not add Supabase, user auth, or persistence here).
 - Do **not** treat missing target components as a mandate to implement them unless the task explicitly asks.

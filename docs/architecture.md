@@ -46,13 +46,15 @@ App Platform
     ↓
 authorized farm data
     ↓
-FinancialInput
+FinancialModel (in-memory envelope) / FinancialInput
     ↓
-Financial Service
+existing calculation functions
     ↓
 FinancialResult
     ↓
 App Platform / Agent
+
+HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). The domain types in `farm_functions/domain.py` are not a new HTTP API.
 
 ## Authentication
 
@@ -64,6 +66,8 @@ The Financial Service uses service-to-service authentication.
 ## State
 
 The calculation engine is stateless.
+
+`FinancialModel` in this service is an in-memory envelope (`period`, `currency`, `inputs`). It is not persisted here.
 
 Persistent financial state belongs to the App Platform.
 

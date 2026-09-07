@@ -75,6 +75,7 @@ KPIs (feed ratio, per cow), monthly cashflow, Monte Carlo, alerts, risk, and far
 ## Docs
 
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
+- Domain model: [`docs/domain-model.md`](docs/domain-model.md)
 - Development: [`docs/development.md`](docs/development.md)
 - API contract: [`docs/api-contract.md`](docs/api-contract.md)
 - Decisions (ADRs): [`docs/decisions/`](docs/decisions/)

@@ -50,10 +50,12 @@ Units: **EUR**, **annual**. `profit.margin` returns a 0–1 `margin` and a `marg
 ## Run
 
 ```bash
-pip install -r requirements.txt
-pytest
-uvicorn api.app:app --reload
+python -m pip install -r requirements.txt
+python -m pytest
+python -m uvicorn api.app:app --reload
 ```
+
+On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on PATH). Keep that terminal open, then call the API from another terminal or open http://127.0.0.1:8000/docs.
 
 - `GET /health`
 - `GET /v1/functions` — discovery

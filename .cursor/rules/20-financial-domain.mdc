@@ -23,7 +23,7 @@ Source of truth: `docs/domain-model.md`, `docs/development.md` (how to add calcs
 
 ## Domain concepts vs code today
 
-`FinancialInput`, `FinancialModel`, and `FinancialResult` are in-process types in `farm_functions/domain.py` for the annual P&L. HTTP still uses named functions and flat input dicts (`run_function`). `FinancialModel` is in-memory only (ADR-0003). Do not persist models here or make the domain types the HTTP surface unless the task explicitly changes the API contract.
+`FinancialInput`, `FinancialModel`, and `FinancialResult` are in-process types in `farm_functions/domain.py` for the annual P&L. HTTP still uses named functions and flat input dicts (`run_function`). `FinancialModel` is in-memory only (ADR-0003). Provenance (`explain_annual_pnl`) describes how annual P&L outputs were produced; it must not reimplement formulas or be added to HTTP responses unless a task explicitly changes the API contract. Do not persist models here or make the domain types the HTTP surface unless the task explicitly changes the API contract.
 
 ## When changing inputs or formulas
 

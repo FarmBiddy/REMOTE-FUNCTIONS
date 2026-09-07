@@ -45,6 +45,25 @@ Structured result of a calculation.
 
 For the current annual P&L it matches the existing `pl.summary` JSON: `currency`, `period`, nested `revenue`, `costs`, and `profit`. No extra result fields.
 
+### Calculation provenance
+
+Structured explainability for the existing annual P&L calculations lives in `farm_functions/provenance.py` (`explain_annual_pnl`).
+
+```text
+CalculationProvenance
+├── calculation
+├── value
+├── formula
+├── inputs_used   # name, value, unit for each operand
+└── unit
+```
+
+Covered calculations: `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`.
+
+- Existing calculation functions remain **authoritative**. Provenance records how a result was produced; it does not replace or change the formula.
+- Provenance is for UI / Agent explainability. It is not natural-language prose.
+- Provenance is **not** added to the HTTP `pl.summary` (or other `/v1/functions/.../run`) response. Call `explain_annual_pnl` in-process.
+
 ### FinancialModel
 
 In this service, an **in-memory envelope** only:

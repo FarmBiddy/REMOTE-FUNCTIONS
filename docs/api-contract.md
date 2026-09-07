@@ -5,6 +5,8 @@ Implementation: `farm_functions/runner.py`, `farm_functions/schemas.py`, `api/ap
 
 Domain types (`FinancialModel` → `FinancialInput` → calculations → `FinancialResult`) live in `farm_functions/domain.py`. They do **not** change this HTTP contract: request bodies remain a flat JSON object of numbers; statuses remain `ok` / `needs_input` / `error`.
 
+Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not included in HTTP calculation responses.
+
 ## Endpoints
 
 | Method | Path | Purpose |

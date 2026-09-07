@@ -41,3 +41,12 @@ def test_demo_pl_summary():
     body = response.json()
     assert body["status"] == "ok"
     assert body["result"]["profit"]["net"] == 65_000
+
+
+def test_pl_summary_http_shape_has_no_provenance():
+    result = client.post("/v1/demo/pl-summary").json()["result"]
+    assert set(result.keys()) == {"currency", "period", "revenue", "costs", "profit"}
+    assert "provenance" not in result
+    assert set(result["revenue"].keys()) == {"milk", "schemes", "other", "total"}
+    assert set(result["costs"].keys()) == {"lines", "total"}
+    assert set(result["profit"].keys()) == {"net", "margin", "margin_pct"}

@@ -1,0 +1,36 @@
+---
+description: Prevent silent architectural drift — flag decision changes, update docs/ADRs and tests
+alwaysApply: true
+---
+
+# Change control
+
+Source of truth: `CONTRIBUTING.md`, `docs/development.md`, core `docs/*.md`, and `docs/decisions/` ADRs.
+
+## Recognize decision-level changes
+
+Stop and follow the process below when a task introduces or changes:
+
+- Persistence or database access
+- Authentication or authorization
+- External service dependencies
+- Service boundaries / ownership of data
+- FinancialInput or FinancialResult shape or meaning
+- Scenario semantics
+- Calculation semantics that alter documented behavior
+- Public API contract shapes (including `needs_input`)
+
+## Process
+
+1. Identify the existing architectural or domain decision.
+2. Read the relevant documentation and any ADR under `docs/decisions/`.
+3. Determine whether the request is compatible with that decision.
+4. If compatible — implement normally (with tests and doc updates if the public contract changes).
+5. If it **changes** an existing decision — explicitly flag the conflict to the user before proceeding.
+6. When the architectural decision genuinely changes — update or create an ADR in `docs/decisions/`.
+7. Update the relevant documentation when contracts or system behavior change.
+8. Add or update tests.
+
+## Intent
+
+Prevent **silent** architectural drift. Legitimate evolution is allowed when flagged, documented, and tested. Do not create speculative ADRs for undecided ideas.

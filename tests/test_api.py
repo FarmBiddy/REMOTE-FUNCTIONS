@@ -32,7 +32,7 @@ def test_run_asks_for_missing_numbers():
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "needs_input"
-    assert body["missing"] == ["milk_price"]
+    assert body["missing"] == [{"field": "milk_price", "unit": "EUR/litre"}]
 
 
 def test_demo_pl_summary():

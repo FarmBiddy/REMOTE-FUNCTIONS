@@ -1,0 +1,33 @@
+---
+description: Keep financial calculations pure, deterministic, and free of I/O or guessed inputs
+globs: farm_functions/calcs/**/*.py,farm_functions/schemas.py,farm_functions/registry.py
+alwaysApply: false
+---
+
+# Financial domain
+
+Source of truth: `docs/domain-model.md`, `docs/development.md` (how to add calcs), `CONTRIBUTING.md`.
+
+## Calculation code MUST remain
+
+- Deterministic
+- Stateless
+- Independently testable
+- Free of I/O, HTTP calls, database access, and authentication state
+
+## MUST NOT
+
+- Guess, invent, or silently default required missing financial inputs in a way that hides incompleteness from the caller
+- Couple calculation formulas to FastAPI, persistence, or farm database schemas
+- Persist FinancialModel / Scenario state in this service (App Platform owns persistence — ADR-0003)
+
+## Domain concepts vs code today
+
+`FinancialInput`, `FinancialResult`, `FinancialModel`, and `Scenario` are **documented domain concepts**. The current code uses named functions and flat input dicts. Evolve toward clearer types when the task asks; do not refactor the whole surface merely to rename concepts.
+
+## When changing inputs or formulas
+
+- Read `docs/domain-model.md` for ownership and semantics
+- Add/update `FIELD_UNITS` for new fields used in `needs_input`
+- Document semantic meaning of new or materially changed inputs
+- Add or update tests for the financial behavior

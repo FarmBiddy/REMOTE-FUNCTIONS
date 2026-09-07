@@ -1,0 +1,30 @@
+---
+description: Preserve the calculation API contract and needs_input semantics; keep FastAPI out of calcs
+globs: api/**/*.py,farm_functions/runner.py,farm_functions/schemas.py,tests/test_api.py,tests/test_runner.py
+alwaysApply: false
+---
+
+# API contract
+
+Source of truth: `docs/api-contract.md`, ADR-0004, README Contract section, and API/runner tests.
+
+## Preserve unless the task explicitly changes the contract
+
+- Request structures
+- Response structures and status semantics (`ok` | `needs_input` | `error`)
+- Discovery metadata
+- Validation behavior
+- API versioning (`/v1/...`)
+
+Before changing any of the above: read `docs/api-contract.md` and the relevant tests.
+
+## needs_input
+
+- Missing financial inputs MUST be reported explicitly as `{ "field", "unit" }` objects
+- MUST NOT guess missing financial inputs
+- `provided` remains a sorted list of present field **names** (strings)
+
+## Layering
+
+- Keep the calculation engine (`farm_functions/calcs/`) independent of FastAPI
+- HTTP concerns stay in `api/`; orchestration/validation stay in `runner` / `schemas` / `registry`

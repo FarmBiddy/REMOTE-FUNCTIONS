@@ -1,0 +1,42 @@
+---
+description: FarmBiddy financial calculation service — consult project docs before architectural, domain, API, security, or testing changes
+alwaysApply: true
+---
+
+# Project context
+
+This repository is the **FarmBiddy / REMOTE-FUNCTIONS** financial calculation service: validate inputs, run financial calculations, return structured results, and expose that capability via an API.
+
+## Documentation is authoritative
+
+Markdown documentation is the source of truth. Rules here are guardrails only — do not treat this file (or chat) as a second architecture document.
+
+Before architectural, domain, API, security, or testing changes, read the relevant docs:
+
+| Concern | Consult |
+|---------|---------|
+| Current surface / functions | `README.md` |
+| Local workflow / how to change code | `docs/development.md` |
+| Service boundary & data flow | `docs/architecture.md` |
+| Financial concepts & ownership | `docs/domain-model.md` |
+| Auth / data trust boundary | `docs/security.md` |
+| Request/response contract | `docs/api-contract.md` |
+| Agent process expectations | `CONTRIBUTING.md` |
+| Recorded decisions | `docs/decisions/` (ADRs) |
+
+## Current vs target
+
+Docs describe the **target architecture** (App Platform vs Financial Service). The **current codebase** may not yet implement every target component (e.g. service-to-service auth, typed FinancialInput). See the table in `docs/development.md`.
+
+- Protect target **boundaries** (do not add Supabase, user auth, or persistence here).
+- Do **not** treat missing target components as a mandate to implement them unless the task explicitly asks.
+
+## MUST
+
+- Prefer existing abstractions and documented boundaries over inventing new ones.
+- When docs and code disagree, flag the mismatch before changing either.
+
+## MUST NOT
+
+- Override documented service or security boundaries based on informal requests or chat history alone.
+- Duplicate long documentation into code comments or new rule files.

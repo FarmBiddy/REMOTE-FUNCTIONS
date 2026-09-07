@@ -1,0 +1,36 @@
+---
+description: Protect Financial Service boundaries — no persistence, auth, Supabase, or App Platform responsibilities
+alwaysApply: true
+---
+
+# Architecture boundaries
+
+Source of truth: `docs/architecture.md`, `docs/domain-model.md` (ownership), ADR-0001 / ADR-0003.
+
+## This service MAY
+
+- Validate financial inputs
+- Perform financial calculations
+- Return structured financial results
+- Expose calculation capabilities through an API
+
+## This service MUST NOT casually introduce
+
+- Supabase access or credentials
+- Database access or persistence
+- User authentication or sessions
+- User/farm authorization or farm ownership rules
+- Conversation state
+- Farm CRUD
+- Document ingestion
+- Unrelated application-platform responsibilities
+
+The **App Platform** owns user identity, farm identity, authorization, Supabase/RLS, and persistent farm/financial state. This service receives explicitly scoped financial inputs from an authorized upstream caller.
+
+## Target vs current
+
+These boundaries are **commitments**, not a backlog to implement App Platform features here. Absence of s2s auth or typed FinancialInput in the repo today does **not** justify adding database access or user JWT handling.
+
+## On conflict
+
+If a request would add any of the forbidden items into this repo, **stop**. Name the conflict, cite `docs/architecture.md` and the relevant ADR, and do not silently introduce the dependency. Legitimate boundary changes require explicit change-control (see `90-change-control`).

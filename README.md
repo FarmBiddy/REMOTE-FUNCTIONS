@@ -13,10 +13,15 @@ Every call returns one of:
 ```
 
 ```json
-{ "status": "needs_input", "function": "revenue.milk", "missing": ["milk_price"], "provided": ["milking_cows", "litres_per_cow"] }
+{
+  "status": "needs_input",
+  "function": "revenue.milk",
+  "missing": [{ "field": "milk_price", "unit": "EUR/litre" }],
+  "provided": ["milking_cows", "litres_per_cow"]
+}
 ```
 
-Missing numbers are listed. They are never guessed. Extra fields are ignored.
+Missing inputs are listed with field name and unit. They are never guessed. Extra fields are ignored. Full contract: [`docs/api-contract.md`](docs/api-contract.md).
 
 Units: **EUR**, **annual**. `profit.margin` returns a 0–1 `margin` and a `margin_pct`.
 
@@ -66,3 +71,11 @@ On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on 
 ## Out of scope
 
 KPIs (feed ratio, per cow), monthly cashflow, Monte Carlo, alerts, risk, and farm-file loading from Dairy Financials.
+
+## Docs
+
+- Architecture: [`docs/architecture.md`](docs/architecture.md)
+- Development: [`docs/development.md`](docs/development.md)
+- API contract: [`docs/api-contract.md`](docs/api-contract.md)
+- Decisions (ADRs): [`docs/decisions/`](docs/decisions/)
+

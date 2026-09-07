@@ -9,7 +9,7 @@ def test_needs_input_when_milk_price_missing():
         {"milking_cows": 100, "litres_per_cow": 5000},
     )
     assert result["status"] == "needs_input"
-    assert result["missing"] == ["milk_price"]
+    assert result["missing"] == [{"field": "milk_price", "unit": "EUR/litre"}]
     assert result["provided"] == ["litres_per_cow", "milking_cows"]
 
 

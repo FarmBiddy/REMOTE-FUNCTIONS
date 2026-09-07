@@ -1,0 +1,28 @@
+---
+description: Enforce auth and data boundaries — no Supabase, no user JWT forwarding for DB/RLS
+alwaysApply: true
+---
+
+# Security boundary
+
+Source of truth: `docs/security.md`, `docs/architecture.md` (Authentication), ADR-0002.
+
+## MUST NOT
+
+- Query Supabase directly from this service
+- Store or ship Supabase credentials in this service
+- Accept or forward a user JWT so this service can access Supabase/RLS
+- Implement farm ownership or user authorization rules here
+
+## MUST
+
+- Treat financial calculations as operating on an **explicit, scoped financial input contract**
+- Keep **service-to-service authentication** distinct from **user authentication** (user auth stays at the App Platform)
+
+## Target vs current
+
+Service-to-service auth is the **documented trust model**. It may not be implemented on the API yet. When adding authentication, follow `docs/security.md` and ADR-0002 — do not “temporarily” use user JWTs for data access. Do not implement a full auth stack unless the task explicitly requests it.
+
+## On risky requests
+
+If a task appears to require direct database access, JWT forwarding for data access, or a new trust relationship: treat it as an architectural/security decision. Stop, cite `docs/security.md`, and do not implement it as a local convenience.

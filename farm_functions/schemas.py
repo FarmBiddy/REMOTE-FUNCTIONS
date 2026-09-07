@@ -51,6 +51,37 @@ class PlSummaryInput(TotalRevenueInput, TotalCostsInput):
     pass
 
 
+# Semantic units for needs_input reporting (annual EUR P&L unless noted).
+FIELD_UNITS: dict[str, str] = {
+    "milking_cows": "count",
+    "litres_per_cow": "litres/cow/year",
+    "milk_price": "EUR/litre",
+    "biss": "EUR/year",
+    "acres": "EUR/year",
+    "other_grants": "EUR/year",
+    "cattle_sales": "EUR/year",
+    "lamb_sales": "EUR/year",
+    "wool": "EUR/year",
+    "other": "EUR/year",
+    "feed": "EUR/year",
+    "fertiliser": "EUR/year",
+    "vet": "EUR/year",
+    "contractor": "EUR/year",
+    "labour": "EUR/year",
+    "insurance": "EUR/year",
+    "loan_repayments": "EUR/year",
+    "fuel": "EUR/year",
+    "electricity": "EUR/year",
+    "revenue": "EUR/year",
+    "costs": "EUR/year",
+}
+
+
+def missing_field_entry(field: str) -> dict[str, str]:
+    """Canonical needs_input.missing item: {field, unit}."""
+    return {"field": field, "unit": FIELD_UNITS.get(field, "unknown")}
+
+
 REQUIRED_FIELDS = {
     "revenue.milk": ("milking_cows", "litres_per_cow", "milk_price"),
     "revenue.schemes": (),

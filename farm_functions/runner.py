@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from farm_functions.registry import get_function
-from farm_functions.schemas import INPUT_MODELS
+from farm_functions.schemas import INPUT_MODELS, missing_field_entry
 
 
 def _present_keys(inputs: dict[str, Any], spec_keys: tuple[str, ...]) -> list[str]:
@@ -30,12 +30,12 @@ def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, A
         }
 
     known = spec.required + spec.optional
-    missing = [key for key in spec.required if payload.get(key) is None]
-    if missing:
+    missing_keys = [key for key in spec.required if payload.get(key) is None]
+    if missing_keys:
         return {
             "status": "needs_input",
             "function": name,
-            "missing": missing,
+            "missing": [missing_field_entry(key) for key in missing_keys],
             "provided": _present_keys(payload, known),
         }
 

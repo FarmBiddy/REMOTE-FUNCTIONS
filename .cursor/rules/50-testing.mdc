@@ -1,0 +1,32 @@
+---
+description: Require tests for financial, API, and boundary behavior without unnecessary ceremony
+globs: farm_functions/**/*.py,api/**/*.py,tests/**/*.py
+alwaysApply: false
+---
+
+# Testing
+
+Source of truth: `docs/development.md`, `docs/api-contract.md`, `README.md`, `CONTRIBUTING.md`. Use existing `tests/` as the pattern.
+
+## MUST
+
+- Add or update tests when financial behavior changes
+- Keep calculation functions independently testable (no I/O required to unit-test formulas)
+- Add or update API/contract tests when API behavior changes
+- Where practical, cover architectural boundary expectations in tests
+- Preserve existing tests unless the intended behavior is deliberately changing and that change is documented
+
+## Prefer covering
+
+- Normal cases
+- Zero values
+- Missing inputs (`needs_input` with `{field, unit}`)
+- Invalid inputs
+- Boundary conditions
+- Financial invariants
+- Scenario behavior when scenarios are introduced (not required until scenarios exist)
+
+## MUST NOT
+
+- Impose heavy testing ceremony (no mandated coverage %, no new frameworks beyond pytest already in use)
+- Delete or weaken tests solely to make a change pass

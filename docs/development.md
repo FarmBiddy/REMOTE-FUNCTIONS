@@ -54,6 +54,7 @@ Never guess required missing inputs; the runner must return `needs_input`. Expli
 - API/contract changes need API or runner contract tests.
 - Prefer cases: normal, zeros, missing inputs, invalid inputs, boundaries, invariants.
 - No mandated coverage percentage; use pytest as already configured.
+- Registered calculation functions are covered by the behavior matrix in `tests/test_registered_functions.py` (happy path + edge cases via `run_function`, plus thin HTTP/OpenAPI smoke). Specialized suites cover validation, provenance, rounding, domain types, and pure formula units.
 
 ## Documentation expectations
 

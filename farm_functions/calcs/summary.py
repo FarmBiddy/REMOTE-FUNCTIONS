@@ -3,6 +3,7 @@
 from farm_functions.calcs.costs import COST_CATEGORIES, total_costs
 from farm_functions.calcs.profit import net_profit, profit_margin, profit_margin_pct
 from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue, total_revenue
+from farm_functions.rounding import round_margin_pct, round_margin_ratio, round_money
 
 
 def pl_summary(
@@ -58,18 +59,18 @@ def pl_summary(
         "currency": "EUR",
         "period": "annual",
         "revenue": {
-            "milk": round(milk, 2),
-            "schemes": round(schemes, 2),
-            "other": round(other_income, 2),
-            "total": round(revenue, 2),
+            "milk": round_money(milk),
+            "schemes": round_money(schemes),
+            "other": round_money(other_income),
+            "total": round_money(revenue),
         },
         "costs": {
-            "lines": {name: round(cost_lines[name], 2) for name in COST_CATEGORIES},
-            "total": round(costs, 2),
+            "lines": {name: round_money(cost_lines[name]) for name in COST_CATEGORIES},
+            "total": round_money(costs),
         },
         "profit": {
-            "net": round(profit, 2),
-            "margin": round(profit_margin(revenue, costs), 4),
-            "margin_pct": round(profit_margin_pct(revenue, costs), 2),
+            "net": round_money(profit),
+            "margin": round_margin_ratio(profit_margin(revenue, costs)),
+            "margin_pct": round_margin_pct(profit_margin_pct(revenue, costs)),
         },
     }

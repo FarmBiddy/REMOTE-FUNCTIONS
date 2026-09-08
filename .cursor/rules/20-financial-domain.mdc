@@ -30,4 +30,5 @@ Source of truth: `docs/domain-model.md`, `docs/development.md` (how to add calcs
 - Read `docs/domain-model.md` for ownership and semantics
 - Add/update `INPUT_FIELD_METADATA` (units, required, min/max, description); `FIELD_UNITS` is derived from it
 - Document semantic meaning of new or materially changed inputs
+- Round published money/margin with `farm_functions/rounding.py` (banker's rounding; ADR-0005), not raw `round()`
 - Add or update tests for the financial behavior

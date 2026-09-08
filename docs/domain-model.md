@@ -45,6 +45,18 @@ Structured result of a calculation.
 
 For the current annual P&L it matches the existing `pl.summary` JSON: `currency`, `period`, nested `revenue`, `costs`, and `profit`. No extra result fields.
 
+### Rounding
+
+Published P&L outputs use **banker's rounding** (round half to even). See ADR-0005 and `farm_functions/rounding.py`.
+
+- Formulas in `farm_functions/calcs/` stay full precision.
+- Money (`EUR`) and `margin_pct`: 2 decimal places.
+- `profit.margin` (0–1 ratio): 4 decimal places.
+- Totals are rounded after the full-precision sum.
+- Provenance values remain unrounded formula results.
+
+Do not use raw `round()` for published P&L figures.
+
 ### Calculation provenance
 
 Structured explainability for the existing annual P&L calculations lives in `farm_functions/provenance.py` (`explain_annual_pnl`).

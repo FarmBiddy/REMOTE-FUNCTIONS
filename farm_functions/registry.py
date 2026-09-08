@@ -7,6 +7,7 @@ from farm_functions.calcs.costs import total_costs
 from farm_functions.calcs.profit import net_profit, profit_margin, profit_margin_pct
 from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue, total_revenue
 from farm_functions.calcs.summary import pl_summary
+from farm_functions.rounding import round_margin_pct, round_margin_ratio, round_money
 from farm_functions.schemas import OPTIONAL_FIELDS, REQUIRED_FIELDS
 
 
@@ -20,7 +21,7 @@ class FunctionSpec:
 
 
 def _money(value: float) -> dict[str, float]:
-    return {"amount": round(float(value), 2), "currency": "EUR"}
+    return {"amount": round_money(value), "currency": "EUR"}
 
 
 def _handle_milk_revenue(**kwargs: Any) -> dict[str, Any]:
@@ -51,11 +52,11 @@ def _handle_profit_margin(**kwargs: Any) -> dict[str, Any]:
     revenue = kwargs["revenue"]
     costs = kwargs["costs"]
     return {
-        "margin": round(profit_margin(revenue, costs), 4),
-        "margin_pct": round(profit_margin_pct(revenue, costs), 2),
-        "profit": round(net_profit(revenue, costs), 2),
-        "revenue": round(float(revenue), 2),
-        "costs": round(float(costs), 2),
+        "margin": round_margin_ratio(profit_margin(revenue, costs)),
+        "margin_pct": round_margin_pct(profit_margin_pct(revenue, costs)),
+        "profit": round_money(net_profit(revenue, costs)),
+        "revenue": round_money(revenue),
+        "costs": round_money(costs),
         "currency": "EUR",
     }
 

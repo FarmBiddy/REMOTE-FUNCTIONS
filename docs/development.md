@@ -40,7 +40,7 @@ On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0
 4. Cover behavior in `tests/test_calcs.py` and/or `tests/test_runner.py`. Domain-type tests live in `tests/test_domain.py`. Provenance tests live in `tests/test_provenance.py`. Do not change formulas to produce provenance; call the existing calculation functions.
 5. Update `README.md` function table and `docs/domain-model.md` / `docs/api-contract.md` when semantics or the public contract change.
 
-Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis.
+Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis. Published P&L outputs use banker's rounding via `farm_functions/rounding.py` (ADR-0005).
 
 ## Adding or changing API endpoints
 

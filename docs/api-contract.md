@@ -35,6 +35,8 @@ Body: JSON object of named financial inputs (numbers). Extra fields are ignored.
 
 Numeric annual P&L inputs must be **≥ 0**. No maximum is imposed unless `INPUT_FIELD_METADATA` defines one; currently every numeric `maximum` is `null`. Units in `needs_input` and in metadata come from `FIELD_UNITS`, which is derived from `INPUT_FIELD_METADATA` in `farm_functions/schemas.py`.
 
+Published numeric results use **banker's rounding** (round half to even): money and `margin_pct` to 2 dp, `profit.margin` to 4 dp (ADR-0005).
+
 ## Response statuses
 
 Every calculation response uses one of:

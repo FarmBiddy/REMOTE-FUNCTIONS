@@ -8,6 +8,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0002](0002-authentication-and-service-trust.md) | Authentication and service-to-service trust |
 | [0003](0003-scenario-persistence-ownership.md) | Scenario and financial model persistence ownership |
 | [0004](0004-needs-input-missing-shape.md) | `needs_input.missing` structured field entries |
+| [0005](0005-bankers-rounding.md) | Banker's rounding for published P&L outputs |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

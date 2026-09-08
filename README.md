@@ -64,7 +64,7 @@ On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on 
 
 - `GET /health`
 - `GET /v1/functions` — discovery
-- `POST /v1/functions/{name}/run` — body is a JSON object of numbers
+- `POST /v1/functions/<key>/run` — one typed route per function (e.g. `revenue.milk`); body is a JSON object of numbers; OpenAPI shows the real field names
 - `POST /v1/demo/pl-summary` — runs `pl.summary` on the sample farm
 - OpenAPI: `http://127.0.0.1:8000/docs`
 

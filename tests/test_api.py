@@ -50,3 +50,22 @@ def test_pl_summary_http_shape_has_no_provenance():
     assert set(result["revenue"].keys()) == {"milk", "schemes", "other", "total"}
     assert set(result["costs"].keys()) == {"lines", "total"}
     assert set(result["profit"].keys()) == {"net", "margin", "margin_pct"}
+
+
+def test_openapi_exposes_typed_function_inputs():
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+    paths = response.json()["paths"]
+    assert "/v1/functions/revenue.milk/run" in paths
+    assert "/v1/functions/{name}/run" not in paths
+
+    request_body = paths["/v1/functions/revenue.milk/run"]["post"]["requestBody"]
+    schema = request_body["content"]["application/json"]["schema"]
+    assert schema["properties"]["milking_cows"]["type"] == "number"
+    assert schema["properties"]["litres_per_cow"]["type"] == "number"
+    assert schema["properties"]["milk_price"]["type"] == "number"
+    assert set(schema["required"]) == {
+        "milking_cows",
+        "litres_per_cow",
+        "milk_price",
+    }

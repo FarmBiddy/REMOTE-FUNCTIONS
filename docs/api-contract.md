@@ -13,14 +13,22 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 |--------|------|---------|
 | `GET` | `/health` | Liveness |
 | `GET` | `/v1/functions` | Discovery (keys, descriptions, required/optional fields) |
-| `POST` | `/v1/functions/{name}/run` | Run a named calculation |
+| `POST` | `/v1/functions/<key>/run` | Run that calculation (one concrete route per key) |
 | `POST` | `/v1/demo/pl-summary` | Demo: `pl.summary` on sample farm JSON |
+
+Each registered function key has its own path, for example:
+
+- `POST /v1/functions/revenue.milk/run`
+- `POST /v1/functions/pl.summary/run`
+
+OpenAPI (`/docs`) documents the typed request body for each route from the Pydantic models in `farm_functions/schemas.py`. Unknown keys have no route and return **HTTP 404**.
 
 ## Calculation request
 
-`POST /v1/functions/{name}/run`
+`POST /v1/functions/<key>/run`
 
 Body: JSON object of named financial inputs (numbers). Extra fields are ignored.
+Missing required fields are not rejected by the HTTP layer; the runner returns `needs_input` (see below).
 
 ### Zero, missing, null, and invalid
 
@@ -47,7 +55,7 @@ Every calculation response uses one of:
 | `needs_input` | Required inputs missing; nothing was guessed |
 | `error` | Unknown function (via runner), `null`, negatives, wrong types, or other validation failure |
 
-Unknown function names via the HTTP route return **HTTP 404**; the runner itself returns `status: error` when called directly.
+Unknown function keys have no HTTP route and return **HTTP 404**; the runner itself returns `status: error` when called directly with an unknown name.
 
 ### `ok`
 

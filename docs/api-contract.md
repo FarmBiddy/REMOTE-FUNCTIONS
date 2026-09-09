@@ -55,6 +55,8 @@ Numeric annual P&L inputs must be **≥ 0**. No maximum is imposed unless `INPUT
 
 Published numeric results use **banker's rounding** (round half to even): money and `margin_pct` to 2 dp, `profit.margin` to 4 dp (ADR-0005).
 
+Monetary **line items** (for example `pl.summary.costs.lines`) are each published with an independent `round_money` call. Aggregate **totals** (for example `costs.total` / `pl.summary.costs.total`) are calculated from the underlying full-precision values and rounded once at publication. Because rounding is applied independently for presentation, re-summing published line items may occasionally differ from the published aggregate total by a small rounding amount. Integrations **must** treat the published aggregate `total` as authoritative.
+
 ## Response statuses
 
 Every calculation response uses one of:

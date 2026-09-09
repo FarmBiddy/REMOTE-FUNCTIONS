@@ -202,8 +202,9 @@ def test_missing_each_required_field(key: str, field: str, payload: dict) -> Non
 def _assert_unknown_field_error(result: dict, *fields: str) -> None:
     assert result["status"] == "error"
     assert result["message"] == "One or more values are invalid."
-    details = result["details"]
-    assert details == [{"field": field, "reason": "unknown field"} for field in sorted(fields)]
+    assert [item["field"] for item in result["errors"]] == sorted(fields)
+    assert all(item["code"] == "unknown_field" for item in result["errors"])
+    assert result["error"] == result["errors"][0]
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)

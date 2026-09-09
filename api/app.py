@@ -3,8 +3,10 @@
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from farm_functions.errors import unknown_calculation_envelope
 from farm_functions.loaders.json_loader import load_sample_inputs
 from farm_functions.registry import CALCULATION_CATALOGUE, list_functions
 from farm_functions.runner import run_function
@@ -117,3 +119,14 @@ def demo_pl_summary() -> dict[str, Any]:
 
 
 _register_function_routes()
+
+
+@app.api_route(
+    "/v1/functions/{name}/run",
+    methods=["POST"],
+    include_in_schema=False,
+)
+async def run_unknown_function(name: str, request: Request) -> JSONResponse:
+    """Catch-all for unknown calculation IDs. Catalogue routes are registered first."""
+    await _read_payload(request)
+    return JSONResponse(status_code=404, content=unknown_calculation_envelope(name))

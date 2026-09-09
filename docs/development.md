@@ -58,6 +58,7 @@ Never guess required missing inputs; the runner must return `needs_input`. Expli
 - No mandated coverage percentage; use pytest as already configured.
 - Registered calculation functions are covered by the behavior matrix in `tests/test_registered_functions.py` (happy path + edge cases via `run_function`, plus thin HTTP/OpenAPI smoke). Stable public calculation IDs are covered in `tests/test_calculation_contract.py`. Specialized suites cover validation, provenance, rounding, domain types, and pure formula units.
 - Canonical annual P&L **golden / reference cases** live in `test-data/golden/` and are exercised by `tests/test_golden_reference_cases.py`. They lock current published `pl.summary` / `FinancialResult` outputs against accidental regression. Changing golden `expected` values must be deliberate and reviewed. Golden outputs describe **current software behaviour**, not final Workstream B financial semantics.
+- Structured calculation **error codes** (`farm_functions/errors.py`, `tests/test_error_contract.py`) are the machine-readable failure contract for `run_function` / HTTP. Branch on `error.code`, not message text.
 
 ## Documentation expectations
 

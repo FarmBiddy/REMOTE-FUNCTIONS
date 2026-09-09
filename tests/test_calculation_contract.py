@@ -101,10 +101,12 @@ def test_every_public_id_is_runnable() -> None:
 def test_unknown_calculation_id_unchanged() -> None:
     runner = run_function("does.not.exist", {})
     assert runner["status"] == "error"
+    assert runner["error"]["code"] == "unknown_calculation"
     assert "Unknown function" in runner["message"]
 
     response = client.post("/v1/functions/does.not.exist/run", json={})
     assert response.status_code == 404
+    assert response.json()["error"]["code"] == "unknown_calculation"
 
 
 def test_provenance_uses_catalogue_supported_ids() -> None:

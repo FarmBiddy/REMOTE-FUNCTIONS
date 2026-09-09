@@ -83,7 +83,7 @@ Unknown function keys have no HTTP route and return **HTTP 404**; the runner its
 
 The service **MUST NOT** guess missing financial inputs.
 
-`missing` is a list of objects with semantic units (see ADR-0004):
+`missing` is a list of objects with semantic units (see ADR-0004). Structured `error` / `errors` with code `missing_required` are also present so integrations can branch on a stable code without parsing message text:
 
 ```json
 {
@@ -95,26 +95,88 @@ The service **MUST NOT** guess missing financial inputs.
       "unit": "EUR/litre"
     }
   ],
-  "provided": ["litres_per_cow", "milking_cows"]
+  "provided": ["litres_per_cow", "milking_cows"],
+  "error": {
+    "code": "missing_required",
+    "message": "milk_price is required",
+    "field": "milk_price"
+  },
+  "errors": [
+    {
+      "code": "missing_required",
+      "message": "milk_price is required",
+      "field": "milk_price"
+    }
+  ]
 }
 ```
 
 - `missing[].field` — input name
 - `missing[].unit` — semantic unit string from `FIELD_UNITS` in `farm_functions/schemas.py`
 - `provided` — sorted list of known field names that were present (string names, not objects)
+- `error` / `errors` — structured issues (see Error codes). `missing` remains the ADR-0004 list with units.
 
 ### `error`
+
+Invalid or unsupported supplied input (or unknown calculation via the runner):
 
 ```json
 {
   "status": "error",
-  "function": "revenue.milk",
+  "function": "costs.total",
   "message": "One or more values are invalid.",
-  "details": []
+  "error": {
+    "code": "negative_value",
+    "message": "feed must be greater than or equal to 0",
+    "field": "feed",
+    "value": -1,
+    "details": { "minimum": 0 }
+  },
+  "errors": [
+    {
+      "code": "negative_value",
+      "message": "feed must be greater than or equal to 0",
+      "field": "feed",
+      "value": -1,
+      "details": { "minimum": 0 }
+    }
+  ]
 }
 ```
 
-`error` covers unknown function (via the runner), unknown input field names, explicit `null`, negatives, wrong types, and other validation failures.
+- `error` — primary issue (deterministic: sort by `field`, then `code`)
+- `errors` — full list of issues when several fields fail
+- Irrelevant keys (`field`, `value`, `details`) are omitted when not applicable
+- Top-level `message` is human-readable and **may evolve**; machine integrations MUST branch on `error.code` / `errors[].code`, not on message text
+
+Unknown calculation via the runner (no HTTP route match handled separately below):
+
+```json
+{
+  "status": "error",
+  "message": "Unknown function: does.not.exist",
+  "error": { "code": "unknown_calculation", "message": "Unknown function: does.not.exist" },
+  "errors": [{ "code": "unknown_calculation", "message": "Unknown function: does.not.exist" }]
+}
+```
+
+HTTP unknown calculation ID: **404** with the same structured body (not a bare FastAPI `detail` string).
+
+## Error codes
+
+| Code | Meaning | Typical status |
+|------|---------|----------------|
+| `missing_required` | Required known field omitted | `needs_input` |
+| `unknown_field` | Unsupported input name (typo or wrong calculation) | `error` |
+| `null_not_allowed` | Explicit null not accepted | `error` |
+| `negative_value` | Value below current minimum (0) | `error` |
+| `invalid_type` | Invalid type (string, boolean, non-object body, etc.) | `error` |
+| `non_finite_value` | NaN / infinity on the Python runner path | `error` |
+| `unknown_calculation` | Calculation ID does not exist | `error` / HTTP 404 |
+
+Successful calculation response contracts (`status: ok` + `result`) are unchanged.
+
+Direct in-process construction of `FinancialInput` / `FinancialModel` still raises Pydantic `ValidationError`. The structured codes apply to `run_function` and HTTP calculation responses.
 
 ## Versioning
 

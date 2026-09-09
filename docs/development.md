@@ -1,6 +1,6 @@
 # Development
 
-Practical guide for working in this repository. Architecture and domain semantics live in `docs/architecture.md` and `docs/domain-model.md` — this file does not repeat them. The freeze-oriented **contract snapshot** (IDs, inputs, outputs, errors, precision, exclusions) lives at the top of `docs/api-contract.md`.
+Practical guide for working in this repository. Architecture and domain semantics live in `docs/architecture.md` and `docs/domain-model.md` — this file does not repeat them. The freeze-oriented **contract snapshot** and **Current Financial Domain Contract Scope** live in `docs/api-contract.md`. Branch `FINANCIAL-DOMAIN-CONTRACT` holds the technical freeze for review; do not treat merge to `main` as automatic.
 
 ## Local setup
 

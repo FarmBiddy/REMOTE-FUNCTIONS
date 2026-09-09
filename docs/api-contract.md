@@ -36,6 +36,32 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as a full unit dictionary.
 
+## Current Financial Domain Contract Scope
+
+**Freeze status (branch `FINANCIAL-DOMAIN-CONTRACT`):** technical contract ready for review. This branch has **not** been merged into `main`. Workstream B financial semantics remain open separately.
+
+### Included
+
+- Deterministic annual dairy P&L calculation service
+- Eight stable public calculation IDs via `CALCULATION_CATALOGUE`
+- Typed in-process domain (`FinancialInput` / `FinancialModel` / `FinancialResult` / `calculate_annual_pnl`)
+- Strict input validation, units metadata, structured errors
+- In-process provenance for seven calculations
+- Public HTTP discovery and execution (`/v1/functions`, `/run`, demo)
+- Reconciliation, golden/reference, error, precision, and alignment regression tests
+- Publication rounding (ADR-0005) and Phase 1 float precision policy (ADR-0006)
+
+### Not included (do not assume)
+
+- Workstream B financial semantic redesign (`profit.net` meaning, `loan_repayments` principal vs interest)
+- Scenarios / Base–Best–Worst / sensitivity / forecasting
+- Monthly cash flow, balance sheet, KPIs, valuation, optimisation
+- Persistence, database, authentication, farm identity
+- Accounting / banking / CRM integrations
+- Multi-currency, multi-period
+- HTTP provenance or HTTP `FinancialModel` as the request body
+- AI-generated financial calculations / broader platform orchestration
+
 ## Calculation identifiers
 
 Each calculation has a **stable public ID** (example: `revenue.milk`). These IDs are defined explicitly in `CALCULATION_CATALOGUE` in `farm_functions/registry.py`.

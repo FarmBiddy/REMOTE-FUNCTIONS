@@ -200,14 +200,59 @@ def test_missing_each_required_field(key: str, field: str, payload: dict) -> Non
         assert item["unit"] == FIELD_UNITS[item["field"]]
 
 
+def _assert_unknown_field_error(result: dict, *fields: str) -> None:
+    assert result["status"] == "error"
+    assert result["message"] == "One or more values are invalid."
+    details = result["details"]
+    assert details == [{"field": field, "reason": "unknown field"} for field in sorted(fields)]
+
+
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
-def test_extra_unknown_fields_ignored(key: str) -> None:
+def test_extra_unknown_fields_rejected(key: str) -> None:
     payload = {**_happy_payload(key), "not_a_real_field": 999, "farm_id": "demo"}
     result = run_function(key, payload)
-    assert result["status"] == "ok"
-    # Same outcome as happy path without extras
-    baseline = run_function(key, _happy_payload(key))
-    assert result["result"] == baseline["result"]
+    _assert_unknown_field_error(result, "farm_id", "not_a_real_field")
+
+
+def test_revenue_milk_valid_payload_unchanged() -> None:
+    result = run_function("revenue.milk", SAMPLE_MILK)
+    _assert_ok_money(result, 200_000)
+
+
+def test_revenue_milk_missing_milk_price_needs_input() -> None:
+    result = run_function(
+        "revenue.milk",
+        {"milking_cows": 100, "litres_per_cow": 5000},
+    )
+    assert result["status"] == "needs_input"
+    assert result["missing"] == [missing_field_entry("milk_price")]
+
+
+def test_revenue_milk_typo_field_is_error() -> None:
+    result = run_function(
+        "revenue.milk",
+        {
+            "milking_cows": 100,
+            "litres_per_cow": 5000,
+            "milk_prcie": 0.40,
+        },
+    )
+    _assert_unknown_field_error(result, "milk_prcie")
+
+
+def test_revenue_milk_random_field_is_error() -> None:
+    result = run_function("revenue.milk", {**SAMPLE_MILK, "random_field": 1})
+    _assert_unknown_field_error(result, "random_field")
+
+
+def test_revenue_milk_rejects_field_from_wrong_contract() -> None:
+    result = run_function("revenue.milk", {**SAMPLE_MILK, "feed": 80_000})
+    _assert_unknown_field_error(result, "feed")
+
+
+def test_pl_summary_unknown_cost_is_error() -> None:
+    result = run_function("pl.summary", {**load_sample_inputs(), "unknown_cost": 1})
+    _assert_unknown_field_error(result, "unknown_cost")
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)

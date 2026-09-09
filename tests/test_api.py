@@ -35,6 +35,22 @@ def test_run_asks_for_missing_numbers():
     assert body["missing"] == [{"field": "milk_price", "unit": "EUR/litre"}]
 
 
+def test_run_rejects_unknown_fields():
+    response = client.post(
+        "/v1/functions/revenue.milk/run",
+        json={
+            "milking_cows": 100,
+            "litres_per_cow": 5000,
+            "milk_price": 0.40,
+            "random_field": 1,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "error"
+    assert body["details"] == [{"field": "random_field", "reason": "unknown field"}]
+
+
 def test_demo_pl_summary():
     response = client.post("/v1/demo/pl-summary")
     assert response.status_code == 200

@@ -27,8 +27,9 @@ OpenAPI (`/docs`) documents the typed request body for each route from the Pydan
 
 `POST /v1/functions/<key>/run`
 
-Body: JSON object of named financial inputs (numbers). Extra fields are ignored.
-Missing required fields are not rejected by the HTTP layer; the runner returns `needs_input` (see below).
+Body: JSON object of named financial inputs (numbers). Extra / unknown fields are **rejected** (`error`). This is an **intentional breaking change** for callers that previously sent unknown or unrelated fields (they were ignored).
+
+Missing required fields are not rejected by the HTTP layer; the runner returns `needs_input` (see below). Unknown field names are checked **before** missing required fields: if both a typo (e.g. `milk_prcie`) and a missing required field (`milk_price`) are present, the response is `error` for the unknown name, not `needs_input`.
 
 ### Zero, missing, null, and invalid
 
@@ -37,6 +38,7 @@ Missing required fields are not rejected by the HTTP layer; the runner returns `
 | Explicit `0` | `ok` (valid zero) |
 | Required field omitted | `needs_input` |
 | Optional field omitted | treated as `0`, then calculated |
+| Unknown / extra field (including typos and fields from another calculation) | `error` |
 | `null` on a known field | `error` (invalid; not treated as missing) |
 | Negative number | `error` |
 | Wrong type (string, boolean, non-finite) | `error` (not coerced) |
@@ -53,7 +55,7 @@ Every calculation response uses one of:
 |--------|---------|
 | `ok` | Calculation succeeded; see `result` |
 | `needs_input` | Required inputs missing; nothing was guessed |
-| `error` | Unknown function (via runner), `null`, negatives, wrong types, or other validation failure |
+| `error` | Unknown function (via runner), unknown input fields, `null`, negatives, wrong types, or other validation failure |
 
 Unknown function keys have no HTTP route and return **HTTP 404**; the runner itself returns `status: error` when called directly with an unknown name.
 
@@ -102,7 +104,7 @@ The service **MUST NOT** guess missing financial inputs.
 }
 ```
 
-`error` covers unknown function (via the runner), explicit `null`, negatives, wrong types, and other validation failures.
+`error` covers unknown function (via the runner), unknown input field names, explicit `null`, negatives, wrong types, and other validation failures.
 
 ## Versioning
 

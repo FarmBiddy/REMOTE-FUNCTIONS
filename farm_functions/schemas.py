@@ -27,7 +27,7 @@ NonNegativeNumber = Annotated[float, BeforeValidator(_parse_non_negative_number)
 
 
 class _StrictModel(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
 
 class MilkRevenueInput(_StrictModel):

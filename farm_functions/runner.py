@@ -16,6 +16,11 @@ def _present_keys(inputs: dict[str, Any], spec_keys: tuple[str, ...]) -> list[st
     )
 
 
+def _unknown_keys(inputs: dict[str, Any], known: tuple[str, ...]) -> list[str]:
+    known_set = set(known)
+    return sorted(key for key in inputs if key not in known_set)
+
+
 def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, Any]:
     spec = get_function(name)
     if spec is None:
@@ -30,6 +35,18 @@ def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, A
         }
 
     known = spec.required + spec.optional
+    unknown_keys = _unknown_keys(payload, known)
+    if unknown_keys:
+        return {
+            "status": "error",
+            "function": name,
+            "message": "One or more values are invalid.",
+            "details": [
+                {"field": key, "reason": "unknown field"}
+                for key in unknown_keys
+            ],
+        }
+
     null_keys = [key for key in known if key in payload and payload[key] is None]
     if null_keys:
         return {

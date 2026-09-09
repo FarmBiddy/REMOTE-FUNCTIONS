@@ -1,6 +1,6 @@
 # Development
 
-Practical guide for working in this repository. Architecture and domain semantics live in `docs/architecture.md` and `docs/domain-model.md` — this file does not repeat them.
+Practical guide for working in this repository. Architecture and domain semantics live in `docs/architecture.md` and `docs/domain-model.md` — this file does not repeat them. The freeze-oriented **contract snapshot** (IDs, inputs, outputs, errors, precision, exclusions) lives at the top of `docs/api-contract.md`.
 
 ## Local setup
 
@@ -60,6 +60,7 @@ Never guess required missing inputs; the runner must return `needs_input`. Expli
 - Canonical annual P&L **golden / reference cases** live in `test-data/golden/` and are exercised by `tests/test_golden_reference_cases.py`. They lock current published `pl.summary` / `FinancialResult` outputs against accidental regression. Changing golden `expected` values must be deliberate and reviewed. Golden outputs describe **current software behaviour**, not final Workstream B financial semantics.
 - Structured calculation **error codes** (`farm_functions/errors.py`, `tests/test_error_contract.py`) are the machine-readable failure contract for `run_function` / HTTP. Branch on `error.code`, not message text.
 - Numeric **precision policy** characterisation lives in `tests/test_precision_policy.py` (ADR-0006): float internally, banker's rounding at publication, authoritative aggregate totals.
+- Domain / API **alignment** regressions live in `tests/test_domain_api_alignment.py` (catalogue IDs ↔ discovery ↔ OpenAPI required fields).
 
 ## Documentation expectations
 

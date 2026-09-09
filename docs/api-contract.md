@@ -7,6 +7,35 @@ Domain types (`FinancialModel` → `FinancialInput` → calculations → `Financ
 
 Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not included in HTTP calculation responses.
 
+## Contract snapshot
+
+**Service:** Stateless annual dairy P&L calculator (validate inputs, run named calculations, return structured results).
+
+**Calculations (8 public IDs):** `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary` — from `CALCULATION_CATALOGUE` only.
+
+**Inputs:** Flat JSON numbers per calculation. Required fields → `needs_input` when omitted. Optional omitted → `0`. Explicit `0` is valid. Unknown fields / null / negatives / wrong types → `error` with stable codes. Units come from `FIELD_UNITS` / `needs_input` / metadata — **not** from discovery.
+
+**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit}` with `period:"annual"`.
+
+**Validation:** Codes `missing_required`, `unknown_field`, `null_not_allowed`, `negative_value`, `invalid_type`, `non_finite_value`, `unknown_calculation`. Branch on `error.code`, not message text.
+
+**Precision:** Internal `float` (ADR-0006); publish with banker's rounding (ADR-0005); published aggregate totals are authoritative; rounded lines need not re-sum exactly; provenance stays unrounded.
+
+**Provenance:** In-process for seven catalogue entries with `supports_provenance=True` (`pl.summary` excluded). Not on HTTP.
+
+**Out of scope here:** persistence, authentication, scenarios, forecasting, monthly cashflow, KPIs, multi-currency, multi-period, AI-generated calculations, Supabase/farm CRUD.
+
+### Intentional interface differences
+
+| Layer | Representation |
+|-------|----------------|
+| HTTP / runner | Flat per-calculation field dict |
+| Domain | `FinancialModel` envelope (`period`, `currency`, `inputs: FinancialInput`) for in-process annual P&L only |
+| Discovery | `key`, `description`, `required`, `optional` — no units (by design) |
+| Provenance | Unrounded formula values; published API results are rounded |
+
+Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as a full unit dictionary.
+
 ## Calculation identifiers
 
 Each calculation has a **stable public ID** (example: `revenue.milk`). These IDs are defined explicitly in `CALCULATION_CATALOGUE` in `farm_functions/registry.py`.
@@ -29,7 +58,7 @@ Each registered calculation ID has its own path, for example:
 - `POST /v1/functions/revenue.milk/run`
 - `POST /v1/functions/pl.summary/run`
 
-OpenAPI (`/docs`) documents the typed request body for each route from the Pydantic models in `farm_functions/schemas.py`. Unknown calculation IDs have no route and return **HTTP 404**.
+OpenAPI (`/docs`) documents the typed request body for each catalogue ID. Unknown calculation IDs are handled by a catch-all route (not listed in OpenAPI) that returns **HTTP 404** with structured `unknown_calculation` body.
 
 ## Calculation request
 
@@ -67,7 +96,7 @@ Every calculation response uses one of:
 | `needs_input` | Required inputs missing; nothing was guessed |
 | `error` | Unknown function (via runner), unknown input fields, `null`, negatives, wrong types, or other validation failure |
 
-Unknown function keys have no HTTP route and return **HTTP 404**; the runner itself returns `status: error` when called directly with an unknown name.
+Unknown function keys return **HTTP 404** with structured `unknown_calculation` (catch-all; catalogue routes stay typed in OpenAPI). The runner returns `status: error` with the same code when called directly with an unknown name.
 
 ### `ok`
 

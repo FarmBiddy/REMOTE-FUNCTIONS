@@ -1,11 +1,19 @@
 # API Contract
 
 Canonical description of the Financial Service HTTP calculation contract.
-Implementation: `farm_functions/runner.py`, `farm_functions/schemas.py`, `api/app.py`.
+Implementation: `farm_functions/registry.py` (authoritative catalogue), `farm_functions/runner.py`, `farm_functions/schemas.py`, `api/app.py`.
 
 Domain types (`FinancialModel` → `FinancialInput` → calculations → `FinancialResult`) live in `farm_functions/domain.py`. They do **not** change this HTTP contract: request bodies remain a flat JSON object of numbers; statuses remain `ok` / `needs_input` / `error`.
 
 Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not included in HTTP calculation responses.
+
+## Calculation identifiers
+
+Each calculation has a **stable public ID** (example: `revenue.milk`). These IDs are defined explicitly in `CALCULATION_CATALOGUE` in `farm_functions/registry.py`.
+
+- Integrations MUST call calculations by this ID (`POST /v1/functions/<calculation_id>/run` and the `function` field in responses).
+- Discovery (`GET /v1/functions`) exposes the same IDs in the `key` field.
+- Internal Python handler, module, or class names are implementation details and may change independently of the public ID.
 
 ## Endpoints
 
@@ -13,19 +21,19 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 |--------|------|---------|
 | `GET` | `/health` | Liveness |
 | `GET` | `/v1/functions` | Discovery (keys, descriptions, required/optional fields) |
-| `POST` | `/v1/functions/<key>/run` | Run that calculation (one concrete route per key) |
+| `POST` | `/v1/functions/<calculation_id>/run` | Run that calculation (one concrete route per ID) |
 | `POST` | `/v1/demo/pl-summary` | Demo: `pl.summary` on sample farm JSON |
 
-Each registered function key has its own path, for example:
+Each registered calculation ID has its own path, for example:
 
 - `POST /v1/functions/revenue.milk/run`
 - `POST /v1/functions/pl.summary/run`
 
-OpenAPI (`/docs`) documents the typed request body for each route from the Pydantic models in `farm_functions/schemas.py`. Unknown keys have no route and return **HTTP 404**.
+OpenAPI (`/docs`) documents the typed request body for each route from the Pydantic models in `farm_functions/schemas.py`. Unknown calculation IDs have no route and return **HTTP 404**.
 
 ## Calculation request
 
-`POST /v1/functions/<key>/run`
+`POST /v1/functions/<calculation_id>/run`
 
 Body: JSON object of named financial inputs (numbers). Extra / unknown fields are **rejected** (`error`). This is an **intentional breaking change** for callers that previously sent unknown or unrelated fields (they were ignored).
 

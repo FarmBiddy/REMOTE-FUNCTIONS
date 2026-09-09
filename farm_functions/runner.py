@@ -4,8 +4,8 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from farm_functions.registry import get_function
-from farm_functions.schemas import INPUT_MODELS, missing_field_entry
+from farm_functions.registry import INPUT_MODELS, get_function
+from farm_functions.schemas import missing_field_entry
 
 
 def _present_keys(inputs: dict[str, Any], spec_keys: tuple[str, ...]) -> list[str]:

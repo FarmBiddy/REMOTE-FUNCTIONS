@@ -1,23 +1,58 @@
-"""Discoverable function catalog for an agent or HTTP client."""
+"""Authoritative catalogue of public calculation IDs for agents and HTTP clients.
+
+Public IDs (e.g. ``revenue.milk``) are stable contract identifiers. They are set
+explicitly on each ``CalculationDefinition`` and are independent of Python
+handler, module, or class names.
+"""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Callable
+
+from pydantic import BaseModel
 
 from farm_functions.calcs.costs import total_costs
 from farm_functions.calcs.profit import net_profit, profit_margin, profit_margin_pct
 from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue, total_revenue
 from farm_functions.calcs.summary import pl_summary
 from farm_functions.rounding import round_margin_pct, round_margin_ratio, round_money
-from farm_functions.schemas import OPTIONAL_FIELDS, REQUIRED_FIELDS
+from farm_functions.schemas import (
+    MilkRevenueInput,
+    OtherRevenueInput,
+    PlSummaryInput,
+    ProfitInput,
+    SchemeRevenueInput,
+    TotalCostsInput,
+    TotalRevenueInput,
+)
 
 
 @dataclass(frozen=True)
-class FunctionSpec:
-    key: str
+class CalculationDefinition:
+    """One registered calculation. ``id`` is the stable public calculation ID."""
+
+    id: str
     description: str
-    required: tuple[str, ...]
-    optional: tuple[str, ...]
+    input_model: type[BaseModel]
     handler: Callable[..., Any]
+    supports_provenance: bool
+
+    @property
+    def required(self) -> tuple[str, ...]:
+        return tuple(
+            name
+            for name, field in self.input_model.model_fields.items()
+            if field.is_required()
+        )
+
+    @property
+    def optional(self) -> tuple[str, ...]:
+        return tuple(
+            name
+            for name, field in self.input_model.model_fields.items()
+            if not field.is_required()
+        )
 
 
 def _money(value: float) -> dict[str, float]:
@@ -61,79 +96,97 @@ def _handle_profit_margin(**kwargs: Any) -> dict[str, Any]:
     }
 
 
-FUNCTIONS: dict[str, FunctionSpec] = {
-    "revenue.milk": FunctionSpec(
-        key="revenue.milk",
+# Authoritative ordered catalogue. Public IDs are the ``id`` fields only.
+CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
+    CalculationDefinition(
+        id="revenue.milk",
         description="Annual milk revenue: cows × litres per cow × price per litre.",
-        required=REQUIRED_FIELDS["revenue.milk"],
-        optional=OPTIONAL_FIELDS["revenue.milk"],
+        input_model=MilkRevenueInput,
         handler=_handle_milk_revenue,
+        supports_provenance=True,
     ),
-    "revenue.schemes": FunctionSpec(
-        key="revenue.schemes",
+    CalculationDefinition(
+        id="revenue.schemes",
         description="Annual scheme / subsidy income (BISS, ACRES, other grants).",
-        required=REQUIRED_FIELDS["revenue.schemes"],
-        optional=OPTIONAL_FIELDS["revenue.schemes"],
+        input_model=SchemeRevenueInput,
         handler=_handle_scheme_revenue,
+        supports_provenance=True,
     ),
-    "revenue.other": FunctionSpec(
-        key="revenue.other",
+    CalculationDefinition(
+        id="revenue.other",
         description="Annual non-milk income (cattle, lamb, wool, other).",
-        required=REQUIRED_FIELDS["revenue.other"],
-        optional=OPTIONAL_FIELDS["revenue.other"],
+        input_model=OtherRevenueInput,
         handler=_handle_other_revenue,
+        supports_provenance=True,
     ),
-    "revenue.total": FunctionSpec(
-        key="revenue.total",
+    CalculationDefinition(
+        id="revenue.total",
         description="Annual total revenue: milk + schemes + other.",
-        required=REQUIRED_FIELDS["revenue.total"],
-        optional=OPTIONAL_FIELDS["revenue.total"],
+        input_model=TotalRevenueInput,
         handler=_handle_total_revenue,
+        supports_provenance=True,
     ),
-    "costs.total": FunctionSpec(
-        key="costs.total",
+    CalculationDefinition(
+        id="costs.total",
         description="Annual total costs. Missing cost lines count as 0.",
-        required=REQUIRED_FIELDS["costs.total"],
-        optional=OPTIONAL_FIELDS["costs.total"],
+        input_model=TotalCostsInput,
         handler=_handle_total_costs,
+        supports_provenance=True,
     ),
-    "profit.net": FunctionSpec(
-        key="profit.net",
+    CalculationDefinition(
+        id="profit.net",
         description="Net profit: revenue − costs. Both must already be totals.",
-        required=REQUIRED_FIELDS["profit.net"],
-        optional=OPTIONAL_FIELDS["profit.net"],
+        input_model=ProfitInput,
         handler=_handle_net_profit,
+        supports_provenance=True,
     ),
-    "profit.margin": FunctionSpec(
-        key="profit.margin",
+    CalculationDefinition(
+        id="profit.margin",
         description="Profit margin as a 0–1 ratio and as a percentage.",
-        required=REQUIRED_FIELDS["profit.margin"],
-        optional=OPTIONAL_FIELDS["profit.margin"],
+        input_model=ProfitInput,
         handler=_handle_profit_margin,
+        supports_provenance=True,
     ),
-    "pl.summary": FunctionSpec(
-        key="pl.summary",
+    CalculationDefinition(
+        id="pl.summary",
         description="Full annual P&L from raw drivers: revenue split, costs, profit, margin.",
-        required=REQUIRED_FIELDS["pl.summary"],
-        optional=OPTIONAL_FIELDS["pl.summary"],
+        input_model=PlSummaryInput,
         handler=pl_summary,
+        supports_provenance=False,
     ),
+)
+
+PUBLIC_CALCULATION_IDS: tuple[str, ...] = tuple(c.id for c in CALCULATION_CATALOGUE)
+
+FUNCTIONS: dict[str, CalculationDefinition] = {c.id: c for c in CALCULATION_CATALOGUE}
+
+INPUT_MODELS: dict[str, type[BaseModel]] = {
+    c.id: c.input_model for c in CALCULATION_CATALOGUE
+}
+
+REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
+    c.id: c.required for c in CALCULATION_CATALOGUE
+}
+
+OPTIONAL_FIELDS: dict[str, tuple[str, ...]] = {
+    c.id: c.optional for c in CALCULATION_CATALOGUE
 }
 
 
-def get_function(key: str) -> FunctionSpec | None:
+def get_function(key: str) -> CalculationDefinition | None:
     return FUNCTIONS.get(key)
 
 
 def list_functions() -> list[dict[str, Any]]:
+    """Discovery payload. Field name ``key`` is the public calculation ID."""
     payload = [
         {
-            "key": spec.key,
+            "key": spec.id,
             "description": spec.description,
             "required": list(spec.required),
             "optional": list(spec.optional),
         }
-        for spec in FUNCTIONS.values()
+        for spec in CALCULATION_CATALOGUE
     ]
     payload.sort(key=lambda item: item["key"])
     return payload

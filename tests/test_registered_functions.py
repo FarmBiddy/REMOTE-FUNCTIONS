@@ -7,15 +7,14 @@ from fastapi.testclient import TestClient
 
 from api.app import app
 from farm_functions.loaders.json_loader import load_sample_inputs
-from farm_functions.registry import FUNCTIONS
-from farm_functions.runner import run_function
-from farm_functions.schemas import (
-    FIELD_UNITS,
+from farm_functions.registry import (
+    FUNCTIONS,
     INPUT_MODELS,
     OPTIONAL_FIELDS,
     REQUIRED_FIELDS,
-    missing_field_entry,
 )
+from farm_functions.runner import run_function
+from farm_functions.schemas import FIELD_UNITS, missing_field_entry
 
 client = TestClient(app)
 
@@ -275,8 +274,10 @@ def test_registry_maps_are_complete() -> None:
     assert keys == set(INPUT_MODELS)
     for key in keys:
         spec = FUNCTIONS[key]
+        assert spec.id == key
         assert spec.required == REQUIRED_FIELDS[key]
         assert spec.optional == OPTIONAL_FIELDS[key]
+        assert spec.input_model is INPUT_MODELS[key]
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)

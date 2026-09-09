@@ -6,9 +6,8 @@ from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
 from farm_functions.loaders.json_loader import load_sample_inputs
-from farm_functions.registry import FUNCTIONS, list_functions
+from farm_functions.registry import CALCULATION_CATALOGUE, list_functions
 from farm_functions.runner import run_function
-from farm_functions.schemas import INPUT_MODELS
 
 
 app = FastAPI(
@@ -66,9 +65,10 @@ async def _read_payload(request: Request) -> dict[str, Any]:
 
 
 def _register_function_routes() -> None:
-    """One concrete POST per function so OpenAPI shows real input fields."""
-    for key, model in INPUT_MODELS.items():
-        spec = FUNCTIONS[key]
+    """One concrete POST per catalogue ID so OpenAPI shows real input fields."""
+    for spec in CALCULATION_CATALOGUE:
+        key = spec.id
+        model = spec.input_model
         example = _example_for_model(model)
         schema = model.model_json_schema()
 

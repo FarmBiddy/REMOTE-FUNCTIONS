@@ -70,7 +70,7 @@ CalculationProvenance
 └── unit
 ```
 
-Covered calculations: `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`.
+Covered calculations: `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin` (catalogue entries with `supports_provenance=True` in `farm_functions/registry.py`). `pl.summary` has no provenance entry.
 
 - Existing calculation functions remain **authoritative**. Provenance records how a result was produced; it does not replace or change the formula.
 - Provenance is for UI / Agent explainability. It is not natural-language prose.

@@ -42,7 +42,7 @@ On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0
 6. Cover behavior in `tests/test_calcs.py`, `tests/test_runner.py`, and `tests/test_calculation_contract.py`. Domain-type tests live in `tests/test_domain.py`. Provenance tests live in `tests/test_provenance.py`. Do not change formulas to produce provenance; call the existing calculation functions.
 7. Update `README.md` function table and `docs/domain-model.md` / `docs/api-contract.md` when semantics or the public contract change.
 
-Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis. Published P&L outputs use banker's rounding via `farm_functions/rounding.py` (ADR-0005).
+Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis. Published P&L outputs use banker's rounding via `farm_functions/rounding.py` (ADR-0005). Internal numeric type for Phase 1 is `float` with publish-time rounding only (ADR-0006); do not silently migrate formulas to `Decimal`.
 
 ## Adding or changing API endpoints
 
@@ -59,6 +59,7 @@ Never guess required missing inputs; the runner must return `needs_input`. Expli
 - Registered calculation functions are covered by the behavior matrix in `tests/test_registered_functions.py` (happy path + edge cases via `run_function`, plus thin HTTP/OpenAPI smoke). Stable public calculation IDs are covered in `tests/test_calculation_contract.py`. Specialized suites cover validation, provenance, rounding, domain types, and pure formula units.
 - Canonical annual P&L **golden / reference cases** live in `test-data/golden/` and are exercised by `tests/test_golden_reference_cases.py`. They lock current published `pl.summary` / `FinancialResult` outputs against accidental regression. Changing golden `expected` values must be deliberate and reviewed. Golden outputs describe **current software behaviour**, not final Workstream B financial semantics.
 - Structured calculation **error codes** (`farm_functions/errors.py`, `tests/test_error_contract.py`) are the machine-readable failure contract for `run_function` / HTTP. Branch on `error.code`, not message text.
+- Numeric **precision policy** characterisation lives in `tests/test_precision_policy.py` (ADR-0006): float internally, banker's rounding at publication, authoritative aggregate totals.
 
 ## Documentation expectations
 

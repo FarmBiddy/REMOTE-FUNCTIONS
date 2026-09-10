@@ -11,6 +11,12 @@ def test_health():
     assert response.json() == {"ok": True}
 
 
+def test_livez():
+    response = client.get("/livez")
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+
+
 def test_list_functions():
     response = client.get("/v1/functions")
     assert response.status_code == 200

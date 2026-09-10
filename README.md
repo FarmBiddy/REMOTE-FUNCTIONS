@@ -56,15 +56,44 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 
 ## Run
 
-```bash
+Use a named local venv (prompt style `remote-functions`). Do not commit `.venv/`.
+
+**Windows PowerShell**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python -m pytest
-python -m uvicorn api.app:app --reload
 ```
+
+**Windows cmd**
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate.bat
+python -m pip install -r requirements.txt
+python -m pytest
+```
+
+**Unix**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m pytest
+```
+
+**API**
+
+- Non-reload (process entry): `python run_server.py`
+- Local reload: `python -m uvicorn api.app:app --reload` (or `start.bat` on Windows)
 
 On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on PATH). Keep that terminal open, then call the API from another terminal or open http://127.0.0.1:8000/docs.
 
-- `GET /health`
+- `GET /livez` — liveness
+- `GET /health` — liveness alias
 - `GET /v1/functions` — discovery
 - `POST /v1/functions/<key>/run` — one typed route per function (e.g. `revenue.milk`); body is a JSON object of numbers; OpenAPI shows the real field names
 - `POST /v1/demo/pl-summary` — runs `pl.summary` on the sample farm
@@ -79,6 +108,7 @@ KPIs (feed ratio, per cow), monthly cashflow, Monte Carlo, alerts, risk, and far
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Domain model: [`docs/domain-model.md`](docs/domain-model.md)
 - Development: [`docs/development.md`](docs/development.md)
+- Delivery bootstrap (execute here): [`docs/delivery-bootstrap.md`](docs/delivery-bootstrap.md)
 - API contract: [`docs/api-contract.md`](docs/api-contract.md)
 - Decisions (ADRs): [`docs/decisions/`](docs/decisions/)
 

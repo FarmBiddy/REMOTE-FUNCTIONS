@@ -33,11 +33,11 @@ def test_milk_revenue_ok():
 
 
 def test_profit_margin_ok():
-    result = run_function("profit.margin", {"revenue": 240_000, "costs": 175_000})
+    result = run_function("profit.margin", {"revenue": 240_000, "costs": 163_000})
     assert result["status"] == "ok"
-    assert result["result"]["margin"] == 0.2708
-    assert result["result"]["margin_pct"] == 27.08
-    assert result["result"]["profit"] == 65_000
+    assert result["result"]["margin"] == 0.3208
+    assert result["result"]["margin_pct"] == 32.08
+    assert result["result"]["profit"] == 77_000
 
 
 def test_sample_farm_pl_summary():
@@ -46,9 +46,11 @@ def test_sample_farm_pl_summary():
     payload = result["result"]
     assert payload["revenue"]["milk"] == 200_000
     assert payload["revenue"]["total"] == 240_000
-    assert payload["costs"]["total"] == 175_000
-    assert payload["profit"]["net"] == 65_000
-    assert payload["profit"]["margin_pct"] == 27.08
+    assert payload["costs"]["total"] == 163_000
+    assert payload["profit"]["net"] == 77_000
+    assert payload["profit"]["margin_pct"] == 32.08
+    assert payload["finance"]["loan_repayments"] == 12_000
+    assert "loan_repayments" not in payload["costs"]["lines"]
 
 
 def test_discovery_lists_core_functions_only():

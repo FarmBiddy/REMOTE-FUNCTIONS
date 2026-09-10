@@ -317,5 +317,7 @@ def test_provenance_has_formula_metadata() -> None:
     assert provenance["revenue.total"].formula == (
         "revenue.milk + revenue.schemes + revenue.other"
     )
-    assert provenance["profit.net"].formula == "revenue.total - costs.total"
-    assert "revenue.total" in provenance["profit.margin"].formula
+    assert provenance["profit.net"].formula == (
+        "operating_income - operating_costs (revenue.total - costs.total)"
+    )
+    assert "operating_income" in provenance["profit.margin"].formula

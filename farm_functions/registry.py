@@ -128,28 +128,39 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
     ),
     CalculationDefinition(
         id="costs.total",
-        description="Annual total costs. Missing cost lines count as 0.",
+        description=(
+            "Annual total operating costs. Missing cost lines count as 0. "
+            "Does not include loan repayments."
+        ),
         input_model=TotalCostsInput,
         handler=_handle_total_costs,
         supports_provenance=True,
     ),
     CalculationDefinition(
         id="profit.net",
-        description="Net profit: revenue − costs. Both must already be totals.",
+        description=(
+            "Phase 1 Operating Surplus: operating income − operating costs. "
+            "Both must already be totals. Public ID unchanged."
+        ),
         input_model=ProfitInput,
         handler=_handle_net_profit,
         supports_provenance=True,
     ),
     CalculationDefinition(
         id="profit.margin",
-        description="Profit margin as a 0–1 ratio and as a percentage.",
+        description=(
+            "Phase 1 Operating Surplus margin as a 0–1 ratio and as a percentage."
+        ),
         input_model=ProfitInput,
         handler=_handle_profit_margin,
         supports_provenance=True,
     ),
     CalculationDefinition(
         id="pl.summary",
-        description="Full annual P&L from raw drivers: revenue split, costs, profit, margin.",
+        description=(
+            "Full annual P&L: operating income, operating costs, Operating Surplus, "
+            "and separate finance (loan repayments)."
+        ),
         input_model=PlSummaryInput,
         handler=pl_summary,
         supports_provenance=False,

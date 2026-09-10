@@ -23,7 +23,7 @@ def test_total_revenue():
     ) == 240_000
 
 
-def test_total_costs():
+def test_total_operating_costs_excludes_loans():
     assert total_costs(
         feed=80_000,
         fertiliser=15_000,
@@ -31,20 +31,28 @@ def test_total_costs():
         contractor=10_000,
         labour=40_000,
         insurance=4_000,
-        loan_repayments=12_000,
         fuel=6_000,
         electricity=3_000,
-    ) == 175_000
+    ) == 163_000
+
+
+def test_new_operating_cost_lines_reduce_total():
+    base = total_costs(feed=80_000)
+    assert total_costs(feed=80_000, repairs_maintenance=1_000) == base + 1_000
+    assert total_costs(feed=80_000, rent_lease=2_000) == base + 2_000
+    assert total_costs(feed=80_000, professional_fees=500) == base + 500
+    assert total_costs(feed=80_000, levies=250) == base + 250
+    assert total_costs(feed=80_000, other_operating_costs=100) == base + 100
 
 
 def test_missing_cost_lines_are_zero():
     assert total_costs(feed=80_000) == 80_000
 
 
-def test_net_profit_and_margin():
-    assert net_profit(240_000, 175_000) == 65_000
-    assert profit_margin(240_000, 175_000) == 65_000 / 240_000
-    assert profit_margin_pct(240_000, 175_000) == (65_000 / 240_000) * 100
+def test_operating_surplus_and_margin():
+    assert net_profit(240_000, 163_000) == 77_000
+    assert profit_margin(240_000, 163_000) == 77_000 / 240_000
+    assert profit_margin_pct(240_000, 163_000) == (77_000 / 240_000) * 100
 
 
 def test_margin_is_zero_when_revenue_is_zero():

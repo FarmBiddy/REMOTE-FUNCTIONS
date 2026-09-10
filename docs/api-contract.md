@@ -15,7 +15,9 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Inputs:** Flat JSON numbers per calculation. Required fields → `needs_input` when omitted. Optional omitted → `0`. Explicit `0` is valid. Unknown fields / null / negatives / wrong types → `error` with stable codes. Units come from `FIELD_UNITS` / `needs_input` / metadata — **not** from discovery.
 
-**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit}` with `period:"annual"`.
+**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit, finance}` with `period:"annual"`.
+
+**Phase 1 financial meaning (ADR-0007):** `profit.net` / `profit.margin` are **Operating Surplus** / Operating Surplus margin (operating income − operating costs). `costs.total` and `costs.lines` are **operating costs only**. `loan_repayments` is reported under `finance` and does **not** reduce Operating Surplus. This is not full accounting net profit.
 
 **Validation:** Codes `missing_required`, `unknown_field`, `null_not_allowed`, `negative_value`, `invalid_type`, `non_finite_value`, `unknown_calculation`. Branch on `error.code`, not message text.
 
@@ -38,22 +40,24 @@ Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as 
 
 ## Current Financial Domain Contract Scope
 
-**Freeze status (branch `FINANCIAL-DOMAIN-CONTRACT`):** technical contract ready for review. This branch has **not** been merged into `main`. Workstream B financial semantics remain open separately.
+**Active development branch:** `financial-engine` (Workstream B). Phase 1 Operating Surplus semantics are defined in ADR-0007.
 
 ### Included
 
 - Deterministic annual dairy P&L calculation service
 - Eight stable public calculation IDs via `CALCULATION_CATALOGUE`
 - Typed in-process domain (`FinancialInput` / `FinancialModel` / `FinancialResult` / `calculate_annual_pnl`)
+- Phase 1 Operating Surplus model: operating income, extensible operating-cost catalogue, separate finance (`loan_repayments`)
 - Strict input validation, units metadata, structured errors
 - In-process provenance for seven calculations
 - Public HTTP discovery and execution (`/v1/functions`, `/run`, demo)
 - Reconciliation, golden/reference, error, precision, and alignment regression tests
-- Publication rounding (ADR-0005) and Phase 1 float precision policy (ADR-0006)
+- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007)
 
 ### Not included (do not assume)
 
-- Workstream B financial semantic redesign (`profit.net` meaning, `loan_repayments` principal vs interest)
+- Principal vs interest split for `loan_repayments`
+- Full accounting net profit (depreciation, tax, drawings, livestock valuation, etc.)
 - Scenarios / Base–Best–Worst / sensitivity / forecasting
 - Monthly cash flow, balance sheet, KPIs, valuation, optimisation
 - Persistence, database, authentication, farm identity

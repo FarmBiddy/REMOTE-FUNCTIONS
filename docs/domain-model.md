@@ -22,7 +22,9 @@ Normalized inputs required to perform a financial calculation.
 
 FinancialInput is independent of the underlying farm database schema.
 
-For the current annual P&L it is the complete `pl.summary` driver set (`PlSummaryInput` / `FinancialInput`): required milk fields, optional scheme/other/cost lines defaulting to `0`. Numeric drivers must be finite numbers **≥ 0**. There is no maximum unless metadata sets one; none are set today.
+For the current annual P&L it is the complete `pl.summary` driver set (`PlSummaryInput` / `FinancialInput`): required milk fields, optional scheme/other/**operating cost** lines defaulting to `0`, plus optional `loan_repayments` (finance). Numeric drivers must be finite numbers **≥ 0**. There is no maximum unless metadata sets one; none are set today.
+
+Operating cost lines are listed in `OPERATING_COST_CATEGORIES` (`farm_functions/calcs/costs.py`). Loan repayments are finance/debt service and are **not** operating costs (ADR-0007).
 
 Input metadata (name, type, required, minimum, maximum, unit, description) lives in `INPUT_FIELD_METADATA` in `farm_functions/schemas.py`. Units are taken from that list via `FIELD_UNITS` (ADR-0004).
 
@@ -43,7 +45,15 @@ Direct formula functions in `farm_functions/calcs/` still take numbers only; thi
 
 Structured result of a calculation.
 
-For the current annual P&L it matches the existing `pl.summary` JSON: `currency`, `period`, nested `revenue`, `costs`, and `profit`. No extra result fields.
+For the current annual P&L it matches `pl.summary` JSON: `currency`, `period`, nested `revenue`, `costs`, `profit`, and `finance` (ADR-0007).
+
+- `revenue` — operating income split (milk, schemes, other, total)
+- `costs` — operating cost `lines` + `total` (excludes loan repayments)
+- `profit.net` — Phase 1 **Operating Surplus** (operating income − operating costs); public ID unchanged
+- `profit.margin` / `margin_pct` — Operating Surplus margin
+- `finance.loan_repayments` — debt service reported separately; does not reduce Operating Surplus
+
+Phase 1 is a basic annual operating P&L, not full accounting net profit (no depreciation, tax, drawings, livestock valuation, etc.).
 
 ### Rounding and numeric precision
 

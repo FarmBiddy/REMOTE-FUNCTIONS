@@ -35,11 +35,10 @@ SAMPLE_COSTS = {
     "contractor": 10_000,
     "labour": 40_000,
     "insurance": 4_000,
-    "loan_repayments": 12_000,
     "fuel": 6_000,
     "electricity": 3_000,
 }
-SAMPLE_PROFIT_TOTALS = {"revenue": 240_000, "costs": 175_000}
+SAMPLE_PROFIT_TOTALS = {"revenue": 240_000, "costs": 163_000}
 
 
 def _happy_payload(key: str) -> dict:
@@ -98,16 +97,16 @@ def test_happy_path(key: str) -> None:
     elif key == "revenue.total":
         _assert_ok_money(result, 240_000)
     elif key == "costs.total":
-        _assert_ok_money(result, 175_000)
+        _assert_ok_money(result, 163_000)
     elif key == "profit.net":
-        _assert_ok_money(result, 65_000)
+        _assert_ok_money(result, 77_000)
     elif key == "profit.margin":
         body = result["result"]
-        assert body["margin"] == 0.2708
-        assert body["margin_pct"] == 27.08
-        assert body["profit"] == 65_000
+        assert body["margin"] == 0.3208
+        assert body["margin_pct"] == 32.08
+        assert body["profit"] == 77_000
         assert body["revenue"] == 240_000
-        assert body["costs"] == 175_000
+        assert body["costs"] == 163_000
         assert body["currency"] == "EUR"
     elif key == "pl.summary":
         body = result["result"]
@@ -115,9 +114,11 @@ def test_happy_path(key: str) -> None:
         assert body["revenue"]["schemes"] == 25_000
         assert body["revenue"]["other"] == 15_000
         assert body["revenue"]["total"] == 240_000
-        assert body["costs"]["total"] == 175_000
-        assert body["profit"]["net"] == 65_000
-        assert body["profit"]["margin_pct"] == 27.08
+        assert body["costs"]["total"] == 163_000
+        assert body["profit"]["net"] == 77_000
+        assert body["profit"]["margin_pct"] == 32.08
+        assert body["finance"]["loan_repayments"] == 12_000
+        assert "loan_repayments" not in body["costs"]["lines"]
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -137,9 +138,9 @@ def test_required_only_optionals_default_to_zero(key: str) -> None:
     elif key == "costs.total":
         _assert_ok_money(result, 0)
     elif key == "profit.net":
-        _assert_ok_money(result, 65_000)
+        _assert_ok_money(result, 77_000)
     elif key == "profit.margin":
-        assert result["result"]["profit"] == 65_000
+        assert result["result"]["profit"] == 77_000
     elif key == "pl.summary":
         body = result["result"]
         assert body["revenue"]["milk"] == 200_000
@@ -147,6 +148,7 @@ def test_required_only_optionals_default_to_zero(key: str) -> None:
         assert body["revenue"]["other"] == 0
         assert body["costs"]["total"] == 0
         assert body["profit"]["net"] == 200_000
+        assert body["finance"]["loan_repayments"] == 0
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)

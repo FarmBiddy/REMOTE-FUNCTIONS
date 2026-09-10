@@ -56,6 +56,18 @@ On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0
 6. Cover behavior in `tests/test_calcs.py`, `tests/test_runner.py`, and `tests/test_calculation_contract.py`. Domain-type tests live in `tests/test_domain.py`. Provenance tests live in `tests/test_provenance.py`. Do not change formulas to produce provenance; call the existing calculation functions.
 7. Update `README.md` function table and `docs/domain-model.md` / `docs/api-contract.md` when semantics or the public contract change.
 
+### Adding an operating cost category (Phase 1)
+
+Authoritative catalogue: `OPERATING_COST_CATEGORIES` in `farm_functions/calcs/costs.py` (ADR-0007). To add a line:
+
+1. Append the name to `OPERATING_COST_CATEGORIES` and to `total_costs(...)`.
+2. Add an optional field on `TotalCostsInput` and a matching `INPUT_FIELD_METADATA` row.
+3. Add the field on `CostLines` in `farm_functions/domain.py` and pass it through `pl_summary`.
+4. Ensure the JSON loader picks it up via `COST_KEYS` / `OPERATING_COST_CATEGORIES`.
+5. Update golden/reference cases and tests.
+
+Do **not** add loan repayments, tax, drawings, depreciation, or capex as operating costs.
+
 Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis. Published P&L outputs use banker's rounding via `farm_functions/rounding.py` (ADR-0005). Internal numeric type for Phase 1 is `float` with publish-time rounding only (ADR-0006); do not silently migrate formulas to `Decimal`.
 
 ## Adding or changing API endpoints
@@ -71,7 +83,7 @@ Never guess required missing inputs; the runner must return `needs_input`. Expli
 - Prefer cases: normal, zeros, missing inputs, invalid inputs, boundaries, invariants.
 - No mandated coverage percentage; use pytest as already configured.
 - Registered calculation functions are covered by the behavior matrix in `tests/test_registered_functions.py` (happy path + edge cases via `run_function`, plus thin HTTP/OpenAPI smoke). Stable public calculation IDs are covered in `tests/test_calculation_contract.py`. Specialized suites cover validation, provenance, rounding, domain types, and pure formula units.
-- Canonical annual P&L **golden / reference cases** live in `test-data/golden/` and are exercised by `tests/test_golden_reference_cases.py`. They lock current published `pl.summary` / `FinancialResult` outputs against accidental regression. Changing golden `expected` values must be deliberate and reviewed. Golden outputs describe **current software behaviour**, not final Workstream B financial semantics.
+- Canonical annual P&L **golden / reference cases** live in `test-data/golden/` and are exercised by `tests/test_golden_reference_cases.py`. They lock published `pl.summary` / `FinancialResult` outputs (including Phase 1 Operating Surplus and `finance`, ADR-0007). Changing golden `expected` values must be deliberate and reviewed.
 - Structured calculation **error codes** (`farm_functions/errors.py`, `tests/test_error_contract.py`) are the machine-readable failure contract for `run_function` / HTTP. Branch on `error.code`, not message text.
 - Numeric **precision policy** characterisation lives in `tests/test_precision_policy.py` (ADR-0006): float internally, banker's rounding at publication, authoritative aggregate totals.
 - Domain / API **alignment** regressions live in `tests/test_domain_api_alignment.py` (catalogue IDs ↔ discovery ↔ OpenAPI required fields).

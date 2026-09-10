@@ -54,15 +54,27 @@ class TotalRevenueInput(MilkRevenueInput, SchemeRevenueInput, OtherRevenueInput)
 
 
 class TotalCostsInput(_StrictModel):
+    """Phase 1 operating cost lines. Loan repayments belong on FinanceInput."""
+
     feed: NonNegativeNumber = 0
     fertiliser: NonNegativeNumber = 0
     vet: NonNegativeNumber = 0
     contractor: NonNegativeNumber = 0
     labour: NonNegativeNumber = 0
     insurance: NonNegativeNumber = 0
-    loan_repayments: NonNegativeNumber = 0
     fuel: NonNegativeNumber = 0
     electricity: NonNegativeNumber = 0
+    repairs_maintenance: NonNegativeNumber = 0
+    rent_lease: NonNegativeNumber = 0
+    professional_fees: NonNegativeNumber = 0
+    levies: NonNegativeNumber = 0
+    other_operating_costs: NonNegativeNumber = 0
+
+
+class FinanceInput(_StrictModel):
+    """Debt-service inputs reported separately from operating costs."""
+
+    loan_repayments: NonNegativeNumber = 0
 
 
 class ProfitInput(_StrictModel):
@@ -70,7 +82,7 @@ class ProfitInput(_StrictModel):
     costs: NonNegativeNumber
 
 
-class PlSummaryInput(TotalRevenueInput, TotalCostsInput):
+class PlSummaryInput(TotalRevenueInput, TotalCostsInput, FinanceInput):
     pass
 
 
@@ -106,7 +118,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="count",
-        description="Number of milking cows used in the annual milk revenue calculation",
+        description=(
+            "Cow count used for the annual milk-income estimate "
+            "(Phase 1 Operating Surplus model)"
+        ),
     ),
     InputFieldMetadata(
         name="litres_per_cow",
@@ -115,7 +130,7 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="litres/cow/year",
-        description="Annual yield per cow used in the annual milk revenue calculation",
+        description="Litres sold / paid per cow per year used in milk revenue",
     ),
     InputFieldMetadata(
         name="milk_price",
@@ -124,7 +139,7 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/litre",
-        description="Milk price per litre used in the annual milk revenue calculation",
+        description="Average EUR per litre received for milk",
     ),
     InputFieldMetadata(
         name="biss",
@@ -133,7 +148,7 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual BISS scheme/subsidy amount",
+        description="Annual BISS operating scheme/subsidy income",
     ),
     InputFieldMetadata(
         name="acres",
@@ -142,7 +157,7 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual ACRES scheme/subsidy amount in EUR (not land area)",
+        description="Annual ACRES scheme payment in EUR (not land area)",
     ),
     InputFieldMetadata(
         name="other_grants",
@@ -151,7 +166,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual other grant/scheme amount",
+        description=(
+            "Other operating agri-scheme / grant income only "
+            "(exclude capital grants and financing)"
+        ),
     ),
     InputFieldMetadata(
         name="cattle_sales",
@@ -160,7 +178,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual cattle sales amount",
+        description=(
+            "Gross annual cattle sales income "
+            "(purchases and herd valuation are out of scope in Phase 1)"
+        ),
     ),
     InputFieldMetadata(
         name="lamb_sales",
@@ -169,7 +190,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual lamb sales amount",
+        description=(
+            "Gross annual lamb sales income "
+            "(purchases and herd valuation are out of scope in Phase 1)"
+        ),
     ),
     InputFieldMetadata(
         name="wool",
@@ -178,7 +202,7 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual wool income amount",
+        description="Annual wool income",
     ),
     InputFieldMetadata(
         name="other",
@@ -187,7 +211,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual other non-milk, non-scheme income",
+        description=(
+            "Other operating income only "
+            "(exclude loans received, capital receipts, asset sales, financing)"
+        ),
     ),
     InputFieldMetadata(
         name="feed",
@@ -196,7 +223,7 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual feed cost",
+        description="Annual operating feed cost",
     ),
     InputFieldMetadata(
         name="fertiliser",
@@ -205,7 +232,7 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual fertiliser cost",
+        description="Annual operating fertiliser cost",
     ),
     InputFieldMetadata(
         name="vet",
@@ -214,7 +241,7 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual vet cost",
+        description="Annual veterinary / animal-health operating cost",
     ),
     InputFieldMetadata(
         name="contractor",
@@ -223,7 +250,7 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual contractor cost",
+        description="Annual contractor / contract-services operating cost",
     ),
     InputFieldMetadata(
         name="labour",
@@ -232,7 +259,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual labour cost",
+        description=(
+            "Annual paid/hired labour cost only "
+            "(do not impute farmer or unpaid family labour)"
+        ),
     ),
     InputFieldMetadata(
         name="insurance",
@@ -241,7 +271,70 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual insurance cost",
+        description="Annual farm operating insurance cost",
+    ),
+    InputFieldMetadata(
+        name="fuel",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description="Annual operating fuel cost",
+    ),
+    InputFieldMetadata(
+        name="electricity",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description="Annual operating electricity cost",
+    ),
+    InputFieldMetadata(
+        name="repairs_maintenance",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description="Annual repairs and maintenance operating cost",
+    ),
+    InputFieldMetadata(
+        name="rent_lease",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description="Annual land rent / lease operating cost",
+    ),
+    InputFieldMetadata(
+        name="professional_fees",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description="Annual professional / accountancy fees (operating)",
+    ),
+    InputFieldMetadata(
+        name="levies",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description="Annual levies and similar operating charges",
+    ),
+    InputFieldMetadata(
+        name="other_operating_costs",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description="Other annual operating costs not covered by named lines",
     ),
     InputFieldMetadata(
         name="loan_repayments",
@@ -251,27 +344,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         maximum=None,
         unit="EUR/year",
         description=(
-            "Annual loan repayment amount included in total costs. "
-            "Whether this is principal, interest, or both is not defined"
+            "Annual loan repayments / debt service. Reported under finance; "
+            "does not reduce Phase 1 Operating Surplus. "
+            "Principal vs interest is not split"
         ),
-    ),
-    InputFieldMetadata(
-        name="fuel",
-        type="number",
-        required=False,
-        minimum=0,
-        maximum=None,
-        unit="EUR/year",
-        description="Annual fuel cost",
-    ),
-    InputFieldMetadata(
-        name="electricity",
-        type="number",
-        required=False,
-        minimum=0,
-        maximum=None,
-        unit="EUR/year",
-        description="Annual electricity cost",
     ),
     InputFieldMetadata(
         name="period",
@@ -298,7 +374,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Already-totalled annual revenue for profit.net and profit.margin",
+        description=(
+            "Already-totalled annual operating income for profit.net / profit.margin "
+            "(Phase 1 Operating Surplus)"
+        ),
     ),
     InputFieldMetadata(
         name="costs",
@@ -307,7 +386,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Already-totalled annual costs for profit.net and profit.margin",
+        description=(
+            "Already-totalled annual operating costs for profit.net / profit.margin "
+            "(exclude loan repayments)"
+        ),
     ),
 )
 

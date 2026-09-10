@@ -10,6 +10,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0004](0004-needs-input-missing-shape.md) | `needs_input.missing` structured field entries |
 | [0005](0005-bankers-rounding.md) | Banker's rounding for published P&L outputs |
 | [0006](0006-numeric-precision-phase1.md) | Numeric precision for Phase 1 annual P&L (float internally) |
+| [0007](0007-phase1-operating-surplus.md) | Phase 1 Operating Surplus and finance separation |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

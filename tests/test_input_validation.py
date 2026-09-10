@@ -110,7 +110,7 @@ def test_input_metadata_exposes_unit_minimum_and_required():
     assert cows["maximum"] is None
     assert cows["unit"] == "count"
     assert cows["unit"] == FIELD_UNITS["milking_cows"]
-    assert "milking cows" in cows["description"].lower()
+    assert "cow count" in cows["description"].lower()
 
     price = by_name["milk_price"]
     assert price["required"] is True

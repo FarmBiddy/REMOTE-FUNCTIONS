@@ -1,6 +1,6 @@
 # Farm cost and revenue functions
 
-Small calculation library extracted from the Dairy Financials prototype. It only covers the basic annual P&L: **revenue, costs, profit, and margin**.
+Small calculation library extracted from the Dairy Financials prototype. It covers a **Phase 1 annual operating P&L**: operating income, operating costs, **Operating Surplus**, and separately reported debt service (`finance.loan_repayments`). Public calculation ID `profit.net` means Operating Surplus (ADR-0007) — not full accounting net profit.
 
 Functions take explicit numbers. They do not read a database. A sample JSON is used now so the formulas can be checked; a platform loader can replace that later.
 
@@ -31,16 +31,16 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 
 | Calculation ID | Required inputs | Formula |
 |----------------|-----------------|---------|
-| `revenue.milk` | `milking_cows`, `litres_per_cow`, `milk_price` | cows × litres × price |
-| `revenue.schemes` | — | BISS + ACRES + other grants |
-| `revenue.other` | — | cattle + lamb + wool + other |
-| `revenue.total` | milk fields | milk + schemes + other |
-| `costs.total` | — | sum of the 9 cost lines (missing = 0) |
-| `profit.net` | `revenue`, `costs` | revenue − costs |
-| `profit.margin` | `revenue`, `costs` | (revenue − costs) / revenue |
-| `pl.summary` | milk fields | full P&L from raw drivers |
+| `revenue.milk` | `milking_cows`, `litres_per_cow`, `milk_price` | cows × litres sold/paid × price |
+| `revenue.schemes` | — | BISS + ACRES + other operating grants |
+| `revenue.other` | — | cattle + lamb + wool + other operating income |
+| `revenue.total` | milk fields | milk + schemes + other (operating income) |
+| `costs.total` | — | sum of operating cost lines (missing = 0; excludes loans) |
+| `profit.net` | `revenue`, `costs` | Operating Surplus = revenue − operating costs |
+| `profit.margin` | `revenue`, `costs` | Operating Surplus / revenue |
+| `pl.summary` | milk fields | full P&L + `finance.loan_repayments` |
 
-`profit.net` and `profit.margin` expect **already totalled** revenue and costs. Use `pl.summary` when you still have the raw farm numbers.
+`profit.net` and `profit.margin` expect **already totalled** operating income and operating costs. Use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
 
 ## Sample farm (`sample_data/farm.json`)
 
@@ -49,10 +49,13 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | Milk (100 × 5000 × €0.40) | €200,000 |
 | Schemes | €25,000 |
 | Cattle sales | €15,000 |
-| **Revenue** | **€240,000** |
-| **Costs** | **€175,000** |
-| **Profit** | **€65,000** |
-| **Margin** | **27.08%** |
+| **Operating income** | **€240,000** |
+| **Operating costs** (excl. loans) | **€163,000** |
+| **Operating Surplus** (`profit.net`) | **€77,000** |
+| **Margin** | **32.08%** |
+| Loan repayments (`finance`) | €12,000 |
+
+Previously, including loans in costs produced €65,000 “profit”. Under ADR-0007 loans are finance-only.
 
 ## Run
 

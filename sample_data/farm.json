@@ -21,8 +21,15 @@
     "contractor": 10000,
     "labour": 40000,
     "insurance": 4000,
-    "loan_repayments": 12000,
     "fuel": 6000,
-    "electricity": 3000
+    "electricity": 3000,
+    "repairs_maintenance": 0,
+    "rent_lease": 0,
+    "professional_fees": 0,
+    "levies": 0,
+    "other_operating_costs": 0
+  },
+  "finance": {
+    "loan_repayments": 12000
   }
 }

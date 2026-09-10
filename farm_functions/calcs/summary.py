@@ -1,6 +1,6 @@
 """Composite P&L: calls the atomic formulas and returns one payload."""
 
-from farm_functions.calcs.costs import COST_CATEGORIES, total_costs
+from farm_functions.calcs.costs import OPERATING_COST_CATEGORIES, total_costs
 from farm_functions.calcs.profit import net_profit, profit_margin, profit_margin_pct
 from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue, total_revenue
 from farm_functions.rounding import round_margin_pct, round_margin_ratio, round_money
@@ -23,10 +23,16 @@ def pl_summary(
     contractor: float = 0,
     labour: float = 0,
     insurance: float = 0,
-    loan_repayments: float = 0,
     fuel: float = 0,
     electricity: float = 0,
+    repairs_maintenance: float = 0,
+    rent_lease: float = 0,
+    professional_fees: float = 0,
+    levies: float = 0,
+    other_operating_costs: float = 0,
+    loan_repayments: float = 0,
 ) -> dict:
+    """Annual dairy P&L with Operating Surplus and separate finance reporting."""
     milk = milk_revenue(milking_cows, litres_per_cow, milk_price)
     schemes = scheme_revenue(biss, acres, other_grants)
     other_income = other_revenue(cattle_sales, lamb_sales, wool, other)
@@ -49,11 +55,15 @@ def pl_summary(
         "contractor": float(contractor),
         "labour": float(labour),
         "insurance": float(insurance),
-        "loan_repayments": float(loan_repayments),
         "fuel": float(fuel),
         "electricity": float(electricity),
+        "repairs_maintenance": float(repairs_maintenance),
+        "rent_lease": float(rent_lease),
+        "professional_fees": float(professional_fees),
+        "levies": float(levies),
+        "other_operating_costs": float(other_operating_costs),
     }
-    costs = total_costs(**{name: cost_lines[name] for name in COST_CATEGORIES})
+    costs = total_costs(**{name: cost_lines[name] for name in OPERATING_COST_CATEGORIES})
     profit = net_profit(revenue, costs)
     return {
         "currency": "EUR",
@@ -65,12 +75,15 @@ def pl_summary(
             "total": round_money(revenue),
         },
         "costs": {
-            "lines": {name: round_money(cost_lines[name]) for name in COST_CATEGORIES},
+            "lines": {name: round_money(cost_lines[name]) for name in OPERATING_COST_CATEGORIES},
             "total": round_money(costs),
         },
         "profit": {
             "net": round_money(profit),
             "margin": round_margin_ratio(profit_margin(revenue, costs)),
             "margin_pct": round_margin_pct(profit_margin_pct(revenue, costs)),
+        },
+        "finance": {
+            "loan_repayments": round_money(float(loan_repayments)),
         },
     }

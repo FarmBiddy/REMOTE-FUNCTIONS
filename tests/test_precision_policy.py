@@ -90,9 +90,9 @@ def test_f_margin_rounding_and_zero_revenue() -> None:
     assert profit_margin(0, 1000) == 0
     assert profit_margin_pct(0, 1000) == 0
 
-    sample = run_function("profit.margin", {"revenue": 240_000, "costs": 175_000})
-    assert sample["result"]["margin"] == 0.2708
-    assert sample["result"]["margin_pct"] == 27.08
+    sample = run_function("profit.margin", {"revenue": 240_000, "costs": 163_000})
+    assert sample["result"]["margin"] == 0.3208
+    assert sample["result"]["margin_pct"] == 32.08
 
 
 def test_g_provenance_stays_unrounded_when_publish_rounds() -> None:

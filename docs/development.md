@@ -4,11 +4,17 @@ Practical guide for working in this repository. Architecture and domain semantic
 
 ## Local setup
 
+Default is a named local venv (prompt style `remote-functions`). Do not commit `.venv/` (gitignored).
+
 ```bash
+python -m venv .venv
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
+# Windows cmd:        .venv\Scripts\activate.bat
+# Unix:               source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-Use a virtual environment if you prefer (`.venv/` is gitignored).
+Process layout (composition root, lifespan, `run_server.py`, probes): [`delivery-bootstrap.md`](delivery-bootstrap.md).
 
 ## Run tests
 
@@ -18,11 +24,19 @@ python -m pytest
 
 ## Run the API
 
+Non-reload process entry:
+
+```bash
+python run_server.py
+```
+
+Local reload:
+
 ```bash
 python -m uvicorn api.app:app --reload
 ```
 
-On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0.1:8000/docs
+On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0.1:8000/docs. Liveness: `GET /livez` (and alias `GET /health`).
 
 ## Normal workflow
 
@@ -64,6 +78,7 @@ Never guess required missing inputs; the runner must return `needs_input`. Expli
 | Request/response / statuses | `docs/api-contract.md`, README Contract |
 | Service boundary / auth / ownership | `docs/architecture.md`, `docs/security.md`, ADR |
 | How to develop locally | this file |
+| Process boot / venv / probes (FarmBiddy delivery principles) | `docs/delivery-bootstrap.md` |
 
 ## When to create an ADR
 

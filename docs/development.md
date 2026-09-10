@@ -1,6 +1,6 @@
 # Development
 
-Practical guide for working in this repository. Architecture and domain semantics live in `docs/architecture.md` and `docs/domain-model.md` — this file does not repeat them.
+Practical guide for working in this repository. Architecture and domain semantics live in `docs/architecture.md` and `docs/domain-model.md` — this file does not repeat them. The freeze-oriented **contract snapshot** and **Current Financial Domain Contract Scope** live in `docs/api-contract.md`. Branch `FINANCIAL-DOMAIN-CONTRACT` holds the technical freeze for review; do not treat merge to `main` as automatic.
 
 ## Local setup
 
@@ -49,12 +49,14 @@ On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0
 ## Adding or changing financial calculations
 
 1. Keep formulas in `farm_functions/calcs/` pure (no I/O, HTTP, DB, auth).
-2. Declare per-function inputs in `farm_functions/schemas.py` (`REQUIRED_FIELDS` / `OPTIONAL_FIELDS`, Pydantic models, and `INPUT_FIELD_METADATA` / `FIELD_UNITS`). Units belong in `INPUT_FIELD_METADATA` so `FIELD_UNITS` stays derived from that list. Annual P&L domain types (`FinancialInput`, `FinancialModel`, `FinancialResult`) live in `farm_functions/domain.py` and must stay aligned with `pl.summary` — do not change formulas to fit the types.
-3. Register the function in `farm_functions/registry.py`.
-4. Cover behavior in `tests/test_calcs.py` and/or `tests/test_runner.py`. Domain-type tests live in `tests/test_domain.py`. Provenance tests live in `tests/test_provenance.py`. Do not change formulas to produce provenance; call the existing calculation functions.
-5. Update `README.md` function table and `docs/domain-model.md` / `docs/api-contract.md` when semantics or the public contract change.
+2. Declare input models and `INPUT_FIELD_METADATA` / `FIELD_UNITS` in `farm_functions/schemas.py`. Units belong in `INPUT_FIELD_METADATA` so `FIELD_UNITS` stays derived from that list.
+3. Register the calculation in `CALCULATION_CATALOGUE` in `farm_functions/registry.py` with an **explicit** public `id` (e.g. `revenue.milk`). Do not infer the public ID from the Python handler name. Required/optional fields and `INPUT_MODELS` are derived from that catalogue.
+4. Set `supports_provenance` appropriately (`pl.summary` is false; atomic annual P&L lines are true).
+5. Annual P&L domain types (`FinancialInput`, `FinancialModel`, `FinancialResult`) live in `farm_functions/domain.py` and must stay aligned with `pl.summary` — do not change formulas to fit the types.
+6. Cover behavior in `tests/test_calcs.py`, `tests/test_runner.py`, and `tests/test_calculation_contract.py`. Domain-type tests live in `tests/test_domain.py`. Provenance tests live in `tests/test_provenance.py`. Do not change formulas to produce provenance; call the existing calculation functions.
+7. Update `README.md` function table and `docs/domain-model.md` / `docs/api-contract.md` when semantics or the public contract change.
 
-Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis. Published P&L outputs use banker's rounding via `farm_functions/rounding.py` (ADR-0005).
+Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis. Published P&L outputs use banker's rounding via `farm_functions/rounding.py` (ADR-0005). Internal numeric type for Phase 1 is `float` with publish-time rounding only (ADR-0006); do not silently migrate formulas to `Decimal`.
 
 ## Adding or changing API endpoints
 
@@ -68,13 +70,17 @@ Never guess required missing inputs; the runner must return `needs_input`. Expli
 - API/contract changes need API or runner contract tests.
 - Prefer cases: normal, zeros, missing inputs, invalid inputs, boundaries, invariants.
 - No mandated coverage percentage; use pytest as already configured.
-- Registered calculation functions are covered by the behavior matrix in `tests/test_registered_functions.py` (happy path + edge cases via `run_function`, plus thin HTTP/OpenAPI smoke). Specialized suites cover validation, provenance, rounding, domain types, and pure formula units.
+- Registered calculation functions are covered by the behavior matrix in `tests/test_registered_functions.py` (happy path + edge cases via `run_function`, plus thin HTTP/OpenAPI smoke). Stable public calculation IDs are covered in `tests/test_calculation_contract.py`. Specialized suites cover validation, provenance, rounding, domain types, and pure formula units.
+- Canonical annual P&L **golden / reference cases** live in `test-data/golden/` and are exercised by `tests/test_golden_reference_cases.py`. They lock current published `pl.summary` / `FinancialResult` outputs against accidental regression. Changing golden `expected` values must be deliberate and reviewed. Golden outputs describe **current software behaviour**, not final Workstream B financial semantics.
+- Structured calculation **error codes** (`farm_functions/errors.py`, `tests/test_error_contract.py`) are the machine-readable failure contract for `run_function` / HTTP. Branch on `error.code`, not message text.
+- Numeric **precision policy** characterisation lives in `tests/test_precision_policy.py` (ADR-0006): float internally, banker's rounding at publication, authoritative aggregate totals.
+- Domain / API **alignment** regressions live in `tests/test_domain_api_alignment.py` (catalogue IDs ↔ discovery ↔ OpenAPI required fields).
 
 ## Documentation expectations
 
 | Change type | Update |
 |-------------|--------|
-| Formulas / inputs | README table; `docs/domain-model.md` for P&L meaning and validation; `INPUT_FIELD_METADATA` / `FIELD_UNITS` in `farm_functions/schemas.py` for units and constraints |
+| Formulas / inputs / calculation IDs | README table; `CALCULATION_CATALOGUE` in `farm_functions/registry.py`; `docs/domain-model.md` for P&L meaning and validation; `INPUT_FIELD_METADATA` / `FIELD_UNITS` in `farm_functions/schemas.py` for units and constraints |
 | Request/response / statuses | `docs/api-contract.md`, README Contract |
 | Service boundary / auth / ownership | `docs/architecture.md`, `docs/security.md`, ADR |
 | How to develop locally | this file |

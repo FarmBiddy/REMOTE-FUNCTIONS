@@ -16,6 +16,7 @@ def test_needs_input_when_milk_price_missing():
 def test_unknown_function():
     result = run_function("montecarlo.run", {})
     assert result["status"] == "error"
+    assert result["error"]["code"] == "unknown_calculation"
     assert "Unknown function" in result["message"]
 
 

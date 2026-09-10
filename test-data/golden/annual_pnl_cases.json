@@ -1,0 +1,325 @@
+{
+  "cases": [
+    {
+      "name": "standard_dairy",
+      "description": "Established sample farm; locks published annual P&L for the demo dairy.",
+      "input": {
+        "milking_cows": 100,
+        "litres_per_cow": 5000,
+        "milk_price": 0.4,
+        "biss": 20000,
+        "acres": 5000,
+        "other_grants": 0,
+        "cattle_sales": 15000,
+        "lamb_sales": 0,
+        "wool": 0,
+        "other": 0,
+        "feed": 80000,
+        "fertiliser": 15000,
+        "vet": 5000,
+        "contractor": 10000,
+        "labour": 40000,
+        "insurance": 4000,
+        "loan_repayments": 12000,
+        "fuel": 6000,
+        "electricity": 3000
+      },
+      "expected": {
+        "currency": "EUR",
+        "period": "annual",
+        "revenue": {
+          "milk": 200000.0,
+          "schemes": 25000.0,
+          "other": 15000.0,
+          "total": 240000.0
+        },
+        "costs": {
+          "lines": {
+            "feed": 80000.0,
+            "fertiliser": 15000.0,
+            "vet": 5000.0,
+            "contractor": 10000.0,
+            "labour": 40000.0,
+            "insurance": 4000.0,
+            "loan_repayments": 12000.0,
+            "fuel": 6000.0,
+            "electricity": 3000.0
+          },
+          "total": 175000.0
+        },
+        "profit": {
+          "net": 65000.0,
+          "margin": 0.2708,
+          "margin_pct": 27.08
+        }
+      }
+    },
+    {
+      "name": "milk_required_only",
+      "description": "Only required milk fields; omitted optionals resolve to zero under the current contract.",
+      "input": {
+        "milking_cows": 100,
+        "litres_per_cow": 5000,
+        "milk_price": 0.4
+      },
+      "expected": {
+        "currency": "EUR",
+        "period": "annual",
+        "revenue": {
+          "milk": 200000.0,
+          "schemes": 0.0,
+          "other": 0.0,
+          "total": 200000.0
+        },
+        "costs": {
+          "lines": {
+            "feed": 0.0,
+            "fertiliser": 0.0,
+            "vet": 0.0,
+            "contractor": 0.0,
+            "labour": 0.0,
+            "insurance": 0.0,
+            "loan_repayments": 0.0,
+            "fuel": 0.0,
+            "electricity": 0.0
+          },
+          "total": 0.0
+        },
+        "profit": {
+          "net": 200000.0,
+          "margin": 1.0,
+          "margin_pct": 100.0
+        }
+      }
+    },
+    {
+      "name": "all_explicit_zeros",
+      "description": "All known pl.summary fields explicitly 0; zero is valid, not missing.",
+      "input": {
+        "milking_cows": 0,
+        "litres_per_cow": 0,
+        "milk_price": 0,
+        "feed": 0,
+        "fertiliser": 0,
+        "vet": 0,
+        "contractor": 0,
+        "labour": 0,
+        "insurance": 0,
+        "loan_repayments": 0,
+        "fuel": 0,
+        "electricity": 0,
+        "cattle_sales": 0,
+        "lamb_sales": 0,
+        "wool": 0,
+        "other": 0,
+        "biss": 0,
+        "acres": 0,
+        "other_grants": 0
+      },
+      "expected": {
+        "currency": "EUR",
+        "period": "annual",
+        "revenue": {
+          "milk": 0.0,
+          "schemes": 0.0,
+          "other": 0.0,
+          "total": 0.0
+        },
+        "costs": {
+          "lines": {
+            "feed": 0.0,
+            "fertiliser": 0.0,
+            "vet": 0.0,
+            "contractor": 0.0,
+            "labour": 0.0,
+            "insurance": 0.0,
+            "loan_repayments": 0.0,
+            "fuel": 0.0,
+            "electricity": 0.0
+          },
+          "total": 0.0
+        },
+        "profit": {
+          "net": 0.0,
+          "margin": 0.0,
+          "margin_pct": 0.0
+        }
+      }
+    },
+    {
+      "name": "zero_revenue",
+      "description": "Total revenue zero with non-zero costs; margin and margin_pct are 0.",
+      "input": {
+        "milking_cows": 100,
+        "litres_per_cow": 5000,
+        "milk_price": 0,
+        "feed": 1000
+      },
+      "expected": {
+        "currency": "EUR",
+        "period": "annual",
+        "revenue": {
+          "milk": 0.0,
+          "schemes": 0.0,
+          "other": 0.0,
+          "total": 0.0
+        },
+        "costs": {
+          "lines": {
+            "feed": 1000.0,
+            "fertiliser": 0.0,
+            "vet": 0.0,
+            "contractor": 0.0,
+            "labour": 0.0,
+            "insurance": 0.0,
+            "loan_repayments": 0.0,
+            "fuel": 0.0,
+            "electricity": 0.0
+          },
+          "total": 1000.0
+        },
+        "profit": {
+          "net": -1000.0,
+          "margin": 0.0,
+          "margin_pct": 0.0
+        }
+      }
+    },
+    {
+      "name": "loss",
+      "description": "Costs exceed revenue; negative net profit is valid under the current contract.",
+      "input": {
+        "milking_cows": 100,
+        "litres_per_cow": 5000,
+        "milk_price": 0.1,
+        "feed": 80000,
+        "labour": 40000
+      },
+      "expected": {
+        "currency": "EUR",
+        "period": "annual",
+        "revenue": {
+          "milk": 50000.0,
+          "schemes": 0.0,
+          "other": 0.0,
+          "total": 50000.0
+        },
+        "costs": {
+          "lines": {
+            "feed": 80000.0,
+            "fertiliser": 0.0,
+            "vet": 0.0,
+            "contractor": 0.0,
+            "labour": 40000.0,
+            "insurance": 0.0,
+            "loan_repayments": 0.0,
+            "fuel": 0.0,
+            "electricity": 0.0
+          },
+          "total": 120000.0
+        },
+        "profit": {
+          "net": -70000.0,
+          "margin": -1.4,
+          "margin_pct": -140.0
+        }
+      }
+    },
+    {
+      "name": "fractional_rounding",
+      "description": "Exercises ADR-0005 publish rounding. Sum of published cost lines (10001.34) differs from authoritative costs.total (10001.35).",
+      "notes": "Published cost lines are independently rounded presentation values; published aggregate total is authoritative.",
+      "input": {
+        "milking_cows": 100,
+        "litres_per_cow": 5000,
+        "milk_price": 0.333,
+        "biss": 12345.678,
+        "feed": 10000.125,
+        "labour": 1.225
+      },
+      "expected": {
+        "currency": "EUR",
+        "period": "annual",
+        "revenue": {
+          "milk": 166500.0,
+          "schemes": 12345.68,
+          "other": 0.0,
+          "total": 178845.68
+        },
+        "costs": {
+          "lines": {
+            "feed": 10000.12,
+            "fertiliser": 0.0,
+            "vet": 0.0,
+            "contractor": 0.0,
+            "labour": 1.22,
+            "insurance": 0.0,
+            "loan_repayments": 0.0,
+            "fuel": 0.0,
+            "electricity": 0.0
+          },
+          "total": 10001.35
+        },
+        "profit": {
+          "net": 168844.33,
+          "margin": 0.9441,
+          "margin_pct": 94.41
+        }
+      }
+    },
+    {
+      "name": "large_valid",
+      "description": "Large but valid farm; no unintended upper-bound validation.",
+      "input": {
+        "milking_cows": 5000,
+        "litres_per_cow": 8000,
+        "milk_price": 0.45,
+        "biss": 250000,
+        "acres": 100000,
+        "other_grants": 50000,
+        "cattle_sales": 200000,
+        "lamb_sales": 0,
+        "wool": 0,
+        "other": 50000,
+        "feed": 1500000,
+        "fertiliser": 200000,
+        "vet": 150000,
+        "contractor": 300000,
+        "labour": 800000,
+        "insurance": 100000,
+        "loan_repayments": 400000,
+        "fuel": 120000,
+        "electricity": 80000
+      },
+      "expected": {
+        "currency": "EUR",
+        "period": "annual",
+        "revenue": {
+          "milk": 18000000.0,
+          "schemes": 400000.0,
+          "other": 250000.0,
+          "total": 18650000.0
+        },
+        "costs": {
+          "lines": {
+            "feed": 1500000.0,
+            "fertiliser": 200000.0,
+            "vet": 150000.0,
+            "contractor": 300000.0,
+            "labour": 800000.0,
+            "insurance": 100000.0,
+            "loan_repayments": 400000.0,
+            "fuel": 120000.0,
+            "electricity": 80000.0
+          },
+          "total": 3650000.0
+        },
+        "profit": {
+          "net": 15000000.0,
+          "margin": 0.8043,
+          "margin_pct": 80.43
+        }
+      }
+    }
+  ]
+}

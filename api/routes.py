@@ -3,12 +3,13 @@
 from typing import Any
 
 from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from farm_functions.errors import unknown_calculation_envelope
 from farm_functions.loaders.json_loader import load_sample_inputs
-from farm_functions.registry import FUNCTIONS, list_functions
+from farm_functions.registry import CALCULATION_CATALOGUE, list_functions
 from farm_functions.runner import run_function
-from farm_functions.schemas import INPUT_MODELS
 
 router = APIRouter()
 
@@ -60,9 +61,10 @@ async def _read_payload(request: Request) -> dict[str, Any]:
 
 
 def _register_function_routes() -> None:
-    """One concrete POST per function so OpenAPI shows real input fields."""
-    for key, model in INPUT_MODELS.items():
-        spec = FUNCTIONS[key]
+    """One concrete POST per catalogue ID so OpenAPI shows real input fields."""
+    for spec in CALCULATION_CATALOGUE:
+        key = spec.id
+        model = spec.input_model
         example = _example_for_model(model)
         schema = model.model_json_schema()
 
@@ -116,3 +118,14 @@ def demo_pl_summary() -> dict[str, Any]:
 
 
 _register_function_routes()
+
+
+@router.api_route(
+    "/v1/functions/{name}/run",
+    methods=["POST"],
+    include_in_schema=False,
+)
+async def run_unknown_function(name: str, request: Request) -> JSONResponse:
+    """Catch-all for unknown calculation IDs. Catalogue routes are registered first."""
+    await _read_payload(request)
+    return JSONResponse(status_code=404, content=unknown_calculation_envelope(name))

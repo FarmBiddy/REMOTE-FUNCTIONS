@@ -21,14 +21,16 @@ Every call returns one of:
 }
 ```
 
-Missing inputs are listed with field name and unit. They are never guessed. Extra fields are ignored. Explicit `0` is valid; `null` and negatives are invalid. Full contract: [`docs/api-contract.md`](docs/api-contract.md).
+Missing inputs are listed with field name and unit. They are never guessed. Extra / unknown fields are rejected (`error`). Explicit `0` is valid; `null` and negatives are invalid. Full contract: [`docs/api-contract.md`](docs/api-contract.md).
 
 Units: **EUR**, **annual**. `profit.margin` returns a 0–1 `margin` and a `margin_pct`. Published money and margins use **banker's rounding** (round half to even; ADR-0005).
 
 ## Functions
 
-| Key | Required inputs | Formula |
-|-----|-----------------|---------|
+Keys in this table are **stable public calculation IDs** (not Python function names). Integrations must use these IDs. Catalogue: `farm_functions/registry.py`.
+
+| Calculation ID | Required inputs | Formula |
+|----------------|-----------------|---------|
 | `revenue.milk` | `milking_cows`, `litres_per_cow`, `milk_price` | cows × litres × price |
 | `revenue.schemes` | — | BISS + ACRES + other grants |
 | `revenue.other` | — | cattle + lamb + wool + other |

@@ -27,6 +27,11 @@ def test_financial_input_requires_milk_fields():
         FinancialInput.model_validate({"litres_per_cow": 5000, "milk_price": 0.40})
 
 
+def test_financial_input_rejects_unknown_fields():
+    with pytest.raises(ValidationError):
+        FinancialInput.model_validate({**SAMPLE_MILK, "random_field": 1})
+
+
 def test_financial_input_optional_fields_default_to_zero():
     parsed = FinancialInput.model_validate(SAMPLE_MILK)
     assert parsed.biss == 0

@@ -45,15 +45,19 @@ Structured result of a calculation.
 
 For the current annual P&L it matches the existing `pl.summary` JSON: `currency`, `period`, nested `revenue`, `costs`, and `profit`. No extra result fields.
 
-### Rounding
+### Rounding and numeric precision
+
+**Precision** (internal representation) and **rounding** (publication) are distinct. See ADR-0006 and ADR-0005.
 
 Published P&L outputs use **banker's rounding** (round half to even). See ADR-0005 and `farm_functions/rounding.py`.
 
-- Formulas in `farm_functions/calcs/` stay full precision.
-- Money (`EUR`) and `margin_pct`: 2 decimal places.
-- `profit.margin` (0–1 ratio): 4 decimal places.
-- Totals are rounded after the full-precision sum.
+- Validated inputs and formulas use Python `float` (IEEE-754). No intermediate business rounding in `farm_functions/calcs/`.
+- Money (`EUR`) and `margin_pct`: 2 decimal places at publication.
+- `profit.margin` (0–1 ratio): 4 decimal places at publication.
+- Aggregate totals are calculated from underlying values, then rounded once. Independently rounded line items are presentation values and need not re-sum to the published total; the published aggregate is authoritative.
 - Provenance values remain unrounded formula results.
+- Binary floating-point may not represent some decimals exactly (for example `0.1 + 0.2`); publish-time rounding defines the public money/margin contract for Phase 1.
+- Decimal / fixed-point migration is deferred until reassessment triggers in ADR-0006 apply.
 
 Do not use raw `round()` for published P&L figures.
 
@@ -70,7 +74,7 @@ CalculationProvenance
 └── unit
 ```
 
-Covered calculations: `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`.
+Covered calculations: `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin` (catalogue entries with `supports_provenance=True` in `farm_functions/registry.py`). `pl.summary` has no provenance entry.
 
 - Existing calculation functions remain **authoritative**. Provenance records how a result was produced; it does not replace or change the formula.
 - Provenance is for UI / Agent explainability. It is not natural-language prose.

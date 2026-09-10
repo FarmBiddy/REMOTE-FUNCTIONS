@@ -28,6 +28,9 @@ def test_list_functions():
 def test_run_unknown_function():
     response = client.post("/v1/functions/does.not.exist/run", json={})
     assert response.status_code == 404
+    body = response.json()
+    assert body["status"] == "error"
+    assert body["error"]["code"] == "unknown_calculation"
 
 
 def test_run_asks_for_missing_numbers():
@@ -39,6 +42,25 @@ def test_run_asks_for_missing_numbers():
     body = response.json()
     assert body["status"] == "needs_input"
     assert body["missing"] == [{"field": "milk_price", "unit": "EUR/litre"}]
+    assert body["error"]["code"] == "missing_required"
+    assert body["error"]["field"] == "milk_price"
+
+
+def test_run_rejects_unknown_fields():
+    response = client.post(
+        "/v1/functions/revenue.milk/run",
+        json={
+            "milking_cows": 100,
+            "litres_per_cow": 5000,
+            "milk_price": 0.40,
+            "random_field": 1,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "error"
+    assert body["error"]["code"] == "unknown_field"
+    assert body["error"]["field"] == "random_field"
 
 
 def test_demo_pl_summary():

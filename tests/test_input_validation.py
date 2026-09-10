@@ -55,15 +55,15 @@ def test_null_required_field_is_invalid():
         {"milking_cows": 100, "litres_per_cow": 5000, "milk_price": None},
     )
     assert result["status"] == "error"
-    assert result["details"] == [
-        {"field": "milk_price", "reason": "null is not a valid value"}
-    ]
+    assert result["error"]["code"] == "null_not_allowed"
+    assert result["error"]["field"] == "milk_price"
 
 
 def test_null_optional_field_is_invalid():
     result = run_function("pl.summary", {**SAMPLE_MILK, "feed": None})
     assert result["status"] == "error"
-    assert result["details"] == [{"field": "feed", "reason": "null is not a valid value"}]
+    assert result["error"]["code"] == "null_not_allowed"
+    assert result["error"]["field"] == "feed"
 
 
 def test_negative_cows_rejected():

@@ -21,6 +21,8 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Validation:** Codes `missing_required`, `unknown_field`, `null_not_allowed`, `negative_value`, `invalid_type`, `non_finite_value`, `unknown_calculation`. Branch on `error.code`, not message text.
 
+**Phase 1 validation principles (ADR-0008):** Validation checks whether inputs are **structurally usable** for the calculation (finite ≥ 0, presence, types). It does **not** judge whether farm numbers are normal, efficient, or commercially good. Financial inputs are **independent** except where a field is required to run a named calculation (e.g. milk trio for `revenue.milk`). No Phase 1 **maximums**. No calculation-engine warning / advisory / benchmark channel. Unusual-but-valid values (e.g. high contractor cost, `milk_price = 0`, zero cows with positive litres) remain `ok`.
+
 **Precision:** Internal `float` (ADR-0006); publish with banker's rounding (ADR-0005); published aggregate totals are authoritative; rounded lines need not re-sum exactly; provenance stays unrounded.
 
 **Provenance:** In-process for seven catalogue entries with `supports_provenance=True` (`pl.summary` excluded). Not on HTTP.
@@ -48,16 +50,18 @@ Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as 
 - Eight stable public calculation IDs via `CALCULATION_CATALOGUE`
 - Typed in-process domain (`FinancialInput` / `FinancialModel` / `FinancialResult` / `calculate_annual_pnl`)
 - Phase 1 Operating Surplus model: operating income, extensible operating-cost catalogue, separate finance (`loan_repayments`)
+- Phase 1 structural validation and input independence (ADR-0008): no advisory maxima or cross-field farm rules
 - Strict input validation, units metadata, structured errors
 - In-process provenance for seven calculations
 - Public HTTP discovery and execution (`/v1/functions`, `/run`, demo)
 - Reconciliation, golden/reference, error, precision, and alignment regression tests
-- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007)
+- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007), validation independence (ADR-0008)
 
 ### Not included (do not assume)
 
 - Principal vs interest split for `loan_repayments`
 - Full accounting net profit (depreciation, tax, drawings, livestock valuation, etc.)
+- Advisory validation, farm benchmarking, anomaly detection, KPIs, normal ranges, soft warnings
 - Scenarios / Base–Best–Worst / sensitivity / forecasting
 - Monthly cash flow, balance sheet, KPIs, valuation, optimisation
 - Persistence, database, authentication, farm identity

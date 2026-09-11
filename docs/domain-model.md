@@ -22,7 +22,7 @@ Normalized inputs required to perform a financial calculation.
 
 FinancialInput is independent of the underlying farm database schema.
 
-For the current annual P&L it is the complete `pl.summary` driver set (`PlSummaryInput` / `FinancialInput`): required milk fields, optional scheme/other/**operating cost** lines defaulting to `0`, plus optional `loan_repayments` (finance). Numeric drivers must be finite numbers **≥ 0**. There is no maximum unless metadata sets one; none are set today.
+For the current annual P&L it is the complete `pl.summary` driver set (`PlSummaryInput` / `FinancialInput`): required milk fields, optional scheme/other/**operating cost** lines defaulting to `0`, plus optional `loan_repayments` (finance). Numeric drivers must be finite numbers **≥ 0**. There is no maximum unless metadata sets one; **none are set** (ADR-0008). Inputs are independent except for fields required to run a named calculation; the engine does not enforce farm correlations or “realistic” ranges (ADR-0008).
 
 Operating cost lines are listed in `OPERATING_COST_CATEGORIES` (`farm_functions/calcs/costs.py`). Loan repayments are finance/debt service and are **not** operating costs (ADR-0007).
 

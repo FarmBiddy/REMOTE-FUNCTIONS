@@ -68,7 +68,17 @@ Authoritative catalogue: `OPERATING_COST_CATEGORIES` in `farm_functions/calcs/co
 
 Do **not** add loan repayments, tax, drawings, depreciation, or capex as operating costs.
 
-Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis. Published P&L outputs use banker's rounding via `farm_functions/rounding.py` (ADR-0005). Internal numeric type for Phase 1 is `float` with publish-time rounding only (ADR-0006); do not silently migrate formulas to `Decimal`.
+Never guess required missing inputs; the runner must return `needs_input`. Explicit `null` is invalid, not missing. Do not invent numeric maximums without a documented basis (ADR-0008: Phase 1 financial drivers have **no maximums**). Do not add cross-field farm-correlation rules or advisory “unusual value” rejection in this service (ADR-0008). Published P&L outputs use banker's rounding via `farm_functions/rounding.py` (ADR-0005). Internal numeric type for Phase 1 is `float` with publish-time rounding only (ADR-0006); do not silently migrate formulas to `Decimal`.
+
+## Phase 1 validation vs advisory (ADR-0008)
+
+| In this service | Not in this service (later / App Platform) |
+|-----------------|--------------------------------------------|
+| Finite ≥ 0 numbers; required/optional presence; null / type / unknown field errors | Farm benchmarking, “normal” ranges, KPIs |
+| Independent inputs (except fields required to *run* a calculation) | Cross-field inference (cows → feed, etc.) |
+| Explicit zero always valid for non-negative drivers | Soft warnings / anomaly alerts |
+
+Characterisation: `tests/test_validation_independence.py`.
 
 ## Adding or changing API endpoints
 

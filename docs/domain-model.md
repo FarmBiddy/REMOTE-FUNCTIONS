@@ -103,6 +103,25 @@ CalculationProvenance
 - Existing calculation functions remain **authoritative**. Provenance records how a result was produced; it does not replace or reimplement the formula.
 - Provenance is structured evidence for UI / Agent presentation. It is not natural-language prose.
 
+### Simulation (input overrides)
+
+In-process simulation applies **explicit** caller-supplied changes to a **copy** of `FinancialInput` and reruns the canonical annual model (ADR-0011). Implementation: `farm_functions/simulation.py` (`simulate_annual_pnl`).
+
+```text
+base FinancialInput
++ explicit overrides
+→ validated FinancialInput (copy; base unchanged)
+→ calculate_annual_pnl (base) and calculate_annual_pnl (simulated)
+→ SimulationResult { base, simulated, overrides_applied }
+```
+
+- Simulation contains **no** financial formulas — only merge + `calculate_annual_pnl`.
+- Override keys must be existing `FinancialInput` fields; unknown keys are rejected. Merged values use the same B3 validation as normal inputs.
+- Only named fields change (ADR-0008 independence). Multiple overrides are allowed; no cross-field inference.
+- Returns base and simulated `FinancialResult` for comparison. No engine-side deltas or favourable/unfavourable labels.
+- Not scenarios (Base/Best/Worst), forecasting, sensitivity ranges, or Monte Carlo. A later B8 may reuse this primitive for named assumption packages.
+- **Not on HTTP** in Phase 1. Provenance for a simulated run: call `explain_annual_pnl` on the simulated `FinancialInput` (ADR-0010).
+
 ### FinancialModel
 
 In this service, an **in-memory envelope** only:

@@ -58,13 +58,17 @@ On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0
 
 ### Adding an operating cost category (Phase 1)
 
-Authoritative catalogue: `OPERATING_COST_CATEGORIES` in `farm_functions/calcs/costs.py` (ADR-0007). To add a line:
+Authoritative catalogue: `OPERATING_COST_CATEGORIES` in `farm_functions/calcs/costs.py` (ADR-0007). Review **every** location below when adding a line (do not invent a parallel catalogue).
 
-1. Append the name to `OPERATING_COST_CATEGORIES` and to `total_costs(...)`.
-2. Add an optional field on `TotalCostsInput` and a matching `INPUT_FIELD_METADATA` row.
-3. Add the field on `CostLines` in `farm_functions/domain.py` and pass it through `pl_summary`.
-4. Ensure the JSON loader picks it up via `COST_KEYS` / `OPERATING_COST_CATEGORIES`.
-5. Update golden/reference cases and tests.
+| Step | Location | What to update |
+|------|----------|----------------|
+| 1 | `farm_functions/calcs/costs.py` | Append to `OPERATING_COST_CATEGORIES` **and** `total_costs(...)` (signature + sum) |
+| 2 | `farm_functions/schemas.py` | Optional field on `TotalCostsInput` + matching `INPUT_FIELD_METADATA` row |
+| 3 | `farm_functions/domain.py` | Field on `CostLines` (typed `costs.lines`) |
+| 4 | `farm_functions/calcs/summary.py` | `pl_summary(...)` parameter **and** entry in the local `cost_lines` dict |
+| 5 | Auto if 1–2 done | Loader (`COST_KEYS` = catalogue), provenance (`costs.total` inputs/formula), registry `costs.total` optionals (from `TotalCostsInput`) |
+| 6 | Fixtures / demo | `sample_data/farm.json` nested `costs`; `api/routes.py` `_EXAMPLE_VALUES`; `test-data/golden/annual_pnl_cases.json` `expected.costs.lines` (+ inputs if non-zero) |
+| 7 | Tests | Structural: `tests/test_operating_cost_extension_sync.py`. Behavioural (B5): `tests/test_operating_surplus.py`, `tests/test_provenance.py` |
 
 Do **not** add loan repayments, tax, drawings, depreciation, or capex as operating costs.
 

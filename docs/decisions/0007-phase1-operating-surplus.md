@@ -43,4 +43,5 @@ average EUR/litre. B2 implements those rules in the calculation engine.
 ## Related
 
 - `docs/api-contract.md`, `docs/domain-model.md`
+- ADR-0009 (canonical `pl.summary` Operating Statement; naming Option A reaffirmed)
 - `farm_functions/calcs/costs.py`, `farm_functions/calcs/summary.py`, `farm_functions/domain.py`

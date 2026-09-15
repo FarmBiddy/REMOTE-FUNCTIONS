@@ -158,8 +158,8 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
     CalculationDefinition(
         id="pl.summary",
         description=(
-            "Full annual P&L: operating income, operating costs, Operating Surplus, "
-            "and separate finance (loan repayments)."
+            "Canonical Phase 1 annual Operating Statement: operating income, "
+            "operating costs, Operating Surplus, and separate finance (loan repayments)."
         ),
         input_model=PlSummaryInput,
         handler=pl_summary,

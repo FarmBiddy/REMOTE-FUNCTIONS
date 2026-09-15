@@ -38,9 +38,9 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | `costs.total` | — | sum of operating cost lines (missing = 0; excludes loans) |
 | `profit.net` | `revenue`, `costs` | Operating Surplus = revenue − operating costs |
 | `profit.margin` | `revenue`, `costs` | Operating Surplus / revenue |
-| `pl.summary` | milk fields | full P&L + `finance.loan_repayments` |
+| `pl.summary` | milk fields | **canonical** annual Operating Statement + `finance.loan_repayments` |
 
-`profit.net` and `profit.margin` expect **already totalled** operating income and operating costs. Use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
+`pl.summary` is the Phase 1 canonical annual Operating Statement (ADR-0009). Atomic IDs are supporting schedules that must reconcile to it. `profit.net` and `profit.margin` keep those public IDs (Option A) and expect **already totalled** operating income and operating costs — use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
 
 ## Sample farm (`sample_data/farm.json`)
 

@@ -9,12 +9,14 @@ FinancialModel
     ↓
 FinancialInput
     ↓
-existing calculation functions (`pl.summary` and the atomic formulas)
+canonical annual Operating Statement (`pl.summary`) and atomic schedule formulas
     ↓
 FinancialResult
 ```
 
 Python types: `farm_functions/domain.py`. They wrap current behaviour. They are **not** the HTTP surface.
+
+`pl.summary` is the Phase 1 **canonical annual Operating Statement** (ADR-0009): the only public calculation that returns the full `{currency, period, revenue, costs, profit, finance}` view. Atomic catalogue IDs are supporting schedules; for the same inputs their published results must reconcile with `pl.summary`. `calculate_annual_pnl` wraps the same composition and does not introduce alternate maths.
 
 ### FinancialInput
 
@@ -49,11 +51,11 @@ For the current annual P&L it matches `pl.summary` JSON: `currency`, `period`, n
 
 - `revenue` — operating income split (milk, schemes, other, total)
 - `costs` — operating cost `lines` + `total` (excludes loan repayments)
-- `profit.net` — Phase 1 **Operating Surplus** (operating income − operating costs); public ID unchanged
-- `profit.margin` / `margin_pct` — Operating Surplus margin
+- `profit.net` — Phase 1 **Operating Surplus** (operating income − operating costs); public ID kept (naming Option A, ADR-0009)
+- `profit.margin` / `margin_pct` — Operating Surplus margin (public ID kept)
 - `finance.loan_repayments` — debt service reported separately; does not reduce Operating Surplus
 
-Phase 1 is a basic annual operating P&L, not full accounting net profit (no depreciation, tax, drawings, livestock valuation, etc.).
+Phase 1 is a basic annual Operating Statement, not full accounting net profit (no depreciation, tax, drawings, livestock valuation, etc.).
 
 ### Rounding and numeric precision
 

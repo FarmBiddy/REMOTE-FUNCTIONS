@@ -17,7 +17,9 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit, finance}` with `period:"annual"`.
 
-**Phase 1 financial meaning (ADR-0007):** `profit.net` / `profit.margin` are **Operating Surplus** / Operating Surplus margin (operating income − operating costs). `costs.total` and `costs.lines` are **operating costs only**. `loan_repayments` is reported under `finance` and does **not** reduce Operating Surplus. This is not full accounting net profit.
+**Canonical annual view (ADR-0009):** `pl.summary` is the Phase 1 **canonical annual Operating Statement**. Atomic catalogue IDs remain supporting schedules and must reconcile to `pl.summary` for the same inputs (published aggregates authoritative per ADR-0005). In-process `calculate_annual_pnl` wraps the same composition.
+
+**Phase 1 financial meaning (ADR-0007; naming Option A, ADR-0009):** Public IDs `profit.net` / `profit.margin` are kept for API compatibility; their meaning is **Operating Surplus** / Operating Surplus margin (operating income − operating costs). `costs.total` and `costs.lines` are **operating costs only**. `loan_repayments` is reported under `finance` and does **not** reduce Operating Surplus. This is not full accounting net profit.
 
 **Validation:** Codes `missing_required`, `unknown_field`, `null_not_allowed`, `negative_value`, `invalid_type`, `non_finite_value`, `unknown_calculation`. Branch on `error.code`, not message text.
 
@@ -50,12 +52,13 @@ Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as 
 - Eight stable public calculation IDs via `CALCULATION_CATALOGUE`
 - Typed in-process domain (`FinancialInput` / `FinancialModel` / `FinancialResult` / `calculate_annual_pnl`)
 - Phase 1 Operating Surplus model: operating income, extensible operating-cost catalogue, separate finance (`loan_repayments`)
+- `pl.summary` as the canonical annual Operating Statement (ADR-0009); atomic IDs as reconciling schedules
 - Phase 1 structural validation and input independence (ADR-0008): no advisory maxima or cross-field farm rules
 - Strict input validation, units metadata, structured errors
 - In-process provenance for seven calculations
 - Public HTTP discovery and execution (`/v1/functions`, `/run`, demo)
 - Reconciliation, golden/reference, error, precision, and alignment regression tests
-- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007), validation independence (ADR-0008)
+- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007), validation independence (ADR-0008), canonical Operating Statement (ADR-0009)
 
 ### Not included (do not assume)
 

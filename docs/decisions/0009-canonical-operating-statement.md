@@ -43,5 +43,6 @@ reaffirms naming Option A so integrations do not treat B4 as a model redesign.
 ## Related
 
 - ADR-0005 (banker's rounding), ADR-0007 (Operating Surplus / finance)
+- ADR-0010 (Phase 1 provenance / explainability assembly)
 - `docs/api-contract.md`, `docs/domain-model.md`, README
 - `farm_functions/calcs/summary.py`, `farm_functions/domain.py`, `farm_functions/registry.py`

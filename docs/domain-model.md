@@ -75,22 +75,33 @@ Do not use raw `round()` for published P&L figures.
 
 ### Calculation provenance
 
-Structured explainability for the existing annual P&L calculations lives in `farm_functions/provenance.py` (`explain_annual_pnl`).
+Structured explainability for the existing annual P&L calculations lives in `farm_functions/provenance.py` (`explain_annual_pnl`). See ADR-0010.
 
 ```text
 CalculationProvenance
-├── calculation
-├── value
-├── formula
-├── inputs_used   # name, value, unit for each operand
-└── unit
+├── calculation      # public calculation ID
+├── value            # unrounded formula result
+├── formula          # operation metadata (not a second calculator)
+├── inputs_used      # name, value, unit for each operand
+└── unit             # e.g. EUR/year or ratio
 ```
 
-Covered calculations: `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin` (catalogue entries with `supports_provenance=True` in `farm_functions/registry.py`). `pl.summary` has no provenance entry.
+#### Explainability assembly (Phase 1)
 
-- Existing calculation functions remain **authoritative**. Provenance records how a result was produced; it does not replace or change the formula.
-- Provenance is for UI / Agent explainability. It is not natural-language prose.
-- Provenance is **not** added to the HTTP `pl.summary` (or other `/v1/functions/.../run`) response. Call `explain_annual_pnl` in-process.
+1. **Calculation evidence** — Call `explain_annual_pnl` for the seven underlying calculations with `supports_provenance=True`:
+   `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`.
+   Each record already provides calculation ID, inputs used, formula/operation, calculated value, and unit. Do not change that shape for Phase 1.
+2. **Canonical Operating Statement** — `pl.summary` is the authoritative combined annual view (ADR-0009). It does **not** have a separate duplicated provenance object (`supports_provenance=False`). Explain its financial calculations by using the seven component provenance records for the same drivers.
+3. **Finance** — Read `loan_repayments` from `pl.summary` / `FinancialResult.finance`. It is a finance/debt passthrough on the statement: it appears in the annual result, stays separate from operating costs, and is **not** an input to `profit.net` or `profit.margin` provenance (or to Operating Surplus maths).
+4. **Financial labels** — Human-readable meaning comes from catalogue `description` and documented semantics (ADR-0007 / ADR-0009), not from renaming IDs:
+   - `profit.net` → **Operating Surplus**
+   - `profit.margin` → **Operating Surplus Margin**
+5. **Precision** — Provenance values may be **unrounded** calculation evidence. Published aggregate totals remain authoritative (ADR-0005 / ADR-0006). Do not treat independently rounded published lines as a second source of truth that must re-sum to provenance.
+6. **HTTP boundary** — Phase 1 provenance is **in-process only**. It is not exposed on `/v1/functions/.../run` and there is no `/explain` endpoint. A future API/platform/agent may consume or present this evidence separately.
+7. **Engine vs agent** — The financial engine supplies deterministic calculation facts. Natural-language commentary, advice, or conversational explanation belongs to a future agent/platform layer — not this service.
+
+- Existing calculation functions remain **authoritative**. Provenance records how a result was produced; it does not replace or reimplement the formula.
+- Provenance is structured evidence for UI / Agent presentation. It is not natural-language prose.
 
 ### FinancialModel
 

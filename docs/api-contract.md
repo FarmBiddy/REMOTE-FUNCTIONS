@@ -27,7 +27,7 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Precision:** Internal `float` (ADR-0006); publish with banker's rounding (ADR-0005); published aggregate totals are authoritative; rounded lines need not re-sum exactly; provenance stays unrounded.
 
-**Provenance:** In-process for seven catalogue entries with `supports_provenance=True` (`pl.summary` excluded). Not on HTTP.
+**Provenance (ADR-0010):** In-process `explain_annual_pnl` for the seven catalogue entries with `supports_provenance=True`. `pl.summary` has no separate provenance object — explain it via those seven component records plus `finance` from the statement result. Human labels for `profit.net` / `profit.margin` come from catalogue / ADR-0007 (Operating Surplus / margin). Provenance stays unrounded; published aggregates remain authoritative. **Not on HTTP** (no Phase 1 `/explain` endpoint). Natural-language explanation belongs to a future agent/platform layer.
 
 **Out of scope here:** persistence, authentication, scenarios, forecasting, monthly cashflow, KPIs, multi-currency, multi-period, AI-generated calculations, Supabase/farm CRUD.
 
@@ -38,7 +38,7 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 | HTTP / runner | Flat per-calculation field dict |
 | Domain | `FinancialModel` envelope (`period`, `currency`, `inputs: FinancialInput`) for in-process annual P&L only |
 | Discovery | `key`, `description`, `required`, `optional` — no units (by design) |
-| Provenance | Unrounded formula values; published API results are rounded |
+| Provenance | Unrounded formula values via `explain_annual_pnl`; not on HTTP; `pl.summary` explained by components + `finance` (ADR-0010) |
 
 Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as a full unit dictionary.
 
@@ -55,10 +55,10 @@ Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as 
 - `pl.summary` as the canonical annual Operating Statement (ADR-0009); atomic IDs as reconciling schedules
 - Phase 1 structural validation and input independence (ADR-0008): no advisory maxima or cross-field farm rules
 - Strict input validation, units metadata, structured errors
-- In-process provenance for seven calculations
+- In-process provenance for seven calculations with documented explainability assembly (ADR-0010)
 - Public HTTP discovery and execution (`/v1/functions`, `/run`, demo)
 - Reconciliation, golden/reference, error, precision, and alignment regression tests
-- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007), validation independence (ADR-0008), canonical Operating Statement (ADR-0009)
+- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007), validation independence (ADR-0008), canonical Operating Statement (ADR-0009), provenance boundary (ADR-0010)
 
 ### Not included (do not assume)
 

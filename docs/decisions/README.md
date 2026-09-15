@@ -13,6 +13,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0007](0007-phase1-operating-surplus.md) | Phase 1 Operating Surplus and finance separation |
 | [0008](0008-phase1-validation-independence.md) | Phase 1 structural validation and input independence |
 | [0009](0009-canonical-operating-statement.md) | Canonical Phase 1 annual Operating Statement (`pl.summary`) |
+| [0010](0010-phase1-provenance-boundary.md) | Phase 1 calculation provenance / explainability boundary |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

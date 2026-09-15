@@ -94,6 +94,8 @@ def test_provenance_inputs_used_and_formulas():
     costs = provenance["costs.total"]
     assert costs.formula == " + ".join(OPERATING_COST_CATEGORIES)
     assert [item.name for item in costs.inputs_used] == list(OPERATING_COST_CATEGORIES)
+    # Provenance is unrounded; listed cost inputs must sum to the explained value (B5.2).
+    assert sum(item.value for item in costs.inputs_used) == costs.value
 
     profit = provenance["profit.net"]
     assert "operating_income" in profit.formula
@@ -136,7 +138,10 @@ def test_demo_operating_surplus_provenance_excludes_loans():
 
     total = provenance["revenue.total"]
     assert sum(item.value for item in total.inputs_used) == total.value == 240_000
-    assert provenance["costs.total"].value == 163_000
+
+    costs = provenance["costs.total"]
+    assert costs.value == 163_000
+    assert sum(item.value for item in costs.inputs_used) == costs.value
 
 
 def test_explain_annual_pnl_accepts_financial_model():

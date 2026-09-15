@@ -119,8 +119,28 @@ base FinancialInput
 - Override keys must be existing `FinancialInput` fields; unknown keys are rejected. Merged values use the same B3 validation as normal inputs.
 - Only named fields change (ADR-0008 independence). Multiple overrides are allowed; no cross-field inference.
 - Returns base and simulated `FinancialResult` for comparison. No engine-side deltas or favourable/unfavourable labels.
-- Not scenarios (Base/Best/Worst), forecasting, sensitivity ranges, or Monte Carlo. A later B8 may reuse this primitive for named assumption packages.
+- Not forecasting, sensitivity ranges, or Monte Carlo. Named assumption packages are **scenarios** (ADR-0012) built on this primitive.
 - **Not on HTTP** in Phase 1. Provenance for a simulated run: call `explain_annual_pnl` on the simulated `FinancialInput` (ADR-0010).
+
+### Scenarios (named assumption packages)
+
+In-process scenarios package explicit overrides under a caller-defined name and execute them through B7 simulation (ADR-0012). Implementation: `farm_functions/scenarios.py` (`run_scenario`, `run_scenarios`).
+
+```text
+ScenarioDefinition { name, overrides }
++ base FinancialInput
+→ SimulationRequest → simulate_annual_pnl (B7)
+→ ScenarioResult { name, overrides_applied, result }
+
+run_scenarios → ScenarioBundle { base, scenarios[] }  # caller order; independent runs
+```
+
+- A scenario is **name + assumptions**, not a forecast. `milk_price = 0.35` means calculate **if** milk were €0.35/L.
+- B8 owns non-blank name validation only. Financial override validation remains B7 / `FinancialInput`.
+- Every scenario starts from the original base (Scenario B does not inherit Scenario A).
+- Duplicate names allowed (positional). No Base/Best/Worst engine types, ranking, deltas, or persistence.
+- Empty overrides are valid (named current-position case).
+- **Not on HTTP** in Phase 1. Persistence of scenario libraries belongs to the App Platform (ADR-0003).
 
 ### FinancialModel
 
@@ -138,10 +158,7 @@ The App Platform may persist a farm financial model. That persistence does not l
 
 ### Scenario
 
-A set of overrides applied to a FinancialModel without modifying
-the underlying model.
-
-Scenarios are not implemented in this service. If added later, calculations stay ephemeral here; save/commit stays on the App Platform.
+See **Scenarios (named assumption packages)** above. Ephemeral in-process definitions only; App Platform owns save/commit of scenario libraries (ADR-0003).
 
 ## Ownership
 

@@ -18,12 +18,22 @@ from farm_functions.simulation import (
     SimulationResult,
     simulate_annual_pnl,
 )
+from farm_functions.scenarios import (
+    ScenarioBundle,
+    ScenarioDefinition,
+    ScenarioResult,
+    run_scenario,
+    run_scenarios,
+)
 
 __all__ = [
     "CalculationProvenance",
     "FinancialInput",
     "FinancialModel",
     "FinancialResult",
+    "ScenarioBundle",
+    "ScenarioDefinition",
+    "ScenarioResult",
     "SimulationRequest",
     "SimulationResult",
     "calculate_annual_pnl",
@@ -31,5 +41,7 @@ __all__ = [
     "list_functions",
     "list_input_metadata",
     "run_function",
+    "run_scenario",
+    "run_scenarios",
     "simulate_annual_pnl",
 ]

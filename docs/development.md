@@ -96,6 +96,7 @@ Characterisation: `tests/test_validation_independence.py`.
 - Canonical annual P&L **golden / reference cases** live in `test-data/golden/` and are exercised by `tests/test_golden_reference_cases.py`. They lock published `pl.summary` / `FinancialResult` outputs (including Phase 1 Operating Surplus and `finance`, ADR-0007). Changing golden `expected` values must be deliberate and reviewed.
 - Operating Statement **authority / reconciliation** characterisation lives in `tests/test_operating_statement_reconciliation.py` (ADR-0009): `pl.summary` as canonical annual view; published atomic schedules match corresponding summary fields.
 - Annual **input-override simulation** characterisation lives in `tests/test_simulation.py` (ADR-0011): explicit overrides + `calculate_annual_pnl`; not a second formula suite.
+- **Named scenario** characterisation lives in `tests/test_scenarios.py` (ADR-0012): packaging/orchestration via B7; independence and name validation — not a second financial suite.
 - Structured calculation **error codes** (`farm_functions/errors.py`, `tests/test_error_contract.py`) are the machine-readable failure contract for `run_function` / HTTP. Branch on `error.code`, not message text.
 - Numeric **precision policy** characterisation lives in `tests/test_precision_policy.py` (ADR-0006): float internally, banker's rounding at publication, authoritative aggregate totals.
 - Domain / API **alignment** regressions live in `tests/test_domain_api_alignment.py` (catalogue IDs ↔ discovery ↔ OpenAPI required fields).

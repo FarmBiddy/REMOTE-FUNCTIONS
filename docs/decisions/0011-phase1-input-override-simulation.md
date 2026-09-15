@@ -45,4 +45,5 @@ remains on the App Platform.
 
 - `docs/domain-model.md`, `docs/api-contract.md`
 - ADR-0003, ADR-0007, ADR-0008, ADR-0009, ADR-0010
+- ADR-0012 (named scenarios reuse this primitive)
 - `farm_functions/simulation.py`, `farm_functions/domain.py`

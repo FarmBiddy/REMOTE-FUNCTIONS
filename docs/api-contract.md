@@ -29,9 +29,11 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Provenance (ADR-0010):** In-process `explain_annual_pnl` for the seven catalogue entries with `supports_provenance=True`. `pl.summary` has no separate provenance object — explain it via those seven component records plus `finance` from the statement result. Human labels for `profit.net` / `profit.margin` come from catalogue / ADR-0007 (Operating Surplus / margin). Provenance stays unrounded; published aggregates remain authoritative. **Not on HTTP** (no Phase 1 `/explain` endpoint). Natural-language explanation belongs to a future agent/platform layer.
 
-**Simulation (ADR-0011):** In-process `simulate_annual_pnl` — explicit overrides on a copy of `FinancialInput`, then canonical `calculate_annual_pnl` for base and simulated results. No second formulas, no engine-side deltas, no scenarios/forecasting. **Not on HTTP** in Phase 1.
+**Simulation (ADR-0011):** In-process `simulate_annual_pnl` — explicit overrides on a copy of `FinancialInput`, then canonical `calculate_annual_pnl` for base and simulated results. No second formulas, no engine-side deltas, no forecasting. **Not on HTTP** in Phase 1.
 
-**Out of scope here:** persistence, authentication, scenarios, forecasting, monthly cashflow, KPIs, multi-currency, multi-period, AI-generated calculations, Supabase/farm CRUD.
+**Scenarios (ADR-0012):** In-process `run_scenario` / `run_scenarios` — caller-defined name + overrides executed through B7. Independent runs from the same base; no ranking, deltas, Base/Best/Worst semantics, or persistence. **Not on HTTP** in Phase 1.
+
+**Out of scope here:** persistence, authentication, forecasting, monthly cashflow, KPIs, multi-currency, multi-period, AI-generated calculations, Supabase/farm CRUD.
 
 ### Intentional interface differences
 
@@ -42,6 +44,7 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 | Discovery | `key`, `description`, `required`, `optional` — no units (by design) |
 | Provenance | Unrounded formula values via `explain_annual_pnl`; not on HTTP; `pl.summary` explained by components + `finance` (ADR-0010) |
 | Simulation | In-process `simulate_annual_pnl` only (ADR-0011); not on HTTP |
+| Scenarios | In-process named packages via B7 (ADR-0012); not on HTTP |
 
 Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as a full unit dictionary.
 
@@ -59,22 +62,23 @@ Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as 
 - Phase 1 structural validation and input independence (ADR-0008): no advisory maxima or cross-field farm rules
 - Strict input validation, units metadata, structured errors
 - In-process provenance for seven calculations with documented explainability assembly (ADR-0010)
-- In-process annual input-override simulation (ADR-0011); not scenarios
+- In-process annual input-override simulation (ADR-0011)
+- In-process caller-defined named scenarios via B7 (ADR-0012); ephemeral; not persisted here
 - Public HTTP discovery and execution (`/v1/functions`, `/run`, demo)
 - Reconciliation, golden/reference, error, precision, and alignment regression tests
-- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007), validation independence (ADR-0008), canonical Operating Statement (ADR-0009), provenance boundary (ADR-0010), simulation (ADR-0011)
+- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007), validation independence (ADR-0008), canonical Operating Statement (ADR-0009), provenance boundary (ADR-0010), simulation (ADR-0011), scenarios (ADR-0012)
 
 ### Not included (do not assume)
 
 - Principal vs interest split for `loan_repayments`
 - Full accounting net profit (depreciation, tax, drawings, livestock valuation, etc.)
 - Advisory validation, farm benchmarking, anomaly detection, KPIs, normal ranges, soft warnings
-- Scenarios / Base–Best–Worst / sensitivity / forecasting (B7 simulation is explicit overrides only; not named scenarios)
+- Scenarios as persisted libraries / Base–Best–Worst engine types / sensitivity / forecasting (in-process named packages exist via ADR-0012; persistence and judgement stay elsewhere)
 - Monthly cash flow, balance sheet, KPIs, valuation, optimisation
 - Persistence, database, authentication, farm identity
 - Accounting / banking / CRM integrations
 - Multi-currency, multi-period
-- HTTP simulation / provenance endpoints or HTTP `FinancialModel` as the request body
+- HTTP simulation / scenario / provenance endpoints or HTTP `FinancialModel` as the request body
 - AI-generated financial calculations / broader platform orchestration
 
 ## Calculation identifiers

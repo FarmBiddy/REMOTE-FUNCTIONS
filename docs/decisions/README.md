@@ -15,6 +15,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0009](0009-canonical-operating-statement.md) | Canonical Phase 1 annual Operating Statement (`pl.summary`) |
 | [0010](0010-phase1-provenance-boundary.md) | Phase 1 calculation provenance / explainability boundary |
 | [0011](0011-phase1-input-override-simulation.md) | Phase 1 annual input-override simulation |
+| [0012](0012-phase1-named-scenarios.md) | Phase 1 caller-defined named financial scenarios |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

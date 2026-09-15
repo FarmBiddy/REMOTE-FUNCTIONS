@@ -30,6 +30,10 @@ Operating cost lines are listed in `OPERATING_COST_CATEGORIES` (`farm_functions/
 
 Input metadata (name, type, required, minimum, maximum, unit, description) lives in `INPUT_FIELD_METADATA` in `farm_functions/schemas.py`. Units are taken from that list via `FIELD_UNITS` (ADR-0004).
 
+**Sample JSON → flat drivers:** Demo [`sample_data/farm.json`](../sample_data/farm.json) is nested (`revenue` / `costs` / `finance`). `farm_functions.loaders.json_loader` flattens it to the flat field dict expected by `FinancialInput` and HTTP/`run_function`. Do not treat the nested sample shape as the HTTP body contract.
+
+**Financial labels:** Human-readable names for public calculation IDs come from `CALCULATION_CATALOGUE` `description` (discovery `description`). Example: `profit.net` → Operating Surplus (ADR-0007). See `docs/api-contract.md` Phase 1 public surface freeze.
+
 ### Zero, missing, null, and invalid
 
 | Case | Behaviour |

@@ -23,6 +23,8 @@ Every call returns one of:
 
 Missing inputs are listed with field name and unit. They are never guessed. Extra / unknown fields are rejected (`error`). Explicit `0` is valid; `null` and negatives are invalid. Full contract: [`docs/api-contract.md`](docs/api-contract.md).
 
+**Phase 1 public surface (freeze):** HTTP exposes the eight calculation IDs above. In-process-only capabilities — `calculate_annual_pnl`, `explain_annual_pnl`, `simulate_annual_pnl`, `run_scenario` / `run_scenarios` — are documented in [`docs/api-contract.md`](docs/api-contract.md) (Phase 1 public surface). Catalogue `description` is the human-readable label source (`profit.net` = Operating Surplus). HTTP/runner failures use structured `error.code`; in-process domain/sim/scenarios may raise Pydantic/`ValueError` (intentional Phase 1 split).
+
 Units: **EUR**, **annual**. `profit.margin` returns a 0–1 `margin` and a `margin_pct`. Published money and margins use **banker's rounding** (round half to even; ADR-0005).
 
 ## Functions

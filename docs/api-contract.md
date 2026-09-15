@@ -48,6 +48,72 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as a full unit dictionary.
 
+## Phase 1 public surface (freeze)
+
+This section freezes what App Platform integrations may depend on after Workstream B (B1–B8). It invents no new behaviour.
+
+### HTTP calculation surface
+
+Supported endpoints:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/livez`, `/health` | Liveness |
+| `GET` | `/v1/functions` | Discovery (`key`, `description`, `required`, `optional`) |
+| `POST` | `/v1/functions/<calculation_id>/run` | Run one registered calculation |
+| `POST` | `/v1/demo/pl-summary` | Demo: `pl.summary` on sample farm |
+
+**Eight registered calculation IDs** (`CALCULATION_CATALOGUE` only):
+
+`revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`
+
+HTTP request/response envelopes use statuses `ok` / `needs_input` / `error`. On failure, branch on structured `error.code` (see Validation above), not message text.
+
+### In-process Python surface
+
+Package exports (`farm_functions`):
+
+| Symbol | Role | On HTTP? |
+|--------|------|----------|
+| `run_function` / `list_functions` / `list_input_metadata` | Same catalogue as HTTP | HTTP uses these internally |
+| `calculate_annual_pnl` | Canonical annual `FinancialResult` from `FinancialModel` | No — in-process only |
+| `explain_annual_pnl` | Deterministic calculation provenance (ADR-0010) | No — in-process only |
+| `simulate_annual_pnl` | Explicit input-override simulation (ADR-0011) | No — in-process only |
+| `run_scenario` / `run_scenarios` | Named scenario packages via B7 (ADR-0012) | No — in-process only |
+| `FinancialInput` / `FinancialModel` / `FinancialResult` | Typed annual P&L domain | No — not the HTTP body shape |
+| `SimulationRequest` / `SimulationResult` | B7 contracts | No |
+| `ScenarioDefinition` / `ScenarioResult` / `ScenarioBundle` | B8 contracts | No |
+| `CalculationProvenance` | Provenance record type | No |
+
+Phase 1 does **not** expose HTTP endpoints for provenance, simulation, or scenarios.
+
+### Stable IDs and financial labels
+
+- Calculation **IDs** are stable technical identifiers (including `profit.net` and `profit.margin`).
+- Human-readable financial **labels** come from the catalogue `description` on each `CALCULATION_CATALOGUE` entry (also returned by discovery as `description`). That is the authoritative label source — do not invent a second label dictionary.
+- Phase 1 meaning: `profit.net` = **Operating Surplus**; `profit.margin` = **Operating Surplus Margin** (ADR-0007). These IDs are not full accounting net profit.
+
+### Error boundary (intentional)
+
+| Path | How failures appear |
+|------|---------------------|
+| HTTP / `run_function` | Structured envelope: `needs_input` or `error` with stable `error.code` |
+| In-process domain (`FinancialInput` / `FinancialModel`), simulation, scenarios | Python exceptions: typically Pydantic `ValidationError` and/or plain `ValueError` (e.g. unknown override field, blank scenario name) |
+
+This split is **intentional** for Phase 1. There is no unified structured-error framework for in-process B7/B8 calls. A future HTTP exposure of simulation/scenarios may introduce an adapter; that is out of this freeze.
+
+### Sample farm JSON vs flat drivers
+
+Demo sample [`sample_data/farm.json`](../sample_data/farm.json) is **nested** (`revenue` / `costs` / `finance`). The loader flattens it:
+
+```text
+nested sample JSON
+→ farm_functions.loaders.json_loader.farm_to_inputs / load_sample_inputs
+→ flat FinancialInput / runner field dict
+```
+
+HTTP calculation bodies and `FinancialInput` use the **flat** field set. The sample is not restructured; the loader is the bridge.
+
 ## Current Financial Domain Contract Scope
 
 **Active development branch:** `financial-engine` (Workstream B). Phase 1 Operating Surplus semantics are defined in ADR-0007.

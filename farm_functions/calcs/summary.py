@@ -2,7 +2,7 @@
 
 from farm_functions.calcs.costs import OPERATING_COST_CATEGORIES, total_costs
 from farm_functions.calcs.profit import net_profit, profit_margin, profit_margin_pct
-from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue, total_revenue
+from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue
 from farm_functions.rounding import round_margin_pct, round_margin_ratio, round_money
 
 
@@ -36,18 +36,7 @@ def pl_summary(
     milk = milk_revenue(milking_cows, litres_per_cow, milk_price)
     schemes = scheme_revenue(biss, acres, other_grants)
     other_income = other_revenue(cattle_sales, lamb_sales, wool, other)
-    revenue = total_revenue(
-        milking_cows,
-        litres_per_cow,
-        milk_price,
-        biss=biss,
-        acres=acres,
-        other_grants=other_grants,
-        cattle_sales=cattle_sales,
-        lamb_sales=lamb_sales,
-        wool=wool,
-        other=other,
-    )
+    revenue = milk + schemes + other_income
     cost_lines = {
         "feed": float(feed),
         "fertiliser": float(fertiliser),

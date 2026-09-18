@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict
 
-from farm_functions.calcs.costs import COST_CATEGORIES, total_costs
+from farm_functions.calcs.costs import OPERATING_COST_CATEGORIES, total_costs
 from farm_functions.calcs.profit import net_profit, profit_margin
 from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue, total_revenue
 from farm_functions.domain import FinancialInput, FinancialModel
@@ -72,7 +72,7 @@ def explain_annual_pnl(source: FinancialInput | FinancialModel) -> dict[str, Cal
         wool=data["wool"],
         other=data["other"],
     )
-    cost_kwargs = {name: data[name] for name in COST_CATEGORIES}
+    cost_kwargs = {name: data[name] for name in OPERATING_COST_CATEGORIES}
     costs = total_costs(**cost_kwargs)
     profit = net_profit(revenue, costs)
     margin = profit_margin(revenue, costs)
@@ -126,14 +126,14 @@ def explain_annual_pnl(source: FinancialInput | FinancialModel) -> dict[str, Cal
         "costs.total": CalculationProvenance(
             calculation="costs.total",
             value=costs,
-            formula=" + ".join(COST_CATEGORIES),
-            inputs_used=[_field(name, data[name]) for name in COST_CATEGORIES],
+            formula=" + ".join(OPERATING_COST_CATEGORIES),
+            inputs_used=[_field(name, data[name]) for name in OPERATING_COST_CATEGORIES],
             unit=MONEY_UNIT,
         ),
         "profit.net": CalculationProvenance(
             calculation="profit.net",
             value=profit,
-            formula="revenue.total - costs.total",
+            formula="operating_income - operating_costs (revenue.total - costs.total)",
             inputs_used=[
                 _field("revenue.total", revenue, MONEY_UNIT),
                 _field("costs.total", costs, MONEY_UNIT),
@@ -143,7 +143,10 @@ def explain_annual_pnl(source: FinancialInput | FinancialModel) -> dict[str, Cal
         "profit.margin": CalculationProvenance(
             calculation="profit.margin",
             value=margin,
-            formula="(revenue.total - costs.total) / revenue.total if revenue.total > 0 else 0",
+            formula=(
+                "(operating_income - operating_costs) / operating_income "
+                "if operating_income > 0 else 0"
+            ),
             inputs_used=[
                 _field("revenue.total", revenue, MONEY_UNIT),
                 _field("costs.total", costs, MONEY_UNIT),

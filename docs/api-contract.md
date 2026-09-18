@@ -15,15 +15,25 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Inputs:** Flat JSON numbers per calculation. Required fields → `needs_input` when omitted. Optional omitted → `0`. Explicit `0` is valid. Unknown fields / null / negatives / wrong types → `error` with stable codes. Units come from `FIELD_UNITS` / `needs_input` / metadata — **not** from discovery.
 
-**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit}` with `period:"annual"`.
+**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit, finance}` with `period:"annual"`.
+
+**Canonical annual view (ADR-0009):** `pl.summary` is the Phase 1 **canonical annual Operating Statement**. Atomic catalogue IDs remain supporting schedules and must reconcile to `pl.summary` for the same inputs (published aggregates authoritative per ADR-0005). In-process `calculate_annual_pnl` wraps the same composition.
+
+**Phase 1 financial meaning (ADR-0007; naming Option A, ADR-0009):** Public IDs `profit.net` / `profit.margin` are kept for API compatibility; their meaning is **Operating Surplus** / Operating Surplus margin (operating income − operating costs). `costs.total` and `costs.lines` are **operating costs only**. `loan_repayments` is reported under `finance` and does **not** reduce Operating Surplus. This is not full accounting net profit.
 
 **Validation:** Codes `missing_required`, `unknown_field`, `null_not_allowed`, `negative_value`, `invalid_type`, `non_finite_value`, `unknown_calculation`. Branch on `error.code`, not message text.
 
+**Phase 1 validation principles (ADR-0008):** Validation checks whether inputs are **structurally usable** for the calculation (finite ≥ 0, presence, types). It does **not** judge whether farm numbers are normal, efficient, or commercially good. Financial inputs are **independent** except where a field is required to run a named calculation (e.g. milk trio for `revenue.milk`). No Phase 1 **maximums**. No calculation-engine warning / advisory / benchmark channel. Unusual-but-valid values (e.g. high contractor cost, `milk_price = 0`, zero cows with positive litres) remain `ok`.
+
 **Precision:** Internal `float` (ADR-0006); publish with banker's rounding (ADR-0005); published aggregate totals are authoritative; rounded lines need not re-sum exactly; provenance stays unrounded.
 
-**Provenance:** In-process for seven catalogue entries with `supports_provenance=True` (`pl.summary` excluded). Not on HTTP.
+**Provenance (ADR-0010):** In-process `explain_annual_pnl` for the seven catalogue entries with `supports_provenance=True`. `pl.summary` has no separate provenance object — explain it via those seven component records plus `finance` from the statement result. Human labels for `profit.net` / `profit.margin` come from catalogue / ADR-0007 (Operating Surplus / margin). Provenance stays unrounded; published aggregates remain authoritative. **Not on HTTP** (no Phase 1 `/explain` endpoint). Natural-language explanation belongs to a future agent/platform layer.
 
-**Out of scope here:** persistence, authentication, scenarios, forecasting, monthly cashflow, KPIs, multi-currency, multi-period, AI-generated calculations, Supabase/farm CRUD.
+**Simulation (ADR-0011):** In-process `simulate_annual_pnl` — explicit overrides on a copy of `FinancialInput`, then canonical `calculate_annual_pnl` for base and simulated results. No second formulas, no engine-side deltas, no forecasting. **Not on HTTP** in Phase 1.
+
+**Scenarios (ADR-0012):** In-process `run_scenario` / `run_scenarios` — caller-defined name + overrides executed through B7. Independent runs from the same base; no ranking, deltas, Base/Best/Worst semantics, or persistence. **Not on HTTP** in Phase 1.
+
+**Out of scope here:** persistence, authentication, forecasting, monthly cashflow, KPIs, multi-currency, multi-period, AI-generated calculations, Supabase/farm CRUD.
 
 ### Intentional interface differences
 
@@ -32,34 +42,109 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 | HTTP / runner | Flat per-calculation field dict |
 | Domain | `FinancialModel` envelope (`period`, `currency`, `inputs: FinancialInput`) for in-process annual P&L only |
 | Discovery | `key`, `description`, `required`, `optional` — no units (by design) |
-| Provenance | Unrounded formula values; published API results are rounded |
+| Provenance | Unrounded formula values via `explain_annual_pnl`; not on HTTP; `pl.summary` explained by components + `finance` (ADR-0010) |
+| Simulation | In-process `simulate_annual_pnl` only (ADR-0011); not on HTTP |
+| Scenarios | In-process named packages via B7 (ADR-0012); not on HTTP |
 
 Do **not** force HTTP to accept `FinancialModel`, and do not treat discovery as a full unit dictionary.
 
+## Phase 1 public surface (freeze)
+
+This section freezes what App Platform integrations may depend on after Workstream B (B1–B8). It invents no new behaviour.
+
+### HTTP calculation surface
+
+Supported endpoints:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/livez`, `/health` | Liveness |
+| `GET` | `/v1/functions` | Discovery (`key`, `description`, `required`, `optional`) |
+| `POST` | `/v1/functions/<calculation_id>/run` | Run one registered calculation |
+| `POST` | `/v1/demo/pl-summary` | Demo: `pl.summary` on sample farm |
+
+**Eight registered calculation IDs** (`CALCULATION_CATALOGUE` only):
+
+`revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`
+
+HTTP request/response envelopes use statuses `ok` / `needs_input` / `error`. On failure, branch on structured `error.code` (see Validation above), not message text.
+
+### In-process Python surface
+
+Package exports (`farm_functions`):
+
+| Symbol | Role | On HTTP? |
+|--------|------|----------|
+| `run_function` / `list_functions` / `list_input_metadata` | Same catalogue as HTTP | HTTP uses these internally |
+| `calculate_annual_pnl` | Canonical annual `FinancialResult` from `FinancialModel` | No — in-process only |
+| `explain_annual_pnl` | Deterministic calculation provenance (ADR-0010) | No — in-process only |
+| `simulate_annual_pnl` | Explicit input-override simulation (ADR-0011) | No — in-process only |
+| `run_scenario` / `run_scenarios` | Named scenario packages via B7 (ADR-0012) | No — in-process only |
+| `FinancialInput` / `FinancialModel` / `FinancialResult` | Typed annual P&L domain | No — not the HTTP body shape |
+| `SimulationRequest` / `SimulationResult` | B7 contracts | No |
+| `ScenarioDefinition` / `ScenarioResult` / `ScenarioBundle` | B8 contracts | No |
+| `CalculationProvenance` | Provenance record type | No |
+
+Phase 1 does **not** expose HTTP endpoints for provenance, simulation, or scenarios.
+
+### Stable IDs and financial labels
+
+- Calculation **IDs** are stable technical identifiers (including `profit.net` and `profit.margin`).
+- Human-readable financial **labels** come from the catalogue `description` on each `CALCULATION_CATALOGUE` entry (also returned by discovery as `description`). That is the authoritative label source — do not invent a second label dictionary.
+- Phase 1 meaning: `profit.net` = **Operating Surplus**; `profit.margin` = **Operating Surplus Margin** (ADR-0007). These IDs are not full accounting net profit.
+
+### Error boundary (intentional)
+
+| Path | How failures appear |
+|------|---------------------|
+| HTTP / `run_function` | Structured envelope: `needs_input` or `error` with stable `error.code` |
+| In-process domain (`FinancialInput` / `FinancialModel`), simulation, scenarios | Python exceptions: typically Pydantic `ValidationError` and/or plain `ValueError` (e.g. unknown override field, blank scenario name) |
+
+This split is **intentional** for Phase 1. There is no unified structured-error framework for in-process B7/B8 calls. A future HTTP exposure of simulation/scenarios may introduce an adapter; that is out of this freeze.
+
+### Sample farm JSON vs flat drivers
+
+Demo sample [`sample_data/farm.json`](../sample_data/farm.json) is **nested** (`revenue` / `costs` / `finance`). The loader flattens it:
+
+```text
+nested sample JSON
+→ farm_functions.loaders.json_loader.farm_to_inputs / load_sample_inputs
+→ flat FinancialInput / runner field dict
+```
+
+HTTP calculation bodies and `FinancialInput` use the **flat** field set. The sample is not restructured; the loader is the bridge.
+
 ## Current Financial Domain Contract Scope
 
-**Freeze status (branch `FINANCIAL-DOMAIN-CONTRACT`):** technical contract ready for review. This branch has **not** been merged into `main`. Workstream B financial semantics remain open separately.
+**Active development branch:** `financial-engine` (Workstream B). Phase 1 Operating Surplus semantics are defined in ADR-0007.
 
 ### Included
 
 - Deterministic annual dairy P&L calculation service
 - Eight stable public calculation IDs via `CALCULATION_CATALOGUE`
 - Typed in-process domain (`FinancialInput` / `FinancialModel` / `FinancialResult` / `calculate_annual_pnl`)
+- Phase 1 Operating Surplus model: operating income, extensible operating-cost catalogue, separate finance (`loan_repayments`)
+- `pl.summary` as the canonical annual Operating Statement (ADR-0009); atomic IDs as reconciling schedules
+- Phase 1 structural validation and input independence (ADR-0008): no advisory maxima or cross-field farm rules
 - Strict input validation, units metadata, structured errors
-- In-process provenance for seven calculations
+- In-process provenance for seven calculations with documented explainability assembly (ADR-0010)
+- In-process annual input-override simulation (ADR-0011)
+- In-process caller-defined named scenarios via B7 (ADR-0012); ephemeral; not persisted here
 - Public HTTP discovery and execution (`/v1/functions`, `/run`, demo)
 - Reconciliation, golden/reference, error, precision, and alignment regression tests
-- Publication rounding (ADR-0005) and Phase 1 float precision policy (ADR-0006)
+- Publication rounding (ADR-0005), Phase 1 float precision (ADR-0006), Operating Surplus (ADR-0007), validation independence (ADR-0008), canonical Operating Statement (ADR-0009), provenance boundary (ADR-0010), simulation (ADR-0011), scenarios (ADR-0012)
 
 ### Not included (do not assume)
 
-- Workstream B financial semantic redesign (`profit.net` meaning, `loan_repayments` principal vs interest)
-- Scenarios / Base–Best–Worst / sensitivity / forecasting
+- Principal vs interest split for `loan_repayments`
+- Full accounting net profit (depreciation, tax, drawings, livestock valuation, etc.)
+- Advisory validation, farm benchmarking, anomaly detection, KPIs, normal ranges, soft warnings
+- Scenarios as persisted libraries / Base–Best–Worst engine types / sensitivity / forecasting (in-process named packages exist via ADR-0012; persistence and judgement stay elsewhere)
 - Monthly cash flow, balance sheet, KPIs, valuation, optimisation
 - Persistence, database, authentication, farm identity
 - Accounting / banking / CRM integrations
 - Multi-currency, multi-period
-- HTTP provenance or HTTP `FinancialModel` as the request body
+- HTTP simulation / scenario / provenance endpoints or HTTP `FinancialModel` as the request body
 - AI-generated financial calculations / broader platform orchestration
 
 ## Calculation identifiers

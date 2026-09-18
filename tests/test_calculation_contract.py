@@ -62,12 +62,11 @@ def _happy_payload(calculation_id: str) -> dict:
             "contractor": 10_000,
             "labour": 40_000,
             "insurance": 4_000,
-            "loan_repayments": 12_000,
             "fuel": 6_000,
             "electricity": 3_000,
         }
     if calculation_id in ("profit.net", "profit.margin"):
-        return {"revenue": 240_000, "costs": 175_000}
+        return {"revenue": 240_000, "costs": 163_000}
     if calculation_id == "pl.summary":
         return load_sample_inputs()
     raise AssertionError(f"No happy payload for {calculation_id}")

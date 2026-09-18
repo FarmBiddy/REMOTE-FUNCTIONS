@@ -35,6 +35,8 @@ class RevenueResult(BaseModel):
 
 
 class CostLines(BaseModel):
+    """Phase 1 operating cost lines. Does not include loan repayments."""
+
     model_config = ConfigDict(extra="forbid")
 
     feed: float
@@ -43,9 +45,13 @@ class CostLines(BaseModel):
     contractor: float
     labour: float
     insurance: float
-    loan_repayments: float
     fuel: float
     electricity: float
+    repairs_maintenance: float
+    rent_lease: float
+    professional_fees: float
+    levies: float
+    other_operating_costs: float
 
 
 class CostsResult(BaseModel):
@@ -56,6 +62,8 @@ class CostsResult(BaseModel):
 
 
 class ProfitResult(BaseModel):
+    """Phase 1 Operating Surplus published under stable IDs ``net`` / ``margin``."""
+
     model_config = ConfigDict(extra="forbid")
 
     net: float
@@ -63,8 +71,20 @@ class ProfitResult(BaseModel):
     margin_pct: float
 
 
+class FinanceResult(BaseModel):
+    """Debt-service amounts reported separately from operating costs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    loan_repayments: float
+
+
 class FinancialResult(BaseModel):
-    """Structured annual P&L. Shape matches `pl.summary` JSON exactly."""
+    """Structured annual P&L. Shape matches `pl.summary` JSON exactly.
+
+    ``profit.net`` is Phase 1 Operating Surplus (operating income − operating costs).
+    Loan repayments appear under ``finance`` and do not reduce Operating Surplus.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -73,6 +93,7 @@ class FinancialResult(BaseModel):
     revenue: RevenueResult
     costs: CostsResult
     profit: ProfitResult
+    finance: FinanceResult
 
 
 def calculate_annual_pnl(model: FinancialModel) -> FinancialResult:

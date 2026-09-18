@@ -68,16 +68,19 @@ def test_demo_pl_summary():
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
-    assert body["result"]["profit"]["net"] == 65_000
+    assert body["result"]["profit"]["net"] == 77_000
+    assert body["result"]["finance"]["loan_repayments"] == 12_000
 
 
 def test_pl_summary_http_shape_has_no_provenance():
     result = client.post("/v1/demo/pl-summary").json()["result"]
-    assert set(result.keys()) == {"currency", "period", "revenue", "costs", "profit"}
+    assert set(result.keys()) == {"currency", "period", "revenue", "costs", "profit", "finance"}
     assert "provenance" not in result
     assert set(result["revenue"].keys()) == {"milk", "schemes", "other", "total"}
     assert set(result["costs"].keys()) == {"lines", "total"}
     assert set(result["profit"].keys()) == {"net", "margin", "margin_pct"}
+    assert set(result["finance"].keys()) == {"loan_repayments"}
+    assert "loan_repayments" not in result["costs"]["lines"]
 
 
 def test_openapi_exposes_typed_function_inputs():

@@ -47,9 +47,14 @@ def test_financial_input_optional_fields_default_to_zero():
     assert parsed.contractor == 0
     assert parsed.labour == 0
     assert parsed.insurance == 0
-    assert parsed.loan_repayments == 0
     assert parsed.fuel == 0
     assert parsed.electricity == 0
+    assert parsed.repairs_maintenance == 0
+    assert parsed.rent_lease == 0
+    assert parsed.professional_fees == 0
+    assert parsed.levies == 0
+    assert parsed.other_operating_costs == 0
+    assert parsed.loan_repayments == 0
 
 
 def test_financial_model_defaults_to_annual_eur():
@@ -92,9 +97,11 @@ def test_sample_pnl_results_unchanged_through_domain_types():
     assert result.revenue.schemes == 25_000
     assert result.revenue.other == 15_000
     assert result.revenue.total == 240_000
-    assert result.costs.total == 175_000
-    assert result.profit.net == 65_000
-    assert result.profit.margin_pct == 27.08
+    assert result.costs.total == 163_000
+    assert result.profit.net == 77_000
+    assert result.profit.margin_pct == 32.08
+    assert result.finance.loan_repayments == 12_000
+    assert "loan_repayments" not in result.costs.lines.model_dump()
     assert result.currency == "EUR"
     assert result.period == "annual"
 

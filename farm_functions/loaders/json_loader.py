@@ -18,8 +18,7 @@ REVENUE_KEYS = (
     "acres",
     "other_grants",
     "cattle_sales",
-    "lamb_sales",
-    "wool",
+    "land_leasing_income",
     "other",
 )
 COST_KEYS = OPERATING_COST_CATEGORIES

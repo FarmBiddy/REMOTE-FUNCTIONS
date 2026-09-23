@@ -47,6 +47,7 @@ class CostLines(BaseModel):
     insurance: float
     fuel: float
     electricity: float
+    water: float
     repairs_maintenance: float
     rent_lease: float
     professional_fees: float

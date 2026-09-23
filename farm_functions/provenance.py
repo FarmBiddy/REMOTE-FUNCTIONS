@@ -56,8 +56,7 @@ def explain_annual_pnl(source: FinancialInput | FinancialModel) -> dict[str, Cal
     )
     other = other_revenue(
         cattle_sales=data["cattle_sales"],
-        lamb_sales=data["lamb_sales"],
-        wool=data["wool"],
+        land_leasing_income=data["land_leasing_income"],
         other=data["other"],
     )
     revenue = total_revenue(
@@ -68,8 +67,7 @@ def explain_annual_pnl(source: FinancialInput | FinancialModel) -> dict[str, Cal
         acres=data["acres"],
         other_grants=data["other_grants"],
         cattle_sales=data["cattle_sales"],
-        lamb_sales=data["lamb_sales"],
-        wool=data["wool"],
+        land_leasing_income=data["land_leasing_income"],
         other=data["other"],
     )
     cost_kwargs = {name: data[name] for name in OPERATING_COST_CATEGORIES}
@@ -103,11 +101,10 @@ def explain_annual_pnl(source: FinancialInput | FinancialModel) -> dict[str, Cal
         "revenue.other": CalculationProvenance(
             calculation="revenue.other",
             value=other,
-            formula="cattle_sales + lamb_sales + wool + other",
+            formula="cattle_sales + land_leasing_income + other",
             inputs_used=[
                 _field("cattle_sales", data["cattle_sales"]),
-                _field("lamb_sales", data["lamb_sales"]),
-                _field("wool", data["wool"]),
+                _field("land_leasing_income", data["land_leasing_income"]),
                 _field("other", data["other"]),
             ],
             unit=MONEY_UNIT,

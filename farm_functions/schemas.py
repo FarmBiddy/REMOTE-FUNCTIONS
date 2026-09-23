@@ -44,8 +44,7 @@ class SchemeRevenueInput(_StrictModel):
 
 class OtherRevenueInput(_StrictModel):
     cattle_sales: NonNegativeNumber = 0
-    lamb_sales: NonNegativeNumber = 0
-    wool: NonNegativeNumber = 0
+    land_leasing_income: NonNegativeNumber = 0
     other: NonNegativeNumber = 0
 
 
@@ -64,6 +63,7 @@ class TotalCostsInput(_StrictModel):
     insurance: NonNegativeNumber = 0
     fuel: NonNegativeNumber = 0
     electricity: NonNegativeNumber = 0
+    water: NonNegativeNumber = 0
     repairs_maintenance: NonNegativeNumber = 0
     rent_lease: NonNegativeNumber = 0
     professional_fees: NonNegativeNumber = 0
@@ -179,30 +179,21 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         maximum=None,
         unit="EUR/year",
         description=(
-            "Gross annual cattle sales income "
-            "(purchases and herd valuation are out of scope in Phase 1)"
+            "Annual gross proceeds from cattle/calf/cull-cow sales associated "
+            "with the Dairy farm (purchases and herd valuation are out of scope)"
         ),
     ),
     InputFieldMetadata(
-        name="lamb_sales",
+        name="land_leasing_income",
         type="number",
         required=False,
         minimum=0,
         maximum=None,
         unit="EUR/year",
         description=(
-            "Gross annual lamb sales income "
-            "(purchases and herd valuation are out of scope in Phase 1)"
+            "Annual income received from leasing owned land out to another party "
+            "(operating income; not a capital receipt; not netted against rent_lease)"
         ),
-    ),
-    InputFieldMetadata(
-        name="wool",
-        type="number",
-        required=False,
-        minimum=0,
-        maximum=None,
-        unit="EUR/year",
-        description="Annual wool income",
     ),
     InputFieldMetadata(
         name="other",
@@ -289,7 +280,23 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual operating electricity cost",
+        description=(
+            "Annual farm electricity expenditure, including pumping electricity "
+            "where it is part of the electricity bill"
+        ),
+    ),
+    InputFieldMetadata(
+        name="water",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description=(
+            "Annual operating expenditure for farm water supply: water charges/"
+            "scheme charges and routine water-system maintenance "
+            "(exclude pump electricity — use electricity; exclude water capex)"
+        ),
     ),
     InputFieldMetadata(
         name="repairs_maintenance",
@@ -298,7 +305,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual repairs and maintenance operating cost",
+        description=(
+            "Annual general farm repairs and routine maintenance not classified "
+            "elsewhere (routine water-system maintenance belongs under water)"
+        ),
     ),
     InputFieldMetadata(
         name="rent_lease",
@@ -307,7 +317,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual land rent / lease operating cost",
+        description=(
+            "Annual operating cost of land/property rented or leased in "
+            "(not income from leasing owned land out)"
+        ),
     ),
     InputFieldMetadata(
         name="professional_fees",
@@ -325,7 +338,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Annual levies and similar operating charges",
+        description=(
+            "Annual non-water operating levies/charges of the Dairy farm "
+            "(water-scheme charges belong under water)"
+        ),
     ),
     InputFieldMetadata(
         name="other_operating_costs",
@@ -334,7 +350,10 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         minimum=0,
         maximum=None,
         unit="EUR/year",
-        description="Other annual operating costs not covered by named lines",
+        description=(
+            "Other annual operating costs that do not belong in another "
+            "named category"
+        ),
     ),
     InputFieldMetadata(
         name="loan_repayments",

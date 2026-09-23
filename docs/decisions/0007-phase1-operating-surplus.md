@@ -23,9 +23,9 @@ average EUR/litre. B2 implements those rules in the calculation engine.
    reduce Operating Surplus. It is retained on `pl.summary` / `FinancialResult` under
    `finance.loan_repayments`. Principal vs interest is not split in Phase 1.
 3. **Operating cost catalogue:** Authoritative list is `OPERATING_COST_CATEGORIES` in
-   `farm_functions/calcs/costs.py`. Phase 1 includes existing operating lines plus
-   `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`,
-   `other_operating_costs`. Adding a later operating cost extends that catalogue plus
+   `farm_functions/calcs/costs.py`. Phase 1 includes operating lines such as feed through
+   electricity, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`,
+   and `other_operating_costs`. Adding a later operating cost extends that catalogue plus
    aligned schema/metadata/`CostLines`/loader keys — no engine redesign.
 4. **HTTP:** Request bodies remain flat JSON. Response nesting for `pl.summary` gains
    `finance`; `costs.lines` contains operating lines only.

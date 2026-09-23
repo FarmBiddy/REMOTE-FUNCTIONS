@@ -27,7 +27,7 @@ SAMPLE_MILK = {
 }
 
 SAMPLE_SCHEMES = {"biss": 20_000, "acres": 5_000, "other_grants": 0}
-SAMPLE_OTHER = {"cattle_sales": 15_000, "lamb_sales": 0, "wool": 0, "other": 0}
+SAMPLE_OTHER = {"cattle_sales": 15_000, "land_leasing_income": 0, "other": 0}
 SAMPLE_COSTS = {
     "feed": 80_000,
     "fertiliser": 15_000,

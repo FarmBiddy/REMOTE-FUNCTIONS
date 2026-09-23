@@ -17,12 +17,11 @@ def scheme_revenue(
 
 def other_revenue(
     cattle_sales: float = 0,
-    lamb_sales: float = 0,
-    wool: float = 0,
+    land_leasing_income: float = 0,
     other: float = 0,
 ) -> float:
-    """Non-milk, non-scheme income."""
-    return float(cattle_sales) + float(lamb_sales) + float(wool) + float(other)
+    """Non-milk, non-scheme Dairy operating income."""
+    return float(cattle_sales) + float(land_leasing_income) + float(other)
 
 
 def total_revenue(
@@ -33,13 +32,12 @@ def total_revenue(
     acres: float = 0,
     other_grants: float = 0,
     cattle_sales: float = 0,
-    lamb_sales: float = 0,
-    wool: float = 0,
+    land_leasing_income: float = 0,
     other: float = 0,
 ) -> float:
     """Milk + schemes + other revenue."""
     return (
         milk_revenue(milking_cows, litres_per_cow, milk_price)
         + scheme_revenue(biss, acres, other_grants)
-        + other_revenue(cattle_sales, lamb_sales, wool, other)
+        + other_revenue(cattle_sales, land_leasing_income, other)
     )

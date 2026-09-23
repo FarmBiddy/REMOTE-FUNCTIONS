@@ -35,7 +35,7 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 |----------------|-----------------|---------|
 | `revenue.milk` | `milking_cows`, `litres_per_cow`, `milk_price` | cows × litres sold/paid × price |
 | `revenue.schemes` | — | BISS + ACRES + other operating grants |
-| `revenue.other` | — | cattle + lamb + wool + other operating income |
+| `revenue.other` | — | cattle sales + land leasing income + other operating income |
 | `revenue.total` | milk fields | milk + schemes + other (operating income) |
 | `costs.total` | — | sum of operating cost lines (missing = 0; excludes loans) |
 | `profit.net` | `revenue`, `costs` | Operating Surplus = revenue − operating costs |

@@ -14,8 +14,7 @@ def pl_summary(
     acres: float = 0,
     other_grants: float = 0,
     cattle_sales: float = 0,
-    lamb_sales: float = 0,
-    wool: float = 0,
+    land_leasing_income: float = 0,
     other: float = 0,
     feed: float = 0,
     fertiliser: float = 0,
@@ -25,6 +24,7 @@ def pl_summary(
     insurance: float = 0,
     fuel: float = 0,
     electricity: float = 0,
+    water: float = 0,
     repairs_maintenance: float = 0,
     rent_lease: float = 0,
     professional_fees: float = 0,
@@ -35,7 +35,7 @@ def pl_summary(
     """Annual dairy P&L with Operating Surplus and separate finance reporting."""
     milk = milk_revenue(milking_cows, litres_per_cow, milk_price)
     schemes = scheme_revenue(biss, acres, other_grants)
-    other_income = other_revenue(cattle_sales, lamb_sales, wool, other)
+    other_income = other_revenue(cattle_sales, land_leasing_income, other)
     revenue = milk + schemes + other_income
     cost_lines = {
         "feed": float(feed),
@@ -46,6 +46,7 @@ def pl_summary(
         "insurance": float(insurance),
         "fuel": float(fuel),
         "electricity": float(electricity),
+        "water": float(water),
         "repairs_maintenance": float(repairs_maintenance),
         "rent_lease": float(rent_lease),
         "professional_fees": float(professional_fees),

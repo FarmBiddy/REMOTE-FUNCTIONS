@@ -114,7 +114,7 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
     ),
     CalculationDefinition(
         id="revenue.other",
-        description="Annual non-milk income (cattle, lamb, wool, other).",
+        description="Annual non-milk income (cattle sales, land leasing income, other).",
         input_model=OtherRevenueInput,
         handler=_handle_other_revenue,
         supports_provenance=True,

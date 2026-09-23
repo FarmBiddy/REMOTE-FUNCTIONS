@@ -262,8 +262,7 @@ def test_provenance_reconciles_with_unrounded_calcs(farm_payload: dict) -> None:
     )
     other = other_revenue(
         cattle_sales=drivers["cattle_sales"],
-        lamb_sales=drivers["lamb_sales"],
-        wool=drivers["wool"],
+        land_leasing_income=drivers.get("land_leasing_income", 0),
         other=drivers["other"],
     )
     revenue = total_revenue(**{k: drivers[k] for k in _revenue_total_payload(drivers)})

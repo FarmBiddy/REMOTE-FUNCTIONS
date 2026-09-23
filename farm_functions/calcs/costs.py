@@ -13,6 +13,7 @@ OPERATING_COST_CATEGORIES = (
     "insurance",
     "fuel",
     "electricity",
+    "water",
     "repairs_maintenance",
     "rent_lease",
     "professional_fees",
@@ -33,6 +34,7 @@ def total_costs(
     insurance: float = 0,
     fuel: float = 0,
     electricity: float = 0,
+    water: float = 0,
     repairs_maintenance: float = 0,
     rent_lease: float = 0,
     professional_fees: float = 0,
@@ -52,6 +54,7 @@ def total_costs(
         + float(insurance)
         + float(fuel)
         + float(electricity)
+        + float(water)
         + float(repairs_maintenance)
         + float(rent_lease)
         + float(professional_fees)

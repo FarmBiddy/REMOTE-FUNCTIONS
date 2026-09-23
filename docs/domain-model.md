@@ -24,10 +24,9 @@ Normalized inputs required to perform a financial calculation.
 
 FinancialInput is independent of the underlying farm database schema.
 
-For the current annual P&L it is the complete `pl.summary` driver set (`PlSummaryInput` / `FinancialInput`): required milk fields, optional scheme/other/**operating cost** lines defaulting to `0`, plus optional `loan_repayments` (finance). Numeric drivers must be finite numbers **≥ 0**. There is no maximum unless metadata sets one; **none are set** (ADR-0008). Inputs are independent except for fields required to run a named calculation; the engine does not enforce farm correlations or “realistic” ranges (ADR-0008).
+For the current annual P&L it is the complete `pl.summary` driver set (`PlSummaryInput` / `FinancialInput`): required milk fields, optional schemes, Dairy other income (`cattle_sales`, `land_leasing_income`, `other`), optional **operating cost** lines defaulting to `0`, plus optional `loan_repayments` (finance). Numeric drivers must be finite numbers **≥ 0**. There is no maximum unless metadata sets one; **none are set** (ADR-0008). Inputs are independent except for fields required to run a named calculation; the engine does not enforce farm correlations or “realistic” ranges (ADR-0008).
 
-Operating cost lines are listed in `OPERATING_COST_CATEGORIES` (`farm_functions/calcs/costs.py`). Loan repayments are finance/debt service and are **not** operating costs (ADR-0007).
-
+Operating cost lines are listed in `OPERATING_COST_CATEGORIES` (`farm_functions/calcs/costs.py`), including `water`. `rent_lease` is land/property rented **in** (cost); `land_leasing_income` is leasing owned land **out** (income) — they are not netted. Loan repayments are finance/debt service and are **not** operating costs (ADR-0007). Sheep-oriented fields (`lamb_sales`, `wool`) are not part of the Dairy prototype contract.
 Input metadata (name, type, required, minimum, maximum, unit, description) lives in `INPUT_FIELD_METADATA` in `farm_functions/schemas.py`. Units are taken from that list via `FIELD_UNITS` (ADR-0004).
 
 **Sample JSON → flat drivers:** Demo [`sample_data/farm.json`](../sample_data/farm.json) is nested (`revenue` / `costs` / `finance`). `farm_functions.loaders.json_loader` flattens it to the flat field dict expected by `FinancialInput` and HTTP/`run_function`. Do not treat the nested sample shape as the HTTP body contract.

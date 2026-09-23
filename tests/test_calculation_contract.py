@@ -42,7 +42,7 @@ def _happy_payload(calculation_id: str) -> dict:
     if calculation_id == "revenue.schemes":
         return {"biss": 20_000, "acres": 5_000, "other_grants": 0}
     if calculation_id == "revenue.other":
-        return {"cattle_sales": 15_000, "lamb_sales": 0, "wool": 0, "other": 0}
+        return {"cattle_sales": 15_000, "land_leasing_income": 0, "other": 0}
     if calculation_id == "revenue.total":
         return {
             **SAMPLE_MILK,
@@ -50,8 +50,7 @@ def _happy_payload(calculation_id: str) -> dict:
             "acres": 5_000,
             "other_grants": 0,
             "cattle_sales": 15_000,
-            "lamb_sales": 0,
-            "wool": 0,
+            "land_leasing_income": 0,
             "other": 0,
         }
     if calculation_id == "costs.total":
@@ -64,6 +63,7 @@ def _happy_payload(calculation_id: str) -> dict:
             "insurance": 4_000,
             "fuel": 6_000,
             "electricity": 3_000,
+            "water": 0,
         }
     if calculation_id in ("profit.net", "profit.margin"):
         return {"revenue": 240_000, "costs": 163_000}

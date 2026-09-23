@@ -1,6 +1,6 @@
 # Farm cost and revenue functions
 
-Small calculation library extracted from the Dairy Financials prototype. It only covers the basic annual P&L: **revenue, costs, profit, and margin**.
+Small calculation library extracted from the Dairy Financials prototype. It covers a **Phase 1 annual operating P&L**: operating income, operating costs, **Operating Surplus**, and separately reported debt service (`finance.loan_repayments`). Public calculation ID `profit.net` means Operating Surplus (ADR-0007) — not full accounting net profit.
 
 Functions take explicit numbers. They do not read a database. A sample JSON is used now so the formulas can be checked; a platform loader can replace that later.
 
@@ -23,6 +23,8 @@ Every call returns one of:
 
 Missing inputs are listed with field name and unit. They are never guessed. Extra / unknown fields are rejected (`error`). Explicit `0` is valid; `null` and negatives are invalid. Full contract: [`docs/api-contract.md`](docs/api-contract.md).
 
+**Phase 1 public surface (freeze):** HTTP exposes the eight calculation IDs above. In-process-only capabilities — `calculate_annual_pnl`, `explain_annual_pnl`, `simulate_annual_pnl`, `run_scenario` / `run_scenarios` — are documented in [`docs/api-contract.md`](docs/api-contract.md) (Phase 1 public surface). Catalogue `description` is the human-readable label source (`profit.net` = Operating Surplus). HTTP/runner failures use structured `error.code`; in-process domain/sim/scenarios may raise Pydantic/`ValueError` (intentional Phase 1 split).
+
 Units: **EUR**, **annual**. `profit.margin` returns a 0–1 `margin` and a `margin_pct`. Published money and margins use **banker's rounding** (round half to even; ADR-0005).
 
 ## Functions
@@ -31,16 +33,16 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 
 | Calculation ID | Required inputs | Formula |
 |----------------|-----------------|---------|
-| `revenue.milk` | `milking_cows`, `litres_per_cow`, `milk_price` | cows × litres × price |
-| `revenue.schemes` | — | BISS + ACRES + other grants |
-| `revenue.other` | — | cattle + lamb + wool + other |
-| `revenue.total` | milk fields | milk + schemes + other |
-| `costs.total` | — | sum of the 9 cost lines (missing = 0) |
-| `profit.net` | `revenue`, `costs` | revenue − costs |
-| `profit.margin` | `revenue`, `costs` | (revenue − costs) / revenue |
-| `pl.summary` | milk fields | full P&L from raw drivers |
+| `revenue.milk` | `milking_cows`, `litres_per_cow`, `milk_price` | cows × litres sold/paid × price |
+| `revenue.schemes` | — | BISS + ACRES + other operating grants |
+| `revenue.other` | — | cattle + lamb + wool + other operating income |
+| `revenue.total` | milk fields | milk + schemes + other (operating income) |
+| `costs.total` | — | sum of operating cost lines (missing = 0; excludes loans) |
+| `profit.net` | `revenue`, `costs` | Operating Surplus = revenue − operating costs |
+| `profit.margin` | `revenue`, `costs` | Operating Surplus / revenue |
+| `pl.summary` | milk fields | **canonical** annual Operating Statement + `finance.loan_repayments` |
 
-`profit.net` and `profit.margin` expect **already totalled** revenue and costs. Use `pl.summary` when you still have the raw farm numbers.
+`pl.summary` is the Phase 1 canonical annual Operating Statement (ADR-0009). Atomic IDs are supporting schedules that must reconcile to it. `profit.net` and `profit.margin` keep those public IDs (Option A) and expect **already totalled** operating income and operating costs — use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
 
 ## Sample farm (`sample_data/farm.json`)
 
@@ -49,10 +51,13 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | Milk (100 × 5000 × €0.40) | €200,000 |
 | Schemes | €25,000 |
 | Cattle sales | €15,000 |
-| **Revenue** | **€240,000** |
-| **Costs** | **€175,000** |
-| **Profit** | **€65,000** |
-| **Margin** | **27.08%** |
+| **Operating income** | **€240,000** |
+| **Operating costs** (excl. loans) | **€163,000** |
+| **Operating Surplus** (`profit.net`) | **€77,000** |
+| **Margin** | **32.08%** |
+| Loan repayments (`finance`) | €12,000 |
+
+Previously, including loans in costs produced €65,000 “profit”. Under ADR-0007 loans are finance-only.
 
 ## Run
 

@@ -16,6 +16,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0010](0010-phase1-provenance-boundary.md) | Phase 1 calculation provenance / explainability boundary |
 | [0011](0011-phase1-input-override-simulation.md) | Phase 1 annual input-override simulation |
 | [0012](0012-phase1-named-scenarios.md) | Phase 1 caller-defined named financial scenarios |
+| [0013](0013-phase1-layer-ownership.md) | Phase 1 layer ownership (Dairy cost catalogue; land leasing) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

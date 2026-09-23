@@ -56,6 +56,18 @@ App Platform / Agent
 
 HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). The domain types in `farm_functions/domain.py` are not a new HTTP API.
 
+## Target layering (progressive; not fully packaged yet)
+
+Intended long-term separation: **Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.
+
+Phase 1 ownership (ADR-0013):
+
+- Farmer-entered operating-cost catalogue lines on `FinancialInput` are **Dairy-owned** until shared-farm / multi-enterprise work needs an Agriculture catalogue.
+- `land_leasing_income` has **Agriculture** semantics (lease land out) but remains on the current Dairy contract and `revenue.other` composition.
+- Core performs generic money operations (e.g. Operating Surplus, margins, rounding) without owning sector field names.
+
+Package folders `core/` / `agriculture/` / `dairy/` are not required until L2+ extraction; do not duplicate farmer inputs across layers.
+
 ## Authentication
 
 User JWTs MUST NOT be forwarded to the Financial Service

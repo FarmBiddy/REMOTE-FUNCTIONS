@@ -58,16 +58,24 @@ HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). T
 
 ## Target layering (progressive)
 
-Intended separation: **Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.
+Intended separation: **Orchestration / API → Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.
 
-Implemented packages (ADR-0014):
+Implemented packages (ADR-0014, ADR-0015):
 
-- `farm_functions.core` — Operating Surplus, margins, publish rounding, `sum_amounts`
-- `farm_functions.agriculture` — canonical `scheme_revenue` (public ID `revenue.schemes` unchanged)
-- Phase 1 `FinancialInput` / cost catalogue remain the **Dairy** façade (ADR-0013); `land_leasing_income` is Agriculture semantics on that contract
-- Compatibility re-exports: `calcs.profit`, `calcs.revenue.scheme_revenue`, `farm_functions.rounding`
+| Layer | Package | Owns |
+|-------|---------|------|
+| Core | `farm_functions.core` | Operating Surplus, margins, publish rounding, `sum_amounts` |
+| Agriculture | `farm_functions.agriculture` | Canonical `scheme_revenue` (public ID `revenue.schemes`) |
+| Dairy | `farm_functions.dairy` | Milk revenue, other-income composition, operating-cost catalogue, Phase 1 Operating Statement (`pl_summary`) |
+| Orchestration | registry, provenance, runner, loaders, simulation, scenarios, API | Public IDs, contracts, coordination — not financial formulas |
 
-Forbidden imports: Core → Agriculture/Dairy; Agriculture → Dairy/`calcs`. Characterisation: `tests/test_layer_import_boundaries.py`.
+- Public name `FinancialInput` stays stable; conceptually it is the **Phase 1 Dairy** input contract (do not duplicate as `DairyFinancialInput`).
+- `land_leasing_income` is Agriculture semantics on that Dairy contract (ADR-0013); composed in Dairy `other_revenue` once.
+- Compatibility re-exports: `calcs.*` and `farm_functions.rounding` preserve existing imports; one implementation each.
+
+Forbidden imports: Core → Agriculture/Dairy; Agriculture → Dairy/`calcs`; Dairy → orchestration (`calcs` is re-export only). Characterisation: `tests/test_layer_import_boundaries.py`.
+
+No FarmBiddy DB/platform integration, multi-enterprise aggregation, Beef, or Hospitality in this service yet.
 
 ## Authentication
 

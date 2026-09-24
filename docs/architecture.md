@@ -56,17 +56,18 @@ App Platform / Agent
 
 HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). The domain types in `farm_functions/domain.py` are not a new HTTP API.
 
-## Target layering (progressive; not fully packaged yet)
+## Target layering (progressive)
 
-Intended long-term separation: **Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.
+Intended separation: **Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.
 
-Phase 1 ownership (ADR-0013):
+Implemented packages (ADR-0014):
 
-- Farmer-entered operating-cost catalogue lines on `FinancialInput` are **Dairy-owned** until shared-farm / multi-enterprise work needs an Agriculture catalogue.
-- `land_leasing_income` has **Agriculture** semantics (lease land out) but remains on the current Dairy contract and `revenue.other` composition.
-- Core performs generic money operations (e.g. Operating Surplus, margins, rounding) without owning sector field names.
+- `farm_functions.core` — Operating Surplus, margins, publish rounding, `sum_amounts`
+- `farm_functions.agriculture` — canonical `scheme_revenue` (public ID `revenue.schemes` unchanged)
+- Phase 1 `FinancialInput` / cost catalogue remain the **Dairy** façade (ADR-0013); `land_leasing_income` is Agriculture semantics on that contract
+- Compatibility re-exports: `calcs.profit`, `calcs.revenue.scheme_revenue`, `farm_functions.rounding`
 
-Package folders `core/` / `agriculture/` / `dairy/` are not required until L2+ extraction; do not duplicate farmer inputs across layers.
+Forbidden imports: Core → Agriculture/Dairy; Agriculture → Dairy/`calcs`. Characterisation: `tests/test_layer_import_boundaries.py`.
 
 ## Authentication
 

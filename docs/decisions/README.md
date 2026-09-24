@@ -17,6 +17,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0011](0011-phase1-input-override-simulation.md) | Phase 1 annual input-override simulation |
 | [0012](0012-phase1-named-scenarios.md) | Phase 1 caller-defined named financial scenarios |
 | [0013](0013-phase1-layer-ownership.md) | Phase 1 layer ownership (Dairy cost catalogue; land leasing) |
+| [0014](0014-core-agriculture-boundaries.md) | Core and Agriculture package boundaries (L2 / L3) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

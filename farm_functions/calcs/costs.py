@@ -1,8 +1,11 @@
 """Operating cost formulas. All amounts are annual EUR.
 
 ``OPERATING_COST_CATEGORIES`` is the authoritative Phase 1 operating-cost
-catalogue. Loan repayments are finance/debt service and are not included.
+catalogue (Dairy-owned Phase 1 input vocabulary; ADR-0013). Loan repayments
+are finance/debt service and are not included.
 """
+
+from farm_functions.core.aggregate import sum_amounts
 
 OPERATING_COST_CATEGORIES = (
     "feed",
@@ -45,19 +48,19 @@ def total_costs(
 
     Does not include loan repayments / debt service.
     """
-    return (
-        float(feed)
-        + float(fertiliser)
-        + float(vet)
-        + float(contractor)
-        + float(labour)
-        + float(insurance)
-        + float(fuel)
-        + float(electricity)
-        + float(water)
-        + float(repairs_maintenance)
-        + float(rent_lease)
-        + float(professional_fees)
-        + float(levies)
-        + float(other_operating_costs)
+    return sum_amounts(
+        feed,
+        fertiliser,
+        vet,
+        contractor,
+        labour,
+        insurance,
+        fuel,
+        electricity,
+        water,
+        repairs_maintenance,
+        rent_lease,
+        professional_fees,
+        levies,
+        other_operating_costs,
     )

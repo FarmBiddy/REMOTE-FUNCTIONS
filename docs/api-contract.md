@@ -3,6 +3,8 @@
 Canonical description of the Financial Service HTTP calculation contract.
 Implementation: `farm_functions/registry.py` (authoritative catalogue), `farm_functions/runner.py`, `farm_functions/schemas.py`, `api/app.py` (composition root), `api/routes.py` (HTTP handlers).
 
+For a separate frontend (e.g. Next.js mock) integrating the annual Operating Statement over HTTP, start with [`integration-external.md`](integration-external.md) (I2: request/response map, error branching, CORS).
+
 Domain types (`FinancialModel` → `FinancialInput` → calculations → `FinancialResult`) live in `farm_functions/domain.py`. They do **not** change this HTTP contract: request bodies remain a flat JSON object of numbers; statuses remain `ok` / `needs_input` / `error`.
 
 Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not included in HTTP calculation responses.

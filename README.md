@@ -114,6 +114,7 @@ KPIs (feed ratio, per cow), monthly cashflow, Monte Carlo, alerts, risk, and far
 - Domain model: [`docs/domain-model.md`](docs/domain-model.md)
 - Development: [`docs/development.md`](docs/development.md)
 - Delivery bootstrap (execute here): [`docs/delivery-bootstrap.md`](docs/delivery-bootstrap.md)
+- External annual integration (I2): [`docs/integration-external.md`](docs/integration-external.md)
 - API contract: [`docs/api-contract.md`](docs/api-contract.md)
 - Decisions (ADRs): [`docs/decisions/`](docs/decisions/)
 

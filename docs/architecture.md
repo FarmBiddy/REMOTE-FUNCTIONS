@@ -58,20 +58,22 @@ HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). T
 
 ## Target layering (progressive)
 
-Intended separation: **Orchestration / API → Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.
+Intended separation: **Application/API → Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.
 
-Implemented packages (ADR-0014, ADR-0015):
+Layer meaning (ADR-0014, ADR-0015, ADR-0016):
 
-| Layer | Package | Owns |
-|-------|---------|------|
-| Core | `farm_functions.core` | Operating Surplus, margins, publish rounding, `sum_amounts` |
-| Agriculture | `farm_functions.agriculture` | Canonical `scheme_revenue` (public ID `revenue.schemes`) |
-| Dairy | `farm_functions.dairy` | Milk revenue, other-income composition, operating-cost catalogue, Phase 1 Operating Statement (`pl_summary`) |
-| Orchestration | registry, provenance, runner, loaders, simulation, scenarios, API | Public IDs, contracts, coordination — not financial formulas |
+| Layer | Package | Owns | Does not own |
+|-------|---------|------|--------------|
+| **Core** | `farm_functions.core` | Financial mathematics independent of farming: Operating Surplus, margins, publish rounding, `sum_amounts` | Farm field names, schemes, milk, cost catalogues |
+| **Agriculture** | `farm_functions.agriculture` | Financial concepts common across agricultural enterprises (canonical `scheme_revenue` / public ID `revenue.schemes`) | Dairy milk, Dairy Operating Statement, Core maths reimplementation |
+| **Dairy** | `farm_functions.dairy` | Dairy-specific specialisation: milk revenue, other-income composition, Phase 1 operating-cost catalogue, Operating Statement composition (`pl_summary`) | Generic surplus/rounding/sum; scheme formula body |
+| **Application / API** | registry, provenance, runner, loaders, simulation, scenarios, `api/` | Public IDs, HTTP/domain contracts, orchestration | Financial formulas |
+
+Dependency direction: Application/API → Dairy → Agriculture → Core (Dairy → Core also allowed). Higher/generic layers never import specialised ones.
 
 - Public name `FinancialInput` stays stable; conceptually it is the **Phase 1 Dairy** input contract (do not duplicate as `DairyFinancialInput`).
 - `land_leasing_income` is Agriculture semantics on that Dairy contract (ADR-0013); composed in Dairy `other_revenue` once.
-- Compatibility re-exports: `calcs.*` and `farm_functions.rounding` preserve existing imports; one implementation each.
+- Compatibility re-exports: `calcs.*` and `farm_functions.rounding` preserve existing imports; one implementation each (must not grow a second formula body).
 
 Forbidden imports: Core → Agriculture/Dairy; Agriculture → Dairy/`calcs`; Dairy → orchestration (`calcs` is re-export only). Characterisation: `tests/test_layer_import_boundaries.py`.
 

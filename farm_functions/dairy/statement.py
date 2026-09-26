@@ -1,6 +1,11 @@
-"""Canonical Phase 1 Dairy annual Operating Statement composition."""
+"""Canonical Phase 1 Dairy annual Operating Statement composition.
+
+Composes Dairy milk/other income, Agriculture schemes, and Core surplus /
+rounding. Does not reimplement those primitives.
+"""
 
 from farm_functions.agriculture.revenue import scheme_revenue
+from farm_functions.core.aggregate import sum_amounts
 from farm_functions.core.rounding import round_margin_pct, round_margin_ratio, round_money
 from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
 from farm_functions.dairy.costs import OPERATING_COST_CATEGORIES, total_costs
@@ -37,7 +42,7 @@ def pl_summary(
     milk = milk_revenue(milking_cows, litres_per_cow, milk_price)
     schemes = scheme_revenue(biss, acres, other_grants)
     other_income = other_revenue(cattle_sales, land_leasing_income, other)
-    revenue = milk + schemes + other_income
+    revenue = sum_amounts(milk, schemes, other_income)
     cost_lines = {
         "feed": float(feed),
         "fertiliser": float(fertiliser),

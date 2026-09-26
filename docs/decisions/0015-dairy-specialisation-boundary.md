@@ -36,10 +36,12 @@ hid Dairy ownership behind a generic package name.
 - No HTTP path, public ID, request/response, rounding, or golden-result changes.
 - Future L5 should focus on orchestration/composition service seam, not further
   formula extraction.
+- Post-L4 consolidation (no further ownership moves): ADR-0016.
 
 ## Related
 
 - ADR-0013 (layer ownership)
 - ADR-0014 (Core / Agriculture packages)
+- ADR-0016 (Dairy boundary consolidation)
 - `docs/architecture.md`
 - `tests/test_layer_import_boundaries.py`

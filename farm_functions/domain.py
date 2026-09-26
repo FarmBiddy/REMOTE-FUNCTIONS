@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from farm_functions.calcs.summary import pl_summary
+from farm_functions.dairy.statement import pl_summary
 from farm_functions.schemas import PlSummaryInput
 
 Period = Literal["annual"]

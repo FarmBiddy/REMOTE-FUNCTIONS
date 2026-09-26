@@ -60,7 +60,7 @@ HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). T
 
 Intended separation: **Application/API → Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.
 
-Layer meaning (ADR-0014, ADR-0015, ADR-0016):
+Layer meaning (ADR-0014, ADR-0015, ADR-0016, ADR-0017):
 
 | Layer | Package | Owns | Does not own |
 |-------|---------|------|--------------|
@@ -71,11 +71,25 @@ Layer meaning (ADR-0014, ADR-0015, ADR-0016):
 
 Dependency direction: Application/API → Dairy → Agriculture → Core (Dairy → Core also allowed). Higher/generic layers never import specialised ones.
 
+### Execution seam (L5)
+
+Distinct roles (do not collapse these):
+
+| Concern | Where | Role |
+|---------|-------|------|
+| **Canonical implementation** | `core` / `agriculture` / `dairy` | One formula body per capability |
+| **Compatibility facade** | `farm_functions.calcs.*`, `farm_functions.rounding` | Legacy re-exports only; must not grow a second formula body |
+| **Capability registration** | `farm_functions.registry` (`CALCULATION_CATALOGUE`) | Public IDs, schemas, thin publish wrappers bound to canonical callables |
+| **Execution orchestration** | `runner`, `api/routes`, domain/`calculate_annual_pnl`, provenance | Validate, dispatch, type, explain — no financial formulas |
+
+HTTP path: `POST /v1/functions/<id>/run` → `runner.run_function` → registry handler → Dairy / Agriculture / Core.
+
+Application/orchestration **must not** import `farm_functions.calcs` (ADR-0017). External code and compat tests may still use `calcs` re-exports.
+
 - Public name `FinancialInput` stays stable; conceptually it is the **Phase 1 Dairy** input contract (do not duplicate as `DairyFinancialInput`).
 - `land_leasing_income` is Agriculture semantics on that Dairy contract (ADR-0013); composed in Dairy `other_revenue` once.
-- Compatibility re-exports: `calcs.*` and `farm_functions.rounding` preserve existing imports; one implementation each (must not grow a second formula body).
 
-Forbidden imports: Core → Agriculture/Dairy; Agriculture → Dairy/`calcs`; Dairy → orchestration (`calcs` is re-export only). Characterisation: `tests/test_layer_import_boundaries.py`.
+Forbidden imports: Core → Agriculture/Dairy; Agriculture → Dairy/`calcs`; Dairy → orchestration; Application → `calcs`. Characterisation: `tests/test_layer_import_boundaries.py`.
 
 No FarmBiddy DB/platform integration, multi-enterprise aggregation, Beef, or Hospitality in this service yet.
 

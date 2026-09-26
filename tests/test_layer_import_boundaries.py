@@ -1,4 +1,4 @@
-"""Layer import boundaries: Core / Agriculture / Dairy dependency direction."""
+"""Layer import boundaries: Core / Agriculture / Dairy / Application dependency direction."""
 
 from __future__ import annotations
 
@@ -18,6 +18,19 @@ _ORCHESTRATION_FORBIDDEN = (
     "farm_functions.loaders",
     "farm_functions.registry",
     "farm_functions.runner",
+)
+
+# Application/orchestration modules must resolve canonical packages, not calcs.
+_APPLICATION_MODULES = (
+    FARM / "registry.py",
+    FARM / "provenance.py",
+    FARM / "domain.py",
+    FARM / "runner.py",
+    FARM / "simulation.py",
+    FARM / "scenarios.py",
+    FARM / "errors.py",
+    FARM / "schemas.py",
+    FARM / "loaders" / "json_loader.py",
 )
 
 # Symbols that must not be owned/exported by Dairy (Core or Agriculture homes).
@@ -87,6 +100,15 @@ def test_dairy_does_not_import_orchestration() -> None:
     _assert_no_forbidden(FARM / "dairy", _ORCHESTRATION_FORBIDDEN)
 
 
+def test_application_does_not_import_calcs_facade() -> None:
+    """L5: orchestration resolves Dairy/Agriculture/Core directly (ADR-0017)."""
+    for path in _APPLICATION_MODULES:
+        for name in _imported_modules(path):
+            assert name != "farm_functions.calcs" and not name.startswith(
+                "farm_functions.calcs."
+            ), f"{path.relative_to(REPO)} imports {name}"
+
+
 def test_dairy_does_not_redefine_core_or_agriculture_formulas() -> None:
     """Dairy may *call* Core/Agriculture; it must not host a second body."""
     defined: set[str] = set()
@@ -154,6 +176,27 @@ def test_dairy_costs_and_statement_reexport_identity() -> None:
     assert "feed" in OPERATING_COST_CATEGORIES
 
 
+def test_registry_binds_canonical_implementations() -> None:
+    """Catalogue wiring uses Dairy / Agriculture / Core callables, not calcs bodies."""
+    import farm_functions.registry as registry
+    from farm_functions.agriculture.revenue import scheme_revenue
+    from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
+    from farm_functions.dairy.costs import total_costs
+    from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
+    from farm_functions.dairy.statement import pl_summary
+
+    assert registry.milk_revenue is milk_revenue
+    assert registry.scheme_revenue is scheme_revenue
+    assert registry.other_revenue is other_revenue
+    assert registry.total_revenue is total_revenue
+    assert registry.total_costs is total_costs
+    assert registry.net_profit is net_profit
+    assert registry.profit_margin is profit_margin
+    assert registry.profit_margin_pct is profit_margin_pct
+    assert registry.pl_summary is pl_summary
+    assert registry.FUNCTIONS["pl.summary"].handler is pl_summary
+
+
 def test_statement_revenue_total_matches_dairy_total_revenue() -> None:
     """Statement composes the same Dairy revenue total as ``total_revenue``."""
     from farm_functions.dairy.revenue import total_revenue
@@ -173,6 +216,61 @@ def test_statement_revenue_total_matches_dairy_total_revenue() -> None:
     statement = pl_summary(**kwargs)
     assert statement["revenue"]["total"] == total_revenue(**kwargs)
     assert statement["revenue"]["schemes"] == 25_000.0
+
+
+def test_provenance_agrees_with_canonical_and_runner() -> None:
+    """Provenance values come from canonical formulas; match run_function publish path."""
+    from farm_functions.agriculture.revenue import scheme_revenue
+    from farm_functions.core.surplus import net_profit, profit_margin
+    from farm_functions.dairy.costs import OPERATING_COST_CATEGORIES, total_costs
+    from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
+    from farm_functions.domain import FinancialInput
+    from farm_functions.loaders.json_loader import load_sample_inputs
+    from farm_functions.provenance import explain_annual_pnl
+    from farm_functions.runner import run_function
+
+    data = load_sample_inputs()
+    explained = explain_annual_pnl(FinancialInput.model_validate(data))
+
+    milk = milk_revenue(data["milking_cows"], data["litres_per_cow"], data["milk_price"])
+    schemes = scheme_revenue(
+        biss=data["biss"], acres=data["acres"], other_grants=data["other_grants"]
+    )
+    other = other_revenue(
+        cattle_sales=data["cattle_sales"],
+        land_leasing_income=data["land_leasing_income"],
+        other=data["other"],
+    )
+    revenue = total_revenue(
+        milking_cows=data["milking_cows"],
+        litres_per_cow=data["litres_per_cow"],
+        milk_price=data["milk_price"],
+        biss=data["biss"],
+        acres=data["acres"],
+        other_grants=data["other_grants"],
+        cattle_sales=data["cattle_sales"],
+        land_leasing_income=data["land_leasing_income"],
+        other=data["other"],
+    )
+    costs = total_costs(**{name: data[name] for name in OPERATING_COST_CATEGORIES})
+    profit = net_profit(revenue, costs)
+    margin = profit_margin(revenue, costs)
+
+    assert explained["revenue.milk"].value == milk == 200_000.0
+    assert explained["revenue.schemes"].value == schemes == 25_000.0
+    assert explained["revenue.other"].value == other == 15_000.0
+    assert explained["revenue.total"].value == revenue == 240_000.0
+    assert explained["costs.total"].value == costs == 163_000.0
+    assert explained["profit.net"].value == profit == 77_000.0
+    assert explained["profit.margin"].value == margin
+
+    summary = run_function("pl.summary", data)["result"]
+    assert summary["revenue"]["total"] == 240_000.0
+    assert summary["revenue"]["schemes"] == 25_000.0
+    assert summary["costs"]["total"] == 163_000.0
+    assert summary["profit"]["net"] == 77_000.0
+    assert summary["profit"]["margin_pct"] == 32.08
+    assert summary["finance"]["loan_repayments"] == 12_000.0
 
 
 def test_sample_pl_summary_reference_unchanged() -> None:

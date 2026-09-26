@@ -12,11 +12,12 @@ from typing import Any, Callable
 
 from pydantic import BaseModel
 
-from farm_functions.calcs.costs import total_costs
-from farm_functions.calcs.profit import net_profit, profit_margin, profit_margin_pct
-from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue, total_revenue
-from farm_functions.calcs.summary import pl_summary
-from farm_functions.rounding import round_margin_pct, round_margin_ratio, round_money
+from farm_functions.agriculture.revenue import scheme_revenue
+from farm_functions.core.rounding import round_margin_pct, round_margin_ratio, round_money
+from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
+from farm_functions.dairy.costs import total_costs
+from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
+from farm_functions.dairy.statement import pl_summary
 from farm_functions.schemas import (
     MilkRevenueInput,
     OtherRevenueInput,

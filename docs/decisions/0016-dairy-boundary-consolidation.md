@@ -34,13 +34,14 @@ specialisation layer, not a second home for Core or Agriculture maths.
 ## Consequences
 
 - Dependency direction stays protected by `tests/test_layer_import_boundaries.py`.
-- Next architectural work should be the orchestration / composition service seam
-  (L5), not Beef/Sheep/Tillage extraction.
+- Orchestration / composition seam completed in ADR-0017 (Application imports
+  canonical packages; `calcs` remains compatibility-only).
 - Public calculation IDs, HTTP contracts, and the €240k / €163k / €77k reference
   remain unchanged by this gate.
 
 ## Related
 
 - ADR-0013, ADR-0014, ADR-0015
+- ADR-0017 (L5 orchestration canonical resolution)
 - `docs/architecture.md`
 - `tests/test_layer_import_boundaries.py`

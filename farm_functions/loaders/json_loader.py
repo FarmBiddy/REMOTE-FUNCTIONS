@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from farm_functions.calcs.costs import OPERATING_COST_CATEGORIES
+from farm_functions.dairy.costs import OPERATING_COST_CATEGORIES
 
 SAMPLE_FARM_PATH = Path(__file__).resolve().parents[2] / "sample_data" / "farm.json"
 

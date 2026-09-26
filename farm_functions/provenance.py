@@ -2,9 +2,10 @@
 
 from pydantic import BaseModel, ConfigDict
 
-from farm_functions.calcs.costs import OPERATING_COST_CATEGORIES, total_costs
-from farm_functions.calcs.profit import net_profit, profit_margin
-from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue, total_revenue
+from farm_functions.agriculture.revenue import scheme_revenue
+from farm_functions.core.surplus import net_profit, profit_margin
+from farm_functions.dairy.costs import OPERATING_COST_CATEGORIES, total_costs
+from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.domain import FinancialInput, FinancialModel
 from farm_functions.registry import CALCULATION_CATALOGUE
 from farm_functions.schemas import FIELD_UNITS

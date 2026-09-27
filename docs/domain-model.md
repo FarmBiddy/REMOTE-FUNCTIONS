@@ -35,7 +35,18 @@ MonthlyDairyStatementModel
 - Published income aggregates (`milk` / `schemes` / `other`) remain the monthly publication shape. Public HTTP: `pl.monthly` (ADR-0019).
 - Monthly driver metadata: `MONTHLY_DAIRY_INPUT_FIELD_METADATA` in `farm_functions/schemas.py` (separate from annual `FIELD_UNITS`).
 - **P1.2:** `calculate_monthly_dairy_statement(MonthlyDairyStatementModel)` returns `MonthlyDairyStatementResult` (structured `period` identity + reuse of revenue/costs/profit/finance money shapes). Dairy composes via `monthly_pl_summary` / `milk_revenue_from_litres` using explicit monthly amounts only (no annual ÷ 12).
-`pl.summary` is the Phase 1 **canonical annual Operating Statement** (ADR-0009): the only public calculation that returns the full `{currency, period, revenue, costs, profit, finance}` view. Atomic catalogue IDs are supporting schedules; for the same inputs their published results must reconcile with `pl.summary`. `calculate_annual_pnl` wraps the same composition and does not introduce alternate maths.
+
+### Multi-period P&L (P2.0 / ADR-0020 — not implemented yet)
+
+Future multi-month, YTD, and Jan–Dec **actual** series compose the monthly contract above:
+
+- Caller supplies **explicit** monthly envelopes only (omitted ≠ zero).
+- Named YTD through month M requires contiguous Jan…M or errors; series may be sparse.
+- YTD money lines sum monthly operating totals; Operating Surplus and margin use Core on **YTD** income and costs (never average of monthly margins). Finance loan sums stay outside OS.
+- YTD and annual `pl.summary` are independent (no forced Dec-YTD = annual).
+- Domain will own list→months→optional YTD composition; prefer one HTTP multi-period ID later (`pl.months`). No code in P2.0.
+
+`pl.summary` is the Phase 1 **canonical annual Operating Statement** (ADR-0009): the public annual calculation that returns the full `{currency, period, revenue, costs, profit, finance}` view. Atomic catalogue IDs are supporting schedules; for the same inputs their published results must reconcile with `pl.summary`. `calculate_annual_pnl` wraps the same composition and does not introduce alternate maths.
 
 ### FinancialInput
 

@@ -57,6 +57,8 @@ App Platform / Agent
 HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). The domain types in `farm_functions/domain.py` are not a new HTTP API.
 
 **Period contracts (ADR-0018 / P1.2–P1.4):** Annual `FinancialInput` / `pl.summary` remain the public annual facade. Monthly: flat HTTP `pl.monthly` → Application assembles `MonthlyDairyStatementModel` → `calculate_monthly_dairy_statement` → `MonthlyDairyStatementResult` (ADR-0019). Calendar identity stays on the Domain envelope/result; Core / Agriculture / Dairy formula primitives stay calendar-blind. Annual and monthly are two compositions over shared surplus, margin, rounding, scheme, and cost primitives (`tests/test_period_reconciliation.py`).
+
+**Multi-period P&L (ADR-0020 / P2.0 — semantics only):** Near-term Engine focus is Operating Statements, then Cash Flow. YTD and Jan–Dec **actual** series will compose the existing monthly capability (no second P&L engine, no annual÷12, no invented months, YTD margin from YTD totals only). Implementation is P2.1+; HTTP multi-period ID deferred to P2.4. `pl.summary` and `pl.monthly` stay compatible.
 ## Target layering (progressive)
 
 Intended separation: **Application/API → Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.

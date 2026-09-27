@@ -35,7 +35,7 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Scenarios (ADR-0012):** In-process `run_scenario` / `run_scenarios` — caller-defined name + overrides executed through B7. Independent runs from the same base; no ranking, deltas, Base/Best/Worst semantics, or persistence. **Not on HTTP** in Phase 1.
 
-**Out of scope here:** persistence, authentication, forecasting, YTD/Jan–Dec aggregation, KPIs, multi-currency, AI-generated calculations, Supabase/farm CRUD.
+**Out of scope on HTTP today:** persistence, authentication, forecasting, multi-period YTD/series endpoints (semantics only in ADR-0020; implementation P2.1–P2.4), KPIs, multi-currency, AI-generated calculations, Supabase/farm CRUD.
 
 ### Intentional interface differences
 

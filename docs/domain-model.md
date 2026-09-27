@@ -61,7 +61,13 @@ MonthlyDairyStatementModel
   `costs.total` is the sum of monthly operating-cost totals (authoritative
   for surplus). Finance loans summed separately.
 
-**P2.3+ (not implemented):** Jan–Dec actual series; HTTP multi-period ID (P2.4).
+**P2.3 (contract freeze, ADR-0021):** Jan–Dec actual financial series needs **no
+new Domain type** — P2.1 `MultiMonthDairyStatementResult.months[]` is sufficient
+for charts. External HTTP ID **`pl.months`** is frozen (nested `months[]` +
+optional `ytd`); **implementation is P2.4** (not live in the catalogue yet).
+
+**P2.4 (not implemented):** Registry/HTTP adapter for `pl.months` over P2.1 +
+optional P2.2; keep `pl.summary` / `pl.monthly` unchanged.
 
 `pl.summary` is the Phase 1 **canonical annual Operating Statement** (ADR-0009): the public annual calculation that returns the full `{currency, period, revenue, costs, profit, finance}` view. Atomic catalogue IDs are supporting schedules; for the same inputs their published results must reconcile with `pl.summary`. `calculate_annual_pnl` wraps the same composition and does not introduce alternate maths.
 

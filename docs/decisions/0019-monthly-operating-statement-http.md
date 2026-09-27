@@ -29,7 +29,8 @@ Domain type construction or internal packages.
 
 - Catalogue has nine public IDs; discovery and OpenAPI auto-include `pl.monthly`.
 - Annual `POST /v1/functions/pl.summary/run` request/response unchanged.
-- Future YTD can use a separate ID (e.g. `pl.ytd`) without nesting under annual.
+- Future multi-period/YTD HTTP is a separate additive ID (`pl.months`, ADR-0021),
+  not nested under annual — superseding an earlier sketch of a standalone `pl.ytd`.
 - No YTD, forecast, simulation/scenario HTTP, or persistence in P1.4.
 
 ## Related

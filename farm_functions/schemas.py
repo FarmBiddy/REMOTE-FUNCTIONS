@@ -26,6 +26,40 @@ def _parse_non_negative_number(value: Any) -> float:
 NonNegativeNumber = Annotated[float, BeforeValidator(_parse_non_negative_number)]
 
 
+def _parse_calendar_year(value: Any) -> int:
+    """Accept whole number year ≥ 1. Reject bool, null, strings, non-integers."""
+    if value is None:
+        raise ValueError("null is not a valid value")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("must be a number")
+    if isinstance(value, float):
+        if not isfinite(value) or not value.is_integer():
+            raise ValueError("must be a number")
+    year = int(value)
+    if year < 1:
+        raise ValueError("must be a calendar year of 1 or greater")
+    return year
+
+
+def _parse_calendar_month(value: Any) -> int:
+    """Accept whole number month 1–12. Reject bool, null, strings, non-integers."""
+    if value is None:
+        raise ValueError("null is not a valid value")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("must be a number")
+    if isinstance(value, float):
+        if not isfinite(value) or not value.is_integer():
+            raise ValueError("must be a number")
+    month = int(value)
+    if month < 1 or month > 12:
+        raise ValueError("must be a calendar month from 1 to 12")
+    return month
+
+
+CalendarYear = Annotated[int, BeforeValidator(_parse_calendar_year)]
+CalendarMonth = Annotated[int, BeforeValidator(_parse_calendar_month)]
+
+
 class _StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -106,6 +140,18 @@ class MonthlyDairyFinancialInput(
     on the Domain envelope (ADR-0018). No annual milk fields
     (``milking_cows``, ``litres_per_cow``).
     """
+
+
+class PlMonthlyInput(MonthlyDairyFinancialInput):
+    """Flat HTTP / runner input for ``pl.monthly`` (ADR-0019).
+
+    Transport includes period identity; Application peels ``year`` / ``month``
+    into ``MonthlyPeriodIdentity`` and the remaining drivers into
+    ``MonthlyDairyFinancialInput``.
+    """
+
+    year: CalendarYear
+    month: CalendarMonth
 
 
 @dataclass(frozen=True)
@@ -442,10 +488,22 @@ def list_input_metadata() -> list[dict[str, Any]]:
 
 FIELD_UNITS: dict[str, str] = {item.name: item.unit for item in INPUT_FIELD_METADATA}
 
+# Period identity units for flat HTTP ``pl.monthly`` needs_input (not annual FIELD_UNITS).
+PERIOD_IDENTITY_FIELD_UNITS: dict[str, str] = {
+    "year": "year",
+    "month": "month",
+}
+
 
 def missing_field_entry(field: str) -> dict[str, str]:
     """Canonical needs_input.missing item: {field, unit}."""
-    return {"field": field, "unit": FIELD_UNITS.get(field, "unknown")}
+    unit = (
+        FIELD_UNITS.get(field)
+        or PERIOD_IDENTITY_FIELD_UNITS.get(field)
+        or MONTHLY_FIELD_UNITS.get(field)
+        or "unknown"
+    )
+    return {"field": field, "unit": unit}
 
 
 # Monthly Dairy statement financial-driver metadata (ADR-0018). Separate from

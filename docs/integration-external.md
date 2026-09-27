@@ -1,6 +1,6 @@
-# External annual integration (I2)
+# External integration (I2 annual + P1.4 monthly)
 
-How a separate client (e.g. a future Next.js mock on `localhost:3000`) calls this
+How a separate client (e.g. a Next.js mock on `localhost:3000`) calls this
 Financial Engine without knowing Dairy / Agriculture / Core internals.
 
 ## Run the engine
@@ -141,6 +141,68 @@ Most validation outcomes use HTTP **200** with an application status:
   }
 }
 ```
+
+## Canonical monthly call (P1.4)
+
+```http
+POST /v1/functions/pl.monthly/run
+Content-Type: application/json
+```
+
+Body: flat JSON — period identity plus monthly financial drivers. The client must
+**not** construct Domain types (`MonthlyDairyStatementModel`, etc.).
+
+### Required
+
+- `year` (calendar year ≥ 1)
+- `month` (1–12)
+- `milk_litres`
+- `milk_price`
+
+### Optional (omit → treated as `0`)
+
+- Schemes: `biss`, `acres`, `other_grants` (EUR for the statement month)
+- Other income: `cattle_sales`, `land_leasing_income`, `other`
+- Operating costs: `feed`, `fertiliser`, `vet`, `contractor`, `labour`, `insurance`, `fuel`, `electricity`, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`, `other_operating_costs`
+- Finance: `loan_repayments` (does **not** reduce Operating Surplus)
+
+Unknown field names (including annual-only `milking_cows` / `litres_per_cow`), `null`,
+negatives, wrong types, and invalid months are rejected. Monthly is **not** annual ÷ 12.
+
+### Example (approved March 2026 reference)
+
+```json
+{
+  "year": 2026,
+  "month": 3,
+  "milk_litres": 40000,
+  "milk_price": 0.40,
+  "biss": 2000,
+  "acres": 500,
+  "other_grants": 0,
+  "cattle_sales": 1000,
+  "land_leasing_income": 0,
+  "other": 0,
+  "feed": 5000,
+  "fertiliser": 1000,
+  "loan_repayments": 1500
+}
+```
+
+### Success shape
+
+Same envelope as annual (`status` / `function` / `result`). Differences:
+
+| Field | Monthly |
+|-------|---------|
+| `function` | `pl.monthly` |
+| `result.period` | `{ "kind": "month", "year": 2026, "month": 3 }` (object, not `"annual"`) |
+| Money nests | Same: `revenue` / `costs` / `profit` / `finance` |
+
+Approved reference: milk **16000**, schemes **2500**, other **1000**, income **19500**,
+costs **6000**, Operating Surplus **13500**, margin **0.6923** / **69.23%**, loans **1500**.
+
+Error branching is identical to annual (`needs_input` / `error.code`). CORS is unchanged.
 
 ## CORS (local Next.js)
 

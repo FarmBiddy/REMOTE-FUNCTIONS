@@ -34,6 +34,8 @@ _MSG_MUST_BE_NUMBER = "must be a number"
 _MSG_MUST_BE_FINITE = "must be a finite number"
 _MSG_MUST_BE_GE_ZERO = "must be greater than or equal to 0"
 _MSG_NULL = "null is not a valid value"
+_MSG_CALENDAR_YEAR = "must be a calendar year of 1 or greater"
+_MSG_CALENDAR_MONTH = "must be a calendar month from 1 to 12"
 
 
 def issue(
@@ -195,6 +197,28 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     value=safe_value,
                     include_value=True,
                     details={"minimum": 0},
+                )
+            )
+        elif text == _MSG_CALENDAR_YEAR:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} must be a calendar year of 1 or greater" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 1},
+                )
+            )
+        elif text == _MSG_CALENDAR_MONTH:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} must be a calendar month from 1 to 12" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 1, "maximum": 12},
                 )
             )
         else:

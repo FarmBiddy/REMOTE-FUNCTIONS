@@ -14,7 +14,7 @@ from farm_functions.registry import (
     REQUIRED_FIELDS,
 )
 from farm_functions.runner import run_function
-from farm_functions.schemas import FIELD_UNITS, missing_field_entry
+from farm_functions.schemas import missing_field_entry
 
 client = TestClient(app)
 
@@ -57,6 +57,19 @@ def _happy_payload(key: str) -> dict:
         return dict(SAMPLE_PROFIT_TOTALS)
     if key == "pl.summary":
         return load_sample_inputs()
+    if key == "pl.monthly":
+        return {
+            "year": 2026,
+            "month": 3,
+            "milk_litres": 40_000,
+            "milk_price": 0.40,
+            "biss": 2_000,
+            "acres": 500,
+            "cattle_sales": 1_000,
+            "feed": 5_000,
+            "fertiliser": 1_000,
+            "loan_repayments": 1_500,
+        }
     raise AssertionError(f"No happy payload for {key}")
 
 
@@ -72,7 +85,12 @@ def _required_only_payload(key: str) -> dict:
 def _zero_payload(key: str) -> dict:
     """All known fields set explicitly to 0."""
     known = REQUIRED_FIELDS[key] + OPTIONAL_FIELDS[key]
-    return {name: 0 for name in known}
+    payload = {name: 0 for name in known}
+    # Calendar identity cannot be zero; keep a valid period with zero money drivers.
+    if key == "pl.monthly":
+        payload["year"] = 1
+        payload["month"] = 1
+    return payload
 
 
 def _assert_ok_money(result: dict, amount: float) -> None:
@@ -119,6 +137,17 @@ def test_happy_path(key: str) -> None:
         assert body["profit"]["margin_pct"] == 32.08
         assert body["finance"]["loan_repayments"] == 12_000
         assert "loan_repayments" not in body["costs"]["lines"]
+    elif key == "pl.monthly":
+        body = result["result"]
+        assert body["period"] == {"kind": "month", "year": 2026, "month": 3}
+        assert body["revenue"]["milk"] == 16_000
+        assert body["revenue"]["schemes"] == 2_500
+        assert body["revenue"]["other"] == 1_000
+        assert body["revenue"]["total"] == 19_500
+        assert body["costs"]["total"] == 6_000
+        assert body["profit"]["net"] == 13_500
+        assert body["profit"]["margin_pct"] == 69.23
+        assert body["finance"]["loan_repayments"] == 1_500
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -149,6 +178,15 @@ def test_required_only_optionals_default_to_zero(key: str) -> None:
         assert body["costs"]["total"] == 0
         assert body["profit"]["net"] == 200_000
         assert body["finance"]["loan_repayments"] == 0
+    elif key == "pl.monthly":
+        body = result["result"]
+        assert body["period"] == {"kind": "month", "year": 2026, "month": 3}
+        assert body["revenue"]["milk"] == 16_000
+        assert body["revenue"]["schemes"] == 0
+        assert body["revenue"]["other"] == 0
+        assert body["costs"]["total"] == 0
+        assert body["profit"]["net"] == 16_000
+        assert body["finance"]["loan_repayments"] == 0
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -170,6 +208,11 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["margin_pct"] == 0
         assert result["result"]["profit"] == 0
     elif key == "pl.summary":
+        assert result["result"]["revenue"]["total"] == 0
+        assert result["result"]["costs"]["total"] == 0
+        assert result["result"]["profit"]["net"] == 0
+    elif key == "pl.monthly":
+        assert result["result"]["period"] == {"kind": "month", "year": 1, "month": 1}
         assert result["result"]["revenue"]["total"] == 0
         assert result["result"]["costs"]["total"] == 0
         assert result["result"]["profit"]["net"] == 0
@@ -198,7 +241,7 @@ def test_missing_each_required_field(key: str, field: str, payload: dict) -> Non
         missing_field_entry(f) for f in REQUIRED_FIELDS[key] if f not in payload
     ]
     for item in result["missing"]:
-        assert item["unit"] == FIELD_UNITS[item["field"]]
+        assert item["unit"] == missing_field_entry(item["field"])["unit"]
 
 
 def _assert_unknown_field_error(result: dict, *fields: str) -> None:

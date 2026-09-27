@@ -5,7 +5,8 @@ the Phase 1 annual facade aligned with ``pl.summary``.
 
 Monthly types (ADR-0018 / P1.2): period identity on the envelope; financial
 drivers on ``MonthlyDairyFinancialInput``; calculation via
-``calculate_monthly_dairy_statement`` (no HTTP yet).
+``calculate_monthly_dairy_statement``. Public HTTP ID ``pl.monthly`` (ADR-0019)
+assembles this envelope from a flat transport payload.
 """
 
 from typing import Literal

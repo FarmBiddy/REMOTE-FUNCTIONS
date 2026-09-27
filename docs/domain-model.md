@@ -32,7 +32,7 @@ MonthlyDairyStatementModel
 - Period identity (`year` / `month`) stays on the envelope — not on financial drivers and not passed into Core / Agriculture / Dairy formula primitives.
 - Monthly milk drivers are `milk_litres` + `milk_price` (not annual `litres_per_cow`).
 - Schemes, other income, operating costs, and `loan_repayments` reuse the same field names as annual, with monthly metadata units (`EUR` / `litres`) describing amounts for the stated month.
-- Published income aggregates (`milk` / `schemes` / `other`) remain the intended monthly publication shape until P1.5; no monthly HTTP yet.
+- Published income aggregates (`milk` / `schemes` / `other`) remain the monthly publication shape. Public HTTP: `pl.monthly` (ADR-0019).
 - Monthly driver metadata: `MONTHLY_DAIRY_INPUT_FIELD_METADATA` in `farm_functions/schemas.py` (separate from annual `FIELD_UNITS`).
 - **P1.2:** `calculate_monthly_dairy_statement(MonthlyDairyStatementModel)` returns `MonthlyDairyStatementResult` (structured `period` identity + reuse of revenue/costs/profit/finance money shapes). Dairy composes via `monthly_pl_summary` / `milk_revenue_from_litres` using explicit monthly amounts only (no annual ÷ 12).
 `pl.summary` is the Phase 1 **canonical annual Operating Statement** (ADR-0009): the only public calculation that returns the full `{currency, period, revenue, costs, profit, finance}` view. Atomic catalogue IDs are supporting schedules; for the same inputs their published results must reconcile with `pl.summary`. `calculate_annual_pnl` wraps the same composition and does not introduce alternate maths.

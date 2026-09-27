@@ -38,15 +38,16 @@ Agriculture / Dairy money primitives; annual `FinancialInput` /
    catalogue, and `loan_repayments` reuse the same field names as annual,
    with monthly metadata describing them as amounts for the stated month.
 5. **No monthly HTTP in P1.1 / P1.2.** Types and in-process calculation only
-   through P1.2. No registry ID, no HTTP monthly route, no YTD, no forecast,
-   no B7/B8 changes, no income-line publication expansion.
+   through P1.2. (HTTP exposure is ADR-0019 / P1.4.) No YTD, no forecast,
+   no B7/B8 changes, no income-line publication expansion in P1.1–P1.2.
 
 ## Consequences
 
 - P1.2 adds in-process monthly calculation:
   `calculate_monthly_dairy_statement` → Dairy `monthly_pl_summary` /
   `milk_revenue_from_litres`, reusing Core surplus/rounding/sum and
-  Agriculture `scheme_revenue`. No HTTP monthly route yet.
+  Agriculture `scheme_revenue`.
+- P1.4 exposes that calculation as public ID `pl.monthly` (ADR-0019).
 - Published annual `result.period` remains the string `"annual"`.
   Monthly identity uses structured `{kind, year, month}` on the monthly
   envelope and `MonthlyDairyStatementResult`.
@@ -56,5 +57,5 @@ Agriculture / Dairy money primitives; annual `FinancialInput` /
 ## Related
 
 - P1.0 Period Semantics & Contract Audit
-- ADR-0007, ADR-0009, ADR-0015, ADR-0017
+- ADR-0007, ADR-0009, ADR-0015, ADR-0017, ADR-0019
 - `farm_functions/domain.py`, `farm_functions/schemas.py`

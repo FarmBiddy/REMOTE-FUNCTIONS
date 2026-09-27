@@ -41,8 +41,9 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | `profit.net` | `revenue`, `costs` | Operating Surplus = revenue − operating costs |
 | `profit.margin` | `revenue`, `costs` | Operating Surplus / revenue |
 | `pl.summary` | milk fields | **canonical** annual Operating Statement + `finance.loan_repayments` |
+| `pl.monthly` | `year`, `month`, `milk_litres`, `milk_price` | Explicit monthly Operating Statement (not annual ÷ 12) + `finance.loan_repayments` |
 
-`pl.summary` is the Phase 1 canonical annual Operating Statement (ADR-0009). Atomic IDs are supporting schedules that must reconcile to it. `profit.net` and `profit.margin` keep those public IDs (Option A) and expect **already totalled** operating income and operating costs — use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
+`pl.summary` is the Phase 1 canonical annual Operating Statement (ADR-0009). `pl.monthly` is the explicit monthly statement (ADR-0019). Atomic IDs are supporting schedules that must reconcile to the annual view. `profit.net` and `profit.margin` keep those public IDs (Option A) and expect **already totalled** operating income and operating costs — use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
 
 ## Sample farm (`sample_data/farm.json`)
 

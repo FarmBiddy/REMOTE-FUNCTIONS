@@ -1,4 +1,8 @@
-"""Operating Surplus primitives. Inputs are already-totalled annual EUR."""
+"""Operating Surplus primitives.
+
+Inputs are already-totalled monetary amounts for the statement period
+(annual or monthly). Core does not know calendar periods.
+"""
 
 
 def net_profit(revenue: float, costs: float) -> float:

@@ -13,8 +13,9 @@ def scheme_revenue(
     acres: float = 0,
     other_grants: float = 0,
 ) -> float:
-    """Operating agri-scheme / subsidy income (EUR/year).
+    """Operating agri-scheme / subsidy income for the statement period.
 
-    ``acres`` is ACRES scheme money, not land area.
+    Amounts are EUR for that period (annual or monthly callers supply
+    period-scoped floats). ``acres`` is ACRES scheme money, not land area.
     """
     return sum_amounts(biss, acres, other_grants)

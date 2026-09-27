@@ -96,6 +96,41 @@ def test_agriculture_does_not_import_dairy_or_calcs() -> None:
     )
 
 
+def test_core_has_no_calendar_period_coupling() -> None:
+    """Core is period-agnostic money arithmetic (P1.3)."""
+    calendar_needles = (
+        "MonthlyPeriodIdentity",
+        "MonthlyDairy",
+        "monthly_pl_summary",
+        "pl_summary",
+        "milk_litres",
+        "milking_cows",
+        "FinancialInput",
+        "dairy.",
+        "agriculture.",
+    )
+    for path in _py_files(FARM / "core"):
+        text = path.read_text(encoding="utf-8")
+        for needle in calendar_needles:
+            assert needle not in text, f"{path.relative_to(REPO)} mentions {needle}"
+
+
+def test_agriculture_has_no_monthly_envelope_coupling() -> None:
+    """Agriculture must not know monthly Domain statement envelopes (P1.3)."""
+    envelope_needles = (
+        "MonthlyPeriodIdentity",
+        "MonthlyDairyStatement",
+        "MonthlyDairyFinancialInput",
+        "monthly_pl_summary",
+        "calculate_monthly",
+        "milk_litres",
+    )
+    for path in _py_files(FARM / "agriculture"):
+        text = path.read_text(encoding="utf-8")
+        for needle in envelope_needles:
+            assert needle not in text, f"{path.relative_to(REPO)} mentions {needle}"
+
+
 def test_dairy_does_not_import_orchestration() -> None:
     _assert_no_forbidden(FARM / "dairy", _ORCHESTRATION_FORBIDDEN)
 

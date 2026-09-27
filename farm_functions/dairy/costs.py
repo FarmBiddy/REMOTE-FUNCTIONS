@@ -1,8 +1,10 @@
-"""Dairy operating-cost catalogue and totals. All amounts are annual EUR.
+"""Dairy operating-cost catalogue and totals.
 
-``OPERATING_COST_CATEGORIES`` is the authoritative Phase 1 operating-cost
-catalogue (Dairy-owned Phase 1 input vocabulary; ADR-0013 / ADR-0015). Loan
-repayments are finance/debt service and are not included.
+Amounts are EUR for the statement period being computed (annual or monthly
+callers supply period-scoped floats). ``OPERATING_COST_CATEGORIES`` is the
+authoritative Phase 1 operating-cost catalogue (Dairy-owned Phase 1 input
+vocabulary; ADR-0013 / ADR-0015). Loan repayments are finance/debt service
+and are not included.
 """
 
 from farm_functions.core.aggregate import sum_amounts

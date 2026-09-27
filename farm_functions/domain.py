@@ -7,11 +7,14 @@ Monthly types (ADR-0018 / P1.2): period identity on the envelope; financial
 drivers on ``MonthlyDairyFinancialInput``; calculation via
 ``calculate_monthly_dairy_statement``. Public HTTP ID ``pl.monthly`` (ADR-0019)
 assembles this envelope from a flat transport payload.
+
+Multi-month (ADR-0020 / P2.1): ``calculate_multi_month_dairy_statements`` composes
+the existing monthly calculator over an explicit month list. Not YTD (P2.2).
 """
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from farm_functions.dairy.monthly_statement import monthly_pl_summary
 from farm_functions.dairy.statement import pl_summary
@@ -176,3 +179,55 @@ def calculate_monthly_dairy_statement(
             "finance": payload["finance"],
         }
     )
+
+
+class MultiMonthDairyStatementModel(BaseModel):
+    """Explicit collection of monthly envelopes (ADR-0020 / P2.1).
+
+    Not a YTD statement. Sparse and cross-year months are allowed. Duplicate
+    ``{year, month}`` identities are rejected. Caller input order does not
+    define financial meaning — results are sorted chronologically.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    currency: Currency = "EUR"
+    months: list[MonthlyDairyStatementModel] = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def _reject_duplicate_periods(self) -> "MultiMonthDairyStatementModel":
+        seen: set[tuple[int, int]] = set()
+        for item in self.months:
+            key = (item.period.year, item.period.month)
+            if key in seen:
+                raise ValueError(
+                    f"duplicate monthly period year={key[0]} month={key[1]}"
+                )
+            seen.add(key)
+        return self
+
+
+class MultiMonthDairyStatementResult(BaseModel):
+    """Calculated monthly statements only — no YTD or cross-month totals (P2.1).
+
+    ``months`` are ordered chronologically by ``(year, month)``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    currency: Currency
+    months: list[MonthlyDairyStatementResult]
+
+
+def calculate_multi_month_dairy_statements(
+    model: MultiMonthDairyStatementModel,
+) -> MultiMonthDairyStatementResult:
+    """Run existing monthly OS calculation for each explicit month (P2.1).
+
+    Reuses ``calculate_monthly_dairy_statement`` only — no new financial
+    formulas, no YTD aggregation. Does not mutate ``model``. Results are
+    sorted by ``(period.year, period.month)``.
+    """
+    results = [calculate_monthly_dairy_statement(month) for month in model.months]
+    results.sort(key=lambda r: (r.period.year, r.period.month))
+    return MultiMonthDairyStatementResult(currency=model.currency, months=results)

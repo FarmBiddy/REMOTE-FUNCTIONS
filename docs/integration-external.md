@@ -204,11 +204,9 @@ costs **6000**, Operating Surplus **13500**, margin **0.6923** / **69.23%**, loa
 
 Error branching is identical to annual (`needs_input` / `error.code`). CORS is unchanged.
 
-## Multi-period call (ADR-0021 / P2.3 freeze — **not live until P2.4**)
+## Multi-period call (ADR-0021 / P2.4 — live)
 
-Public ID **`pl.months`**. Contract frozen; catalogue/HTTP adapter is **P2.4**.
-Until then, discovery will not list this ID and `POST .../pl.months/run` returns
-unknown calculation.
+Public ID **`pl.months`**. Nested request over Domain multi-month + optional YTD.
 
 ```http
 POST /v1/functions/pl.months/run
@@ -256,7 +254,7 @@ colours. Sparse / cross-year month lists are allowed when `ytd` is omitted.
 Named YTD requires contiguous January…`as_of_month` for that year (Domain
 rules); months after `as_of_month` are ignored for YTD.
 
-### Success shape (P2.4)
+### Success shape
 
 ```json
 {
@@ -264,19 +262,41 @@ rules); months after `as_of_month` are ignored for YTD.
   "function": "pl.months",
   "result": {
     "currency": "EUR",
-    "months": [ { "currency": "EUR", "period": { "kind": "month", "year": 2026, "month": 1 }, "revenue": {}, "costs": {}, "profit": {}, "finance": {} } ],
-    "ytd": null
+    "months": [
+      {
+        "currency": "EUR",
+        "period": { "kind": "month", "year": 2026, "month": 1 },
+        "revenue": { "milk": 100.0, "schemes": 0.0, "other": 0.0, "total": 100.0 },
+        "costs": { "lines": { "feed": 10.0 }, "total": 10.0 },
+        "profit": { "net": 90.0, "margin": 0.9, "margin_pct": 90.0 },
+        "finance": { "loan_repayments": 5.0 }
+      }
+    ],
+    "ytd": {
+      "currency": "EUR",
+      "period": {
+        "kind": "ytd",
+        "year": 2026,
+        "as_of_month": 2,
+        "months_included": [1, 2]
+      },
+      "revenue": { "milk": 1100.0, "schemes": 0.0, "other": 0.0, "total": 1100.0 },
+      "costs": { "lines": { "feed": 910.0 }, "total": 910.0 },
+      "profit": { "net": 190.0, "margin": 0.1727, "margin_pct": 17.27 },
+      "finance": { "loan_repayments": 15.0 }
+    }
   }
 }
 ```
 
+When `ytd` is omitted or JSON `null` on the request, `result.ytd` is **`null`**
+(key always present).
+
 - `result.months` — chronological monthly Operating Statements (Domain dumps).
-- `result.ytd` — full YTD statement dump, or **`null`** when YTD was not requested
-  (key always present).
 - Jan–Dec chart: read `period.month`, `revenue.total`, `costs.total`, `profit.net`
   from each monthly result. Engine does not return chart DTOs.
 
-### Errors (P2.4)
+### Errors
 
 Same envelope vocabulary. Missing top-level `months` → `needs_input` /
 `missing_required`. Nested missing drivers, duplicates, YTD gaps → `error` with
@@ -285,8 +305,8 @@ existing codes; period-set structure uses `details.reason` (`duplicate_period`,
 **not** `needs_input` (runner only scans top-level keys). Branch on `error.code`
 (+ `details.reason`), not message text.
 
-Discovery (after P2.4): `required: ["months"]`, `optional: ["ytd"]` — nested month
-field names are documented here, not listed in discovery.
+Discovery: `required: ["months"]`, `optional: ["ytd"]` — nested month field names
+are documented here, not listed in discovery.
 
 `pl.summary` and `pl.monthly` remain unchanged.
 
@@ -308,8 +328,8 @@ Engine: `127.0.0.1:8000`. Mock UI: typically `localhost:3000`.
 ## Platform-owned (not this engine)
 
 Loan product cards, supplier debt lists, financial event calendars, forecast UI.
-After P2.4, Jan–Dec **actual** chart series and YTD OS cards should call
-`pl.months` (Engine maths); until then Platform may still mock those surfaces.
+Jan–Dec **actual** chart series and YTD OS cards should call `pl.months`
+(Engine maths). Forecast and UI chrome remain Platform-owned.
 
 ## Discovery (optional)
 

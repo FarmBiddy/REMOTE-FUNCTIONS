@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (P2.3 external contract freeze — HTTP implementation deferred to P2.4)
+Accepted and implemented (P2.4 — public ID `pl.months` live in catalogue / HTTP)
 
 ## Context
 
@@ -111,12 +111,12 @@ message text.
 
 ## Consequences
 
-- **P2.3** freezes this contract in documentation (this ADR). No registry,
-  routes, schemas, or HTTP tests yet.
-- **P2.4** implements the thin adapter: schemas → registry handler → P2.1 →
-  optional P2.2 → Domain dumps; extend error mapping; focused HTTP tests;
-  update integration docs for live use.
-- Mock Platform (I6) can wire charts and YTD from one Engine call after P2.4.
+- **P2.3** froze this contract in documentation.
+- **P2.4** implemented the thin adapter: `PlMonthsInput` → registry
+  `_handle_pl_months` → P2.1 → optional P2.2 → Domain dumps; runner allows
+  null on optional `ytd` and maps handler `ValidationError`;
+  `tests/test_pl_months_http.py`.
+- Mock Platform (I6) can wire charts and YTD from one Engine call.
 - ADR-0019 note that future YTD might use `pl.ytd` is superseded for the
   multi-period surface by this single-ID decision.
 

@@ -1,8 +1,11 @@
 """Run a named function. Missing numbers are requested, never guessed."""
 
-from typing import Any
+from __future__ import annotations
 
-from pydantic import ValidationError
+from types import UnionType
+from typing import Any, Union, get_args, get_origin
+
+from pydantic import BaseModel, ValidationError
 
 from farm_functions.errors import (
     attach_issues,
@@ -31,6 +34,20 @@ def _unknown_keys(inputs: dict[str, Any], known: tuple[str, ...]) -> list[str]:
     return sorted(key for key in inputs if key not in known_set)
 
 
+def _field_allows_none(model: type[BaseModel], field_name: str) -> bool:
+    """True when the field annotation accepts ``None`` (e.g. optional ``ytd``)."""
+    field = model.model_fields.get(field_name)
+    if field is None:
+        return False
+    annotation = field.annotation
+    if annotation is type(None):
+        return True
+    origin = get_origin(annotation)
+    if origin is Union or origin is UnionType:
+        return type(None) in get_args(annotation)
+    return False
+
+
 def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, Any]:
     spec = get_function(name)
     if spec is None:
@@ -45,7 +62,14 @@ def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, A
     if unknown_keys:
         return invalid_inputs_envelope(name, unknown_field_issues(unknown_keys))
 
-    null_keys = sorted(key for key in known if key in payload and payload[key] is None)
+    model = INPUT_MODELS[name]
+    null_keys = sorted(
+        key
+        for key in known
+        if key in payload
+        and payload[key] is None
+        and not _field_allows_none(model, key)
+    )
     if null_keys:
         return invalid_inputs_envelope(name, null_not_allowed_issues(null_keys))
 
@@ -61,13 +85,16 @@ def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, A
             missing_required_issues(missing_keys),
         )
 
-    model = INPUT_MODELS[name]
     try:
         parsed = model.model_validate(payload)
     except ValidationError as exc:
         return invalid_inputs_envelope(name, map_validation_error(exc))
 
-    result = spec.handler(**parsed.model_dump())
+    try:
+        result = spec.handler(**parsed.model_dump())
+    except ValidationError as exc:
+        return invalid_inputs_envelope(name, map_validation_error(exc))
+
     return {
         "status": "ok",
         "function": name,

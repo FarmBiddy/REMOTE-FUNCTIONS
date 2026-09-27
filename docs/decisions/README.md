@@ -24,7 +24,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0018](0018-period-domain-contract.md) | Period domain contract (P1.1 monthly identity vs drivers) |
 | [0019](0019-monthly-operating-statement-http.md) | Monthly Operating Statement HTTP contract (`pl.monthly`) |
 | [0020](0020-multi-period-pnl-semantics.md) | Multi-period P&L semantics (P2.0; YTD / series compose monthly) |
-| [0021](0021-multi-period-http.md) | Multi-period Operating Statement HTTP contract (`pl.months`; P2.3 freeze, P2.4 implement) |
+| [0021](0021-multi-period-http.md) | Multi-period Operating Statement HTTP contract (`pl.months`; implemented P2.4) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

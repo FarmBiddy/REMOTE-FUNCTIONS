@@ -21,13 +21,18 @@ from farm_functions.dairy.statement import pl_summary
 from farm_functions.domain import (
     MonthlyDairyStatementModel,
     MonthlyPeriodIdentity,
+    MultiMonthDairyStatementModel,
+    YtdDairyStatementModel,
     calculate_monthly_dairy_statement,
+    calculate_multi_month_dairy_statements,
+    calculate_ytd_dairy_statement,
 )
 from farm_functions.schemas import (
     MilkRevenueInput,
     MonthlyDairyFinancialInput,
     OtherRevenueInput,
     PlMonthlyInput,
+    PlMonthsInput,
     PlSummaryInput,
     ProfitInput,
     SchemeRevenueInput,
@@ -113,6 +118,40 @@ def _handle_pl_monthly(*, year: int, month: int, **drivers: Any) -> dict[str, An
     return calculate_monthly_dairy_statement(model).model_dump()
 
 
+def _handle_pl_months(
+    *,
+    months: list[dict[str, Any]],
+    ytd: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Assemble multi-month (+ optional YTD) via Domain; no Application maths."""
+    envelopes = [
+        MonthlyDairyStatementModel(
+            period=MonthlyPeriodIdentity(year=item["year"], month=item["month"]),
+            inputs=MonthlyDairyFinancialInput.model_validate(
+                {k: v for k, v in item.items() if k not in ("year", "month")}
+            ),
+        )
+        for item in months
+    ]
+    multi = calculate_multi_month_dairy_statements(
+        MultiMonthDairyStatementModel(months=envelopes)
+    )
+    ytd_payload: dict[str, Any] | None = None
+    if ytd is not None:
+        ytd_payload = calculate_ytd_dairy_statement(
+            YtdDairyStatementModel(
+                year=ytd["year"],
+                as_of_month=ytd["as_of_month"],
+                months=envelopes,
+            )
+        ).model_dump()
+    return {
+        "currency": multi.currency,
+        "months": [month.model_dump() for month in multi.months],
+        "ytd": ytd_payload,
+    }
+
+
 # Authoritative ordered catalogue. Public IDs are the ``id`` fields only.
 CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
     CalculationDefinition(
@@ -191,6 +230,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=PlMonthlyInput,
         handler=_handle_pl_monthly,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="pl.months",
+        description=(
+            "Multiple explicit monthly Dairy Operating Statements, optionally with a "
+            "year-to-date Operating Statement through as_of_month (not annual ÷ 12; "
+            "YTD margin from YTD totals)."
+        ),
+        input_model=PlMonthsInput,
+        handler=_handle_pl_months,
         supports_provenance=False,
     ),
 )

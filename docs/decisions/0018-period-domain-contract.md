@@ -37,18 +37,21 @@ Agriculture / Dairy money primitives; annual `FinancialInput` /
 4. **Shared non-milk drivers.** Schemes, other income, operating-cost
    catalogue, and `loan_repayments` reuse the same field names as annual,
    with monthly metadata describing them as amounts for the stated month.
-5. **No monthly calculation in P1.1.** Types and metadata only. No
-   `calculate_monthly_*`, no registry ID, no HTTP monthly route, no YTD,
-   no forecast, no B7/B8 changes, no income-line publication expansion.
+5. **No monthly HTTP in P1.1 / P1.2.** Types and in-process calculation only
+   through P1.2. No registry ID, no HTTP monthly route, no YTD, no forecast,
+   no B7/B8 changes, no income-line publication expansion.
 
 ## Consequences
 
-- P1.2 may compose a monthly Operating Statement from
-  `MonthlyDairyStatementModel` without changing annual types.
+- P1.2 adds in-process monthly calculation:
+  `calculate_monthly_dairy_statement` → Dairy `monthly_pl_summary` /
+  `milk_revenue_from_litres`, reusing Core surplus/rounding/sum and
+  Agriculture `scheme_revenue`. No HTTP monthly route yet.
 - Published annual `result.period` remains the string `"annual"`.
   Monthly identity uses structured `{kind, year, month}` on the monthly
-  envelope (and later monthly result).
+  envelope and `MonthlyDairyStatementResult`.
 - `profit.net` remains Operating Surplus; loans remain under `finance`.
+- Monthly must never derive values by annual ÷ 12.
 
 ## Related
 

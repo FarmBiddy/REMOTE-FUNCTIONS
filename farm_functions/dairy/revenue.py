@@ -1,7 +1,8 @@
-"""Dairy revenue formulas. All amounts are annual EUR unless noted.
+"""Dairy revenue formulas.
 
-``scheme_revenue`` remains Agriculture-owned; Dairy composes it in
-``total_revenue`` and the Operating Statement.
+Annual milk uses cows × litres/cow/year × price. Monthly milk uses explicit
+period volume × price (``milk_revenue_from_litres``). Scheme composition stays
+Agriculture-owned.
 """
 
 from farm_functions.agriculture.revenue import scheme_revenue
@@ -9,8 +10,13 @@ from farm_functions.core.aggregate import sum_amounts
 
 
 def milk_revenue(milking_cows: float, litres_per_cow: float, milk_price: float) -> float:
-    """Milk income = cows × litres per cow × price per litre."""
+    """Annual milk income = cows × litres per cow (per year) × price per litre."""
     return float(milking_cows) * float(litres_per_cow) * float(milk_price)
+
+
+def milk_revenue_from_litres(milk_litres: float, milk_price: float) -> float:
+    """Milk income from explicit volume × price (monthly / period-scoped drivers)."""
+    return float(milk_litres) * float(milk_price)
 
 
 def other_revenue(
@@ -47,6 +53,7 @@ def total_revenue(
 
 __all__ = [
     "milk_revenue",
+    "milk_revenue_from_litres",
     "other_revenue",
     "total_revenue",
 ]

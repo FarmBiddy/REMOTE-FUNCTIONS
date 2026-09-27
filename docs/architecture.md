@@ -56,8 +56,7 @@ App Platform / Agent
 
 HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). The domain types in `farm_functions/domain.py` are not a new HTTP API.
 
-**Period contracts (ADR-0018):** Annual `FinancialInput` / `pl.summary` remain the public annual facade. A separate in-process monthly envelope (`MonthlyDairyStatementModel`: calendar identity on `period`, financial drivers on `inputs`) prepares for monthly statements. Core / Agriculture / Dairy formula primitives stay calendar-blind. No monthly HTTP or monthly calculation in P1.1.
-
+**Period contracts (ADR-0018 / P1.2):** Annual `FinancialInput` / `pl.summary` remain the public annual facade. In-process monthly: `MonthlyDairyStatementModel` → `calculate_monthly_dairy_statement` → `MonthlyDairyStatementResult`. Calendar identity stays on the Domain envelope/result; Core / Agriculture / Dairy formula primitives stay calendar-blind. No monthly HTTP yet.
 ## Target layering (progressive)
 
 Intended separation: **Application/API → Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.

@@ -9,13 +9,21 @@ from farm_functions.dairy.costs import (
     OPERATING_COST_CATEGORIES,
     total_costs,
 )
-from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
+from farm_functions.dairy.monthly_statement import monthly_pl_summary
+from farm_functions.dairy.revenue import (
+    milk_revenue,
+    milk_revenue_from_litres,
+    other_revenue,
+    total_revenue,
+)
 from farm_functions.dairy.statement import pl_summary
 
 __all__ = [
     "COST_CATEGORIES",
     "OPERATING_COST_CATEGORIES",
     "milk_revenue",
+    "milk_revenue_from_litres",
+    "monthly_pl_summary",
     "other_revenue",
     "pl_summary",
     "total_costs",

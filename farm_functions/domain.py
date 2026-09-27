@@ -3,14 +3,16 @@
 Annual types (``FinancialInput`` / ``FinancialModel`` / ``FinancialResult``) remain
 the Phase 1 annual facade aligned with ``pl.summary``.
 
-Monthly types (ADR-0018) define the P1.1 period contract only — no monthly
-calculation is performed here yet.
+Monthly types (ADR-0018 / P1.2): period identity on the envelope; financial
+drivers on ``MonthlyDairyFinancialInput``; calculation via
+``calculate_monthly_dairy_statement`` (no HTTP yet).
 """
 
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from farm_functions.dairy.monthly_statement import monthly_pl_summary
 from farm_functions.dairy.statement import pl_summary
 from farm_functions.schemas import MonthlyDairyFinancialInput, PlSummaryInput
 
@@ -125,10 +127,9 @@ class MonthlyPeriodIdentity(BaseModel):
 
 
 class MonthlyDairyStatementModel(BaseModel):
-    """In-memory monthly Dairy statement contract (P1.1).
+    """In-memory monthly Dairy statement contract (ADR-0018).
 
-    Separates period identity from financial drivers. No monthly calculation is
-    performed from this type until P1.2.
+    Separates period identity from financial drivers.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -136,3 +137,41 @@ class MonthlyDairyStatementModel(BaseModel):
     currency: Currency = "EUR"
     period: MonthlyPeriodIdentity
     inputs: MonthlyDairyFinancialInput
+
+
+class MonthlyDairyStatementResult(BaseModel):
+    """Structured monthly Operating Statement (P1.2).
+
+    Reuses annual money component shapes. ``period`` is structured identity
+    (not the annual string ``\"annual\"``). ``profit.net`` is Operating Surplus.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    currency: Currency
+    period: MonthlyPeriodIdentity
+    revenue: RevenueResult
+    costs: CostsResult
+    profit: ProfitResult
+    finance: FinanceResult
+
+
+def calculate_monthly_dairy_statement(
+    model: MonthlyDairyStatementModel,
+) -> MonthlyDairyStatementResult:
+    """Compose monthly Operating Statement from explicit monthly drivers.
+
+    Period identity is taken from the envelope (not from Dairy primitives).
+    Does not mutate ``model``.
+    """
+    payload = monthly_pl_summary(**model.inputs.model_dump())
+    return MonthlyDairyStatementResult.model_validate(
+        {
+            "currency": model.currency,
+            "period": model.period.model_dump(),
+            "revenue": payload["revenue"],
+            "costs": payload["costs"],
+            "profit": payload["profit"],
+            "finance": payload["finance"],
+        }
+    )

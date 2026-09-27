@@ -144,8 +144,8 @@ def test_annual_reference_still_calculates_through_domain():
     assert typed.finance.loan_repayments == 12_000
 
 
-def test_no_monthly_calculation_entrypoint_in_domain():
+def test_monthly_calculation_entrypoint_exists_in_domain():
     import farm_functions.domain as domain
 
+    assert hasattr(domain, "calculate_monthly_dairy_statement")
     assert not hasattr(domain, "calculate_monthly_pnl")
-    assert not hasattr(domain, "calculate_monthly_dairy_statement")

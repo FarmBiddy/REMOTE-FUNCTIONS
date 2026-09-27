@@ -21,6 +21,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0015](0015-dairy-specialisation-boundary.md) | Dairy specialisation package boundary (L4) |
 | [0016](0016-dairy-boundary-consolidation.md) | Dairy boundary consolidation (post-L4 gate) |
 | [0017](0017-orchestration-canonical-resolution.md) | Application orchestration resolves canonical packages (L5) |
+| [0018](0018-period-domain-contract.md) | Period domain contract (P1.1 monthly identity vs drivers) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

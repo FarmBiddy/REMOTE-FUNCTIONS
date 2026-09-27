@@ -86,6 +86,28 @@ class PlSummaryInput(TotalRevenueInput, TotalCostsInput, FinanceInput):
     pass
 
 
+class MonthlyMilkRevenueInput(_StrictModel):
+    """Monthly milk drivers (D1-B). Do not use annual ``litres_per_cow`` here."""
+
+    milk_litres: NonNegativeNumber
+    milk_price: NonNegativeNumber
+
+
+class MonthlyDairyFinancialInput(
+    MonthlyMilkRevenueInput,
+    SchemeRevenueInput,
+    OtherRevenueInput,
+    TotalCostsInput,
+    FinanceInput,
+):
+    """Financial drivers for one monthly Dairy Operating Statement.
+
+    Period identity (``year`` / ``month``) is **not** on this model — it belongs
+    on the Domain envelope (ADR-0018). No annual milk fields
+    (``milking_cows``, ``litres_per_cow``).
+    """
+
+
 @dataclass(frozen=True)
 class InputFieldMetadata:
     name: str
@@ -424,6 +446,233 @@ FIELD_UNITS: dict[str, str] = {item.name: item.unit for item in INPUT_FIELD_META
 def missing_field_entry(field: str) -> dict[str, str]:
     """Canonical needs_input.missing item: {field, unit}."""
     return {"field": field, "unit": FIELD_UNITS.get(field, "unknown")}
+
+
+# Monthly Dairy statement financial-driver metadata (ADR-0018). Separate from
+# annual INPUT_FIELD_METADATA so FIELD_UNITS / needs_input for pl.summary stay
+# annual-only. Period identity (year/month) is Domain envelope metadata, not here.
+MONTHLY_DAIRY_INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
+    InputFieldMetadata(
+        name="milk_litres",
+        type="number",
+        required=True,
+        minimum=0,
+        maximum=None,
+        unit="litres",
+        description="Milk volume sold/paid in the statement month (not litres/cow/year)",
+    ),
+    InputFieldMetadata(
+        name="milk_price",
+        type="number",
+        required=True,
+        minimum=0,
+        maximum=None,
+        unit="EUR/litre",
+        description="Average EUR/litre for milk in the statement month",
+    ),
+    InputFieldMetadata(
+        name="biss",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="BISS scheme money received in the statement month",
+    ),
+    InputFieldMetadata(
+        name="acres",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="ACRES scheme money (not land area) in the statement month",
+    ),
+    InputFieldMetadata(
+        name="other_grants",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Other operating grants in the statement month",
+    ),
+    InputFieldMetadata(
+        name="cattle_sales",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Cattle sales income in the statement month",
+    ),
+    InputFieldMetadata(
+        name="land_leasing_income",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Income from leasing owned land out in the statement month",
+    ),
+    InputFieldMetadata(
+        name="other",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Other operating income in the statement month",
+    ),
+    InputFieldMetadata(
+        name="feed",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Feed operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="fertiliser",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Fertiliser operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="vet",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Vet operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="contractor",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Contractor operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="labour",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Labour operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="insurance",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Insurance operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="fuel",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Fuel operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="electricity",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Electricity operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="water",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Water operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="repairs_maintenance",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Repairs and maintenance operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="rent_lease",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Rent/lease-in operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="professional_fees",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Professional fees operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="levies",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Levies operating cost in the statement month",
+    ),
+    InputFieldMetadata(
+        name="other_operating_costs",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Other operating costs in the statement month",
+    ),
+    InputFieldMetadata(
+        name="loan_repayments",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description=(
+            "Loan repayments in the statement month (finance; does not reduce "
+            "Operating Surplus)"
+        ),
+    ),
+)
+
+
+MONTHLY_FIELD_UNITS: dict[str, str] = {
+    item.name: item.unit for item in MONTHLY_DAIRY_INPUT_FIELD_METADATA
+}
+
+
+def list_monthly_dairy_input_metadata() -> list[dict[str, Any]]:
+    """Monthly Dairy financial-driver metadata (excludes year/month identity)."""
+    return [item.as_dict() for item in MONTHLY_DAIRY_INPUT_FIELD_METADATA]
 
 
 # Per-calculation REQUIRED_FIELDS / OPTIONAL_FIELDS / INPUT_MODELS are derived

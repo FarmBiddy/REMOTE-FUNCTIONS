@@ -16,6 +16,25 @@ FinancialResult
 
 Python types: `farm_functions/domain.py`. They wrap current behaviour. They are **not** the HTTP surface.
 
+### Period contracts (P1.1 / ADR-0018)
+
+Annual types above are **frozen** for the Phase 1 annual facade (`Period = "annual"` only on `FinancialModel` / `FinancialResult`).
+
+A separate **monthly** Domain contract exists for future monthly Operating Statements (calculation not implemented until P1.2):
+
+```text
+MonthlyDairyStatementModel
+    period: MonthlyPeriodIdentity   # kind=month, year, month (identity only)
+    currency
+    inputs: MonthlyDairyFinancialInput   # milk_litres, milk_price, …
+```
+
+- Period identity (`year` / `month`) stays on the envelope — not on financial drivers and not passed into Core / Agriculture / Dairy formula primitives.
+- Monthly milk drivers are `milk_litres` + `milk_price` (not annual `litres_per_cow`).
+- Schemes, other income, operating costs, and `loan_repayments` reuse the same field names as annual, with monthly metadata units (`EUR` / `litres`) describing amounts for the stated month.
+- Published income aggregates (`milk` / `schemes` / `other`) remain the intended monthly publication shape until P1.5; no monthly HTTP or `calculate_monthly_*` yet.
+- Monthly driver metadata: `MONTHLY_DAIRY_INPUT_FIELD_METADATA` in `farm_functions/schemas.py` (separate from annual `FIELD_UNITS`).
+
 `pl.summary` is the Phase 1 **canonical annual Operating Statement** (ADR-0009): the only public calculation that returns the full `{currency, period, revenue, costs, profit, finance}` view. Atomic catalogue IDs are supporting schedules; for the same inputs their published results must reconcile with `pl.summary`. `calculate_annual_pnl` wraps the same composition and does not introduce alternate maths.
 
 ### FinancialInput

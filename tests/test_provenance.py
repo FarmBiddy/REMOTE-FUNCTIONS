@@ -74,11 +74,10 @@ def test_provenance_inputs_used_and_formulas():
     assert [item.name for item in schemes.inputs_used] == ["biss", "acres", "other_grants"]
 
     other = provenance["revenue.other"]
-    assert other.formula == "cattle_sales + lamb_sales + wool + other"
+    assert other.formula == "cattle_sales + land_leasing_income + other"
     assert [item.name for item in other.inputs_used] == [
         "cattle_sales",
-        "lamb_sales",
-        "wool",
+        "land_leasing_income",
         "other",
     ]
 

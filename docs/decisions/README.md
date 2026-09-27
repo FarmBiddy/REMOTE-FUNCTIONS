@@ -16,6 +16,14 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0010](0010-phase1-provenance-boundary.md) | Phase 1 calculation provenance / explainability boundary |
 | [0011](0011-phase1-input-override-simulation.md) | Phase 1 annual input-override simulation |
 | [0012](0012-phase1-named-scenarios.md) | Phase 1 caller-defined named financial scenarios |
+| [0013](0013-phase1-layer-ownership.md) | Phase 1 layer ownership (Dairy cost catalogue; land leasing) |
+| [0014](0014-core-agriculture-boundaries.md) | Core and Agriculture package boundaries (L2 / L3) |
+| [0015](0015-dairy-specialisation-boundary.md) | Dairy specialisation package boundary (L4) |
+| [0016](0016-dairy-boundary-consolidation.md) | Dairy boundary consolidation (post-L4 gate) |
+| [0017](0017-orchestration-canonical-resolution.md) | Application orchestration resolves canonical packages (L5) |
+| [0018](0018-period-domain-contract.md) | Period domain contract (P1.1 monthly identity vs drivers) |
+| [0019](0019-monthly-operating-statement-http.md) | Monthly Operating Statement HTTP contract (`pl.monthly`) |
+| [0020](0020-multi-period-pnl-semantics.md) | Multi-period P&L semantics (P2.0; YTD / series compose monthly) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

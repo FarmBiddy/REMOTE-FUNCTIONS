@@ -48,24 +48,24 @@ On Windows, prefer `python -m uvicorn` (or `start.bat`). OpenAPI: http://127.0.0
 
 ## Adding or changing financial calculations
 
-1. Keep formulas in `farm_functions/calcs/` pure (no I/O, HTTP, DB, auth).
+1. Put formula ownership in the correct layer (`farm_functions.core` / `agriculture` / `dairy`); keep `farm_functions/calcs/` as thin compatibility re-exports. Formulas stay pure (no I/O, HTTP, DB, auth).
 2. Declare input models and `INPUT_FIELD_METADATA` / `FIELD_UNITS` in `farm_functions/schemas.py`. Units belong in `INPUT_FIELD_METADATA` so `FIELD_UNITS` stays derived from that list.
 3. Register the calculation in `CALCULATION_CATALOGUE` in `farm_functions/registry.py` with an **explicit** public `id` (e.g. `revenue.milk`). Do not infer the public ID from the Python handler name. Required/optional fields and `INPUT_MODELS` are derived from that catalogue.
 4. Set `supports_provenance` appropriately (`pl.summary` is false; atomic annual P&L lines are true).
-5. Annual P&L domain types (`FinancialInput`, `FinancialModel`, `FinancialResult`) live in `farm_functions/domain.py` and must stay aligned with `pl.summary` — do not change formulas to fit the types.
-6. Cover behavior in `tests/test_calcs.py`, `tests/test_runner.py`, and `tests/test_calculation_contract.py`. Domain-type tests live in `tests/test_domain.py`. Provenance tests live in `tests/test_provenance.py`. Do not change formulas to produce provenance; call the existing calculation functions.
+5. Annual P&L domain types (`FinancialInput`, `FinancialModel`, `FinancialResult`) live in `farm_functions/domain.py` and must stay aligned with `pl.summary` — do not change formulas to fit the types. `FinancialInput` is the stable public name for the Phase 1 Dairy contract (ADR-0015). Monthly period contracts (`MonthlyPeriodIdentity`, `MonthlyDairyFinancialInput`, `MonthlyDairyStatementModel`, `MonthlyDairyStatementResult`) are separate (ADR-0018); do not fold calendar fields into formula inputs or annual types. Public monthly HTTP ID: `pl.monthly` (ADR-0019) — Application assembles the Domain envelope from a flat payload; formulas stay in Dairy/Domain.
+6. Cover behavior in `tests/test_calcs.py`, `tests/test_runner.py`, and `tests/test_calculation_contract.py`. Domain-type tests live in `tests/test_domain.py`. Period-contract tests live in `tests/test_period_contract.py`. Monthly Operating Statement tests live in `tests/test_monthly_operating_statement.py`. Provenance tests live in `tests/test_provenance.py`. Do not change formulas to produce provenance; call the existing calculation functions.
 7. Update `README.md` function table and `docs/domain-model.md` / `docs/api-contract.md` when semantics or the public contract change.
 
 ### Adding an operating cost category (Phase 1)
 
-Authoritative catalogue: `OPERATING_COST_CATEGORIES` in `farm_functions/calcs/costs.py` (ADR-0007). Review **every** location below when adding a line (do not invent a parallel catalogue).
+Authoritative catalogue: `OPERATING_COST_CATEGORIES` in `farm_functions/dairy/costs.py` (ADR-0007, ADR-0015; `calcs.costs` re-exports). Review **every** location below when adding a line (do not invent a parallel catalogue).
 
 | Step | Location | What to update |
 |------|----------|----------------|
-| 1 | `farm_functions/calcs/costs.py` | Append to `OPERATING_COST_CATEGORIES` **and** `total_costs(...)` (signature + sum) |
+| 1 | `farm_functions/dairy/costs.py` | Append to `OPERATING_COST_CATEGORIES` **and** `total_costs(...)` (signature + sum) |
 | 2 | `farm_functions/schemas.py` | Optional field on `TotalCostsInput` + matching `INPUT_FIELD_METADATA` row |
 | 3 | `farm_functions/domain.py` | Field on `CostLines` (typed `costs.lines`) |
-| 4 | `farm_functions/calcs/summary.py` | `pl_summary(...)` parameter **and** entry in the local `cost_lines` dict |
+| 4 | `farm_functions/dairy/statement.py` | `pl_summary(...)` parameter **and** entry in the local `cost_lines` dict |
 | 5 | Auto if 1–2 done | Loader (`COST_KEYS` = catalogue), provenance (`costs.total` inputs/formula), registry `costs.total` optionals (from `TotalCostsInput`) |
 | 6 | Fixtures / demo | `sample_data/farm.json` nested `costs`; `api/routes.py` `_EXAMPLE_VALUES`; `test-data/golden/annual_pnl_cases.json` `expected.costs.lines` (+ inputs if non-zero) |
 | 7 | Tests | Structural: `tests/test_operating_cost_extension_sync.py`. Behavioural (B5): `tests/test_operating_surplus.py`, `tests/test_provenance.py` |
@@ -99,6 +99,8 @@ Characterisation: `tests/test_validation_independence.py`.
 - Registered calculation functions are covered by the behavior matrix in `tests/test_registered_functions.py` (happy path + edge cases via `run_function`, plus thin HTTP/OpenAPI smoke). Stable public calculation IDs are covered in `tests/test_calculation_contract.py`. Specialized suites cover validation, provenance, rounding, domain types, and pure formula units.
 - Canonical annual P&L **golden / reference cases** live in `test-data/golden/` and are exercised by `tests/test_golden_reference_cases.py`. They lock published `pl.summary` / `FinancialResult` outputs (including Phase 1 Operating Surplus and `finance`, ADR-0007). Changing golden `expected` values must be deliberate and reviewed.
 - Operating Statement **authority / reconciliation** characterisation lives in `tests/test_operating_statement_reconciliation.py` (ADR-0009): `pl.summary` as canonical annual view; published atomic schedules match corresponding summary fields.
+- **Period reconciliation** (annual vs monthly shared primitives) lives in `tests/test_period_reconciliation.py` (P1.3): same Core surplus/margin/rounding, Agriculture schemes, Dairy cost catalogue; period identity must not change financial arithmetic; no annual÷12 allocation.
+- **Multi-period P&L semantics** (YTD / Jan–Dec actuals compose monthly) are recorded in ADR-0020 (P2.0). No multi-period Domain/HTTP implementation until P2.1+.
 - Annual **input-override simulation** characterisation lives in `tests/test_simulation.py` (ADR-0011): explicit overrides + `calculate_annual_pnl`; not a second formula suite.
 - **Named scenario** characterisation lives in `tests/test_scenarios.py` (ADR-0012): packaging/orchestration via B7; independence and name validation — not a second financial suite.
 - Structured calculation **error codes** (`farm_functions/errors.py`, `tests/test_error_contract.py`) are the machine-readable failure contract for `run_function` / HTTP. Branch on `error.code`, not message text.

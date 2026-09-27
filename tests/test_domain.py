@@ -38,8 +38,7 @@ def test_financial_input_optional_fields_default_to_zero():
     assert parsed.acres == 0
     assert parsed.other_grants == 0
     assert parsed.cattle_sales == 0
-    assert parsed.lamb_sales == 0
-    assert parsed.wool == 0
+    assert parsed.land_leasing_income == 0
     assert parsed.other == 0
     assert parsed.feed == 0
     assert parsed.fertiliser == 0
@@ -49,6 +48,7 @@ def test_financial_input_optional_fields_default_to_zero():
     assert parsed.insurance == 0
     assert parsed.fuel == 0
     assert parsed.electricity == 0
+    assert parsed.water == 0
     assert parsed.repairs_maintenance == 0
     assert parsed.rent_lease == 0
     assert parsed.professional_fees == 0

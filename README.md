@@ -35,14 +35,15 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 |----------------|-----------------|---------|
 | `revenue.milk` | `milking_cows`, `litres_per_cow`, `milk_price` | cows × litres sold/paid × price |
 | `revenue.schemes` | — | BISS + ACRES + other operating grants |
-| `revenue.other` | — | cattle + lamb + wool + other operating income |
+| `revenue.other` | — | cattle sales + land leasing income + other operating income |
 | `revenue.total` | milk fields | milk + schemes + other (operating income) |
 | `costs.total` | — | sum of operating cost lines (missing = 0; excludes loans) |
 | `profit.net` | `revenue`, `costs` | Operating Surplus = revenue − operating costs |
 | `profit.margin` | `revenue`, `costs` | Operating Surplus / revenue |
 | `pl.summary` | milk fields | **canonical** annual Operating Statement + `finance.loan_repayments` |
+| `pl.monthly` | `year`, `month`, `milk_litres`, `milk_price` | Explicit monthly Operating Statement (not annual ÷ 12) + `finance.loan_repayments` |
 
-`pl.summary` is the Phase 1 canonical annual Operating Statement (ADR-0009). Atomic IDs are supporting schedules that must reconcile to it. `profit.net` and `profit.margin` keep those public IDs (Option A) and expect **already totalled** operating income and operating costs — use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
+`pl.summary` is the Phase 1 canonical annual Operating Statement (ADR-0009). `pl.monthly` is the explicit monthly statement (ADR-0019). Atomic IDs are supporting schedules that must reconcile to the annual view. `profit.net` and `profit.margin` keep those public IDs (Option A) and expect **already totalled** operating income and operating costs — use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
 
 ## Sample farm (`sample_data/farm.json`)
 
@@ -114,6 +115,7 @@ KPIs (feed ratio, per cow), monthly cashflow, Monte Carlo, alerts, risk, and far
 - Domain model: [`docs/domain-model.md`](docs/domain-model.md)
 - Development: [`docs/development.md`](docs/development.md)
 - Delivery bootstrap (execute here): [`docs/delivery-bootstrap.md`](docs/delivery-bootstrap.md)
+- External annual integration (I2): [`docs/integration-external.md`](docs/integration-external.md)
 - API contract: [`docs/api-contract.md`](docs/api-contract.md)
 - Decisions (ADRs): [`docs/decisions/`](docs/decisions/)
 

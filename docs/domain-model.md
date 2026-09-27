@@ -16,7 +16,37 @@ FinancialResult
 
 Python types: `farm_functions/domain.py`. They wrap current behaviour. They are **not** the HTTP surface.
 
-`pl.summary` is the Phase 1 **canonical annual Operating Statement** (ADR-0009): the only public calculation that returns the full `{currency, period, revenue, costs, profit, finance}` view. Atomic catalogue IDs are supporting schedules; for the same inputs their published results must reconcile with `pl.summary`. `calculate_annual_pnl` wraps the same composition and does not introduce alternate maths.
+### Period contracts (P1.1 / ADR-0018)
+
+Annual types above are **frozen** for the Phase 1 annual facade (`Period = "annual"` only on `FinancialModel` / `FinancialResult`).
+
+A separate **monthly** Domain contract exists for future monthly Operating Statements (calculation not implemented until P1.2):
+
+```text
+MonthlyDairyStatementModel
+    period: MonthlyPeriodIdentity   # kind=month, year, month (identity only)
+    currency
+    inputs: MonthlyDairyFinancialInput   # milk_litres, milk_price, …
+```
+
+- Period identity (`year` / `month`) stays on the envelope — not on financial drivers and not passed into Core / Agriculture / Dairy formula primitives.
+- Monthly milk drivers are `milk_litres` + `milk_price` (not annual `litres_per_cow`).
+- Schemes, other income, operating costs, and `loan_repayments` reuse the same field names as annual, with monthly metadata units (`EUR` / `litres`) describing amounts for the stated month.
+- Published income aggregates (`milk` / `schemes` / `other`) remain the monthly publication shape. Public HTTP: `pl.monthly` (ADR-0019).
+- Monthly driver metadata: `MONTHLY_DAIRY_INPUT_FIELD_METADATA` in `farm_functions/schemas.py` (separate from annual `FIELD_UNITS`).
+- **P1.2:** `calculate_monthly_dairy_statement(MonthlyDairyStatementModel)` returns `MonthlyDairyStatementResult` (structured `period` identity + reuse of revenue/costs/profit/finance money shapes). Dairy composes via `monthly_pl_summary` / `milk_revenue_from_litres` using explicit monthly amounts only (no annual ÷ 12).
+
+### Multi-period P&L (P2.0 / ADR-0020 — not implemented yet)
+
+Future multi-month, YTD, and Jan–Dec **actual** series compose the monthly contract above:
+
+- Caller supplies **explicit** monthly envelopes only (omitted ≠ zero).
+- Named YTD through month M requires contiguous Jan…M or errors; series may be sparse.
+- YTD money lines sum monthly operating totals; Operating Surplus and margin use Core on **YTD** income and costs (never average of monthly margins). Finance loan sums stay outside OS.
+- YTD and annual `pl.summary` are independent (no forced Dec-YTD = annual).
+- Domain will own list→months→optional YTD composition; prefer one HTTP multi-period ID later (`pl.months`). No code in P2.0.
+
+`pl.summary` is the Phase 1 **canonical annual Operating Statement** (ADR-0009): the public annual calculation that returns the full `{currency, period, revenue, costs, profit, finance}` view. Atomic catalogue IDs are supporting schedules; for the same inputs their published results must reconcile with `pl.summary`. `calculate_annual_pnl` wraps the same composition and does not introduce alternate maths.
 
 ### FinancialInput
 
@@ -24,10 +54,9 @@ Normalized inputs required to perform a financial calculation.
 
 FinancialInput is independent of the underlying farm database schema.
 
-For the current annual P&L it is the complete `pl.summary` driver set (`PlSummaryInput` / `FinancialInput`): required milk fields, optional scheme/other/**operating cost** lines defaulting to `0`, plus optional `loan_repayments` (finance). Numeric drivers must be finite numbers **≥ 0**. There is no maximum unless metadata sets one; **none are set** (ADR-0008). Inputs are independent except for fields required to run a named calculation; the engine does not enforce farm correlations or “realistic” ranges (ADR-0008).
+For the current annual P&L it is the complete `pl.summary` driver set (`PlSummaryInput` / `FinancialInput`): required milk fields, optional schemes, Dairy other income (`cattle_sales`, `land_leasing_income`, `other`), optional **operating cost** lines defaulting to `0`, plus optional `loan_repayments` (finance). Numeric drivers must be finite numbers **≥ 0**. There is no maximum unless metadata sets one; **none are set** (ADR-0008). Inputs are independent except for fields required to run a named calculation; the engine does not enforce farm correlations or “realistic” ranges (ADR-0008).
 
-Operating cost lines are listed in `OPERATING_COST_CATEGORIES` (`farm_functions/calcs/costs.py`). Loan repayments are finance/debt service and are **not** operating costs (ADR-0007).
-
+Operating cost lines are listed in `OPERATING_COST_CATEGORIES` (`farm_functions/dairy/costs.py`; `calcs.costs` re-exports), including `water`. **Phase 1 ownership (ADR-0013 / ADR-0015):** these farmer-entered cost lines are **Dairy-owned** on the current contract; a shared Agriculture cost catalogue is deferred. `rent_lease` is land/property rented **in** (cost); `land_leasing_income` is leasing owned land **out** (income) — they are not netted. Conceptually `land_leasing_income` is an **Agriculture** land semantic that remains on the Dairy Phase 1 input contract (ADR-0013). Loan repayments are finance/debt service and are **not** operating costs (ADR-0007). Sheep-oriented fields (`lamb_sales`, `wool`) are not part of the Dairy prototype contract.
 Input metadata (name, type, required, minimum, maximum, unit, description) lives in `INPUT_FIELD_METADATA` in `farm_functions/schemas.py`. Units are taken from that list via `FIELD_UNITS` (ADR-0004).
 
 **Sample JSON → flat drivers:** Demo [`sample_data/farm.json`](../sample_data/farm.json) is nested (`revenue` / `costs` / `finance`). `farm_functions.loaders.json_loader` flattens it to the flat field dict expected by `FinancialInput` and HTTP/`run_function`. Do not treat the nested sample shape as the HTTP body contract.

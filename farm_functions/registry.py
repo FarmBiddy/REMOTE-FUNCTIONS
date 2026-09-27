@@ -12,14 +12,22 @@ from typing import Any, Callable
 
 from pydantic import BaseModel
 
-from farm_functions.calcs.costs import total_costs
-from farm_functions.calcs.profit import net_profit, profit_margin, profit_margin_pct
-from farm_functions.calcs.revenue import milk_revenue, other_revenue, scheme_revenue, total_revenue
-from farm_functions.calcs.summary import pl_summary
-from farm_functions.rounding import round_margin_pct, round_margin_ratio, round_money
+from farm_functions.agriculture.revenue import scheme_revenue
+from farm_functions.core.rounding import round_margin_pct, round_margin_ratio, round_money
+from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
+from farm_functions.dairy.costs import total_costs
+from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
+from farm_functions.dairy.statement import pl_summary
+from farm_functions.domain import (
+    MonthlyDairyStatementModel,
+    MonthlyPeriodIdentity,
+    calculate_monthly_dairy_statement,
+)
 from farm_functions.schemas import (
     MilkRevenueInput,
+    MonthlyDairyFinancialInput,
     OtherRevenueInput,
+    PlMonthlyInput,
     PlSummaryInput,
     ProfitInput,
     SchemeRevenueInput,
@@ -96,6 +104,15 @@ def _handle_profit_margin(**kwargs: Any) -> dict[str, Any]:
     }
 
 
+def _handle_pl_monthly(*, year: int, month: int, **drivers: Any) -> dict[str, Any]:
+    """Assemble Domain monthly envelope; financial maths stay in Dairy/Domain."""
+    model = MonthlyDairyStatementModel(
+        period=MonthlyPeriodIdentity(year=year, month=month),
+        inputs=MonthlyDairyFinancialInput.model_validate(drivers),
+    )
+    return calculate_monthly_dairy_statement(model).model_dump()
+
+
 # Authoritative ordered catalogue. Public IDs are the ``id`` fields only.
 CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
     CalculationDefinition(
@@ -114,7 +131,7 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
     ),
     CalculationDefinition(
         id="revenue.other",
-        description="Annual non-milk income (cattle, lamb, wool, other).",
+        description="Annual non-milk income (cattle sales, land leasing income, other).",
         input_model=OtherRevenueInput,
         handler=_handle_other_revenue,
         supports_provenance=True,
@@ -163,6 +180,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=PlSummaryInput,
         handler=pl_summary,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="pl.monthly",
+        description=(
+            "Explicit monthly Dairy Operating Statement from period-scoped drivers "
+            "(not annual ÷ 12). Operating income, operating costs, Operating Surplus, "
+            "and separate finance (loan repayments)."
+        ),
+        input_model=PlMonthlyInput,
+        handler=_handle_pl_monthly,
         supports_provenance=False,
     ),
 )

@@ -22,8 +22,7 @@ _EXAMPLE_VALUES: dict[str, float] = {
     "acres": 5000,
     "other_grants": 0,
     "cattle_sales": 15000,
-    "lamb_sales": 0,
-    "wool": 0,
+    "land_leasing_income": 0,
     "other": 0,
     "feed": 80000,
     "fertiliser": 15000,
@@ -34,6 +33,7 @@ _EXAMPLE_VALUES: dict[str, float] = {
     "loan_repayments": 12000,
     "fuel": 6000,
     "electricity": 3000,
+    "water": 0,
     "repairs_maintenance": 0,
     "rent_lease": 0,
     "professional_fees": 0,
@@ -41,6 +41,10 @@ _EXAMPLE_VALUES: dict[str, float] = {
     "other_operating_costs": 0,
     "revenue": 240000,
     "costs": 163000,
+    # Monthly reference (pl.monthly) — OpenAPI examples use field intersection.
+    "year": 2026,
+    "month": 3,
+    "milk_litres": 40000,
 }
 
 

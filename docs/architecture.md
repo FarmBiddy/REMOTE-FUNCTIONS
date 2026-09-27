@@ -56,6 +56,46 @@ App Platform / Agent
 
 HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). The domain types in `farm_functions/domain.py` are not a new HTTP API.
 
+**Period contracts (ADR-0018 / P1.2–P1.4):** Annual `FinancialInput` / `pl.summary` remain the public annual facade. Monthly: flat HTTP `pl.monthly` → Application assembles `MonthlyDairyStatementModel` → `calculate_monthly_dairy_statement` → `MonthlyDairyStatementResult` (ADR-0019). Calendar identity stays on the Domain envelope/result; Core / Agriculture / Dairy formula primitives stay calendar-blind. Annual and monthly are two compositions over shared surplus, margin, rounding, scheme, and cost primitives (`tests/test_period_reconciliation.py`).
+
+**Multi-period P&L (ADR-0020 / P2.0 — semantics only):** Near-term Engine focus is Operating Statements, then Cash Flow. YTD and Jan–Dec **actual** series will compose the existing monthly capability (no second P&L engine, no annual÷12, no invented months, YTD margin from YTD totals only). Implementation is P2.1+; HTTP multi-period ID deferred to P2.4. `pl.summary` and `pl.monthly` stay compatible.
+## Target layering (progressive)
+
+Intended separation: **Application/API → Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.
+
+Layer meaning (ADR-0014, ADR-0015, ADR-0016, ADR-0017):
+
+| Layer | Package | Owns | Does not own |
+|-------|---------|------|--------------|
+| **Core** | `farm_functions.core` | Financial mathematics independent of farming: Operating Surplus, margins, publish rounding, `sum_amounts` | Farm field names, schemes, milk, cost catalogues |
+| **Agriculture** | `farm_functions.agriculture` | Financial concepts common across agricultural enterprises (canonical `scheme_revenue` / public ID `revenue.schemes`) | Dairy milk, Dairy Operating Statement, Core maths reimplementation |
+| **Dairy** | `farm_functions.dairy` | Dairy-specific specialisation: milk revenue, other-income composition, Phase 1 operating-cost catalogue, Operating Statement composition (`pl_summary`) | Generic surplus/rounding/sum; scheme formula body |
+| **Application / API** | registry, provenance, runner, loaders, simulation, scenarios, `api/` | Public IDs, HTTP/domain contracts, orchestration | Financial formulas |
+
+Dependency direction: Application/API → Dairy → Agriculture → Core (Dairy → Core also allowed). Higher/generic layers never import specialised ones.
+
+### Execution seam (L5)
+
+Distinct roles (do not collapse these):
+
+| Concern | Where | Role |
+|---------|-------|------|
+| **Canonical implementation** | `core` / `agriculture` / `dairy` | One formula body per capability |
+| **Compatibility facade** | `farm_functions.calcs.*`, `farm_functions.rounding` | Legacy re-exports only; must not grow a second formula body |
+| **Capability registration** | `farm_functions.registry` (`CALCULATION_CATALOGUE`) | Public IDs, schemas, thin publish wrappers bound to canonical callables |
+| **Execution orchestration** | `runner`, `api/routes`, domain/`calculate_annual_pnl`, provenance | Validate, dispatch, type, explain — no financial formulas |
+
+HTTP path: `POST /v1/functions/<id>/run` → `runner.run_function` → registry handler → Dairy / Agriculture / Core.
+
+Application/orchestration **must not** import `farm_functions.calcs` (ADR-0017). External code and compat tests may still use `calcs` re-exports.
+
+- Public name `FinancialInput` stays stable; conceptually it is the **Phase 1 Dairy** input contract (do not duplicate as `DairyFinancialInput`).
+- `land_leasing_income` is Agriculture semantics on that Dairy contract (ADR-0013); composed in Dairy `other_revenue` once.
+
+Forbidden imports: Core → Agriculture/Dairy; Agriculture → Dairy/`calcs`; Dairy → orchestration; Application → `calcs`. Characterisation: `tests/test_layer_import_boundaries.py`.
+
+No FarmBiddy DB/platform integration, multi-enterprise aggregation, Beef, or Hospitality in this service yet.
+
 ## Authentication
 
 User JWTs MUST NOT be forwarded to the Financial Service

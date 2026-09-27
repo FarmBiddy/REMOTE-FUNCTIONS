@@ -27,7 +27,21 @@ EXPECTED_PUBLIC_IDS = (
     "profit.net",
     "profit.margin",
     "pl.summary",
+    "pl.monthly",
 )
+
+MONTHLY_REFERENCE = {
+    "year": 2026,
+    "month": 3,
+    "milk_litres": 40_000,
+    "milk_price": 0.40,
+    "biss": 2_000,
+    "acres": 500,
+    "cattle_sales": 1_000,
+    "feed": 5_000,
+    "fertiliser": 1_000,
+    "loan_repayments": 1_500,
+}
 
 SAMPLE_MILK = {
     "milking_cows": 100,
@@ -42,7 +56,7 @@ def _happy_payload(calculation_id: str) -> dict:
     if calculation_id == "revenue.schemes":
         return {"biss": 20_000, "acres": 5_000, "other_grants": 0}
     if calculation_id == "revenue.other":
-        return {"cattle_sales": 15_000, "lamb_sales": 0, "wool": 0, "other": 0}
+        return {"cattle_sales": 15_000, "land_leasing_income": 0, "other": 0}
     if calculation_id == "revenue.total":
         return {
             **SAMPLE_MILK,
@@ -50,8 +64,7 @@ def _happy_payload(calculation_id: str) -> dict:
             "acres": 5_000,
             "other_grants": 0,
             "cattle_sales": 15_000,
-            "lamb_sales": 0,
-            "wool": 0,
+            "land_leasing_income": 0,
             "other": 0,
         }
     if calculation_id == "costs.total":
@@ -64,18 +77,21 @@ def _happy_payload(calculation_id: str) -> dict:
             "insurance": 4_000,
             "fuel": 6_000,
             "electricity": 3_000,
+            "water": 0,
         }
     if calculation_id in ("profit.net", "profit.margin"):
         return {"revenue": 240_000, "costs": 163_000}
     if calculation_id == "pl.summary":
         return load_sample_inputs()
+    if calculation_id == "pl.monthly":
+        return dict(MONTHLY_REFERENCE)
     raise AssertionError(f"No happy payload for {calculation_id}")
 
 
-def test_exactly_eight_unique_public_calculation_ids() -> None:
+def test_exactly_nine_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 8
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 8
+    assert len(PUBLIC_CALCULATION_IDS) == 9
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 9
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 
@@ -112,6 +128,7 @@ def test_provenance_uses_catalogue_supported_ids() -> None:
     supported = {c.id for c in CALCULATION_CATALOGUE if c.supports_provenance}
     assert set(SUPPORTED_CALCULATIONS) == supported
     assert "pl.summary" not in supported
+    assert "pl.monthly" not in supported
 
     provenance = explain_annual_pnl(
         FinancialInput.model_validate(load_sample_inputs())

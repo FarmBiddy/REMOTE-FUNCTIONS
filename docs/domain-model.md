@@ -36,6 +36,22 @@ MonthlyDairyStatementModel
 - Monthly driver metadata: `MONTHLY_DAIRY_INPUT_FIELD_METADATA` in `farm_functions/schemas.py` (separate from annual `FIELD_UNITS`).
 - **P1.2:** `calculate_monthly_dairy_statement(MonthlyDairyStatementModel)` returns `MonthlyDairyStatementResult` (structured `period` identity + reuse of revenue/costs/profit/finance money shapes). Dairy composes via `monthly_pl_summary` / `milk_revenue_from_litres` using explicit monthly amounts only (no annual ÷ 12).
 
+### Cash Flow contracts (ADR-0022 / P3.1)
+
+Cash Flow is **independent of P&L**. Explicit cash amounts for a month — not accruals, not annual÷12, not auto-mapped from `loan_repayments`.
+
+```text
+MonthlyDairyCashFlowModel
+    period: MonthlyPeriodIdentity
+    currency
+    inputs: MonthlyDairyCashFlowInput   # operating / investing / financing catalogues
+```
+
+- Phase 1 catalogues include operating receipts/payments plus small investing and financing sets (`loan_proceeds`, `loan_principal_repayments`, `interest_paid`, capex/disposals).
+- Phase 1 Dairy **input grouping** places `interest_paid` under financing outflows; Core does **not** encode that policy (D-CF1).
+- Result shape `MonthlyDairyCashFlowResult`: per-activity inflows/outflows/net + `cash_in` / `cash_out` / `net_cash_flow`.
+- No `calculate_*` cash entrypoint yet (P3.2). No opening/closing cash (P3.4). No household drawings yet (D-CF4). No cash HTTP yet.
+
 ### Multi-period P&L (ADR-0020)
 
 **P2.1 (implemented, in-process only):** `MultiMonthDairyStatementModel` →

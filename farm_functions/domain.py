@@ -1,4 +1,4 @@
-"""In-memory P&L domain types. Not persisted; not the HTTP surface.
+"""In-memory financial domain types. Not persisted; not the HTTP surface.
 
 Annual types (``FinancialInput`` / ``FinancialModel`` / ``FinancialResult``) remain
 the Phase 1 annual facade aligned with ``pl.summary``.
@@ -13,7 +13,10 @@ the existing monthly calculator over an explicit month list.
 
 YTD (ADR-0020 / P2.2): ``calculate_ytd_dairy_statement`` aggregates contiguous
 January–as_of_month results via Core surplus/margin — not annual÷12, not average
-monthly margins. In-process only (no HTTP yet).
+monthly margins.
+
+Cash Flow (ADR-0022 / P3.1): ``MonthlyDairyCashFlowModel`` / result contracts and
+Core cash arithmetic exist; monthly cash **calculation** arrives in P3.2.
 """
 
 from typing import Literal
@@ -26,7 +29,11 @@ from farm_functions.core.surplus import net_profit, profit_margin, profit_margin
 from farm_functions.dairy.costs import OPERATING_COST_CATEGORIES
 from farm_functions.dairy.monthly_statement import monthly_pl_summary
 from farm_functions.dairy.statement import pl_summary
-from farm_functions.schemas import MonthlyDairyFinancialInput, PlSummaryInput
+from farm_functions.schemas import (
+    MonthlyDairyCashFlowInput,
+    MonthlyDairyFinancialInput,
+    PlSummaryInput,
+)
 
 Period = Literal["annual"]
 Currency = Literal["EUR"]
@@ -364,3 +371,57 @@ def calculate_ytd_dairy_statement(model: YtdDairyStatementModel) -> YtdDairyStat
             "finance": {"loan_repayments": round_money(loans)},
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# Cash Flow contracts (ADR-0022 / P3.1) — types only; calculation in P3.2
+# ---------------------------------------------------------------------------
+
+
+class CashLineGroup(BaseModel):
+    """Published cash lines for one direction within an activity section."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    lines: dict[str, float]
+    total: float
+
+
+class CashActivitySectionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    inflows: CashLineGroup
+    outflows: CashLineGroup
+    net: float
+
+
+class MonthlyDairyCashFlowModel(BaseModel):
+    """In-memory monthly Dairy cash-flow contract (ADR-0022).
+
+    Separates period identity from explicit cash drivers. No calculation in P3.1.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    currency: Currency = "EUR"
+    period: MonthlyPeriodIdentity
+    inputs: MonthlyDairyCashFlowInput
+
+
+class MonthlyDairyCashFlowResult(BaseModel):
+    """Structured monthly Cash Flow statement shape (P3.1 contract; composed in P3.2).
+
+    No opening/closing cash yet (D-CF3 → P3.4). ``interest_paid`` appears under
+    financing outflows by Phase 1 Dairy catalogue policy, not by Core.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    currency: Currency
+    period: MonthlyPeriodIdentity
+    operating: CashActivitySectionResult
+    investing: CashActivitySectionResult
+    financing: CashActivitySectionResult
+    cash_in: float
+    cash_out: float
+    net_cash_flow: float

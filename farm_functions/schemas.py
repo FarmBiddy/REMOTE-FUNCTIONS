@@ -142,6 +142,75 @@ class MonthlyDairyFinancialInput(
     """
 
 
+# ---------------------------------------------------------------------------
+# Phase 1 monthly Dairy Cash Flow drivers (ADR-0022). Explicit cash amounts for
+# the statement month — not P&L accruals. Period identity is Domain envelope only.
+# ---------------------------------------------------------------------------
+
+
+class OperatingCashInflowsInput(_StrictModel):
+    milk_receipts: NonNegativeNumber = 0
+    cattle_receipts: NonNegativeNumber = 0
+    scheme_receipts: NonNegativeNumber = 0
+    land_leasing_receipts: NonNegativeNumber = 0
+    other_operating_receipts: NonNegativeNumber = 0
+
+
+class OperatingCashOutflowsInput(_StrictModel):
+    feed_payments: NonNegativeNumber = 0
+    fertiliser_payments: NonNegativeNumber = 0
+    vet_payments: NonNegativeNumber = 0
+    contractor_payments: NonNegativeNumber = 0
+    labour_payments: NonNegativeNumber = 0
+    insurance_payments: NonNegativeNumber = 0
+    fuel_payments: NonNegativeNumber = 0
+    electricity_payments: NonNegativeNumber = 0
+    water_payments: NonNegativeNumber = 0
+    rent_lease_payments: NonNegativeNumber = 0
+    repairs_maintenance_payments: NonNegativeNumber = 0
+    professional_fees_payments: NonNegativeNumber = 0
+    levies_payments: NonNegativeNumber = 0
+    other_operating_payments: NonNegativeNumber = 0
+
+
+class InvestingCashInflowsInput(_StrictModel):
+    asset_disposal_proceeds: NonNegativeNumber = 0
+
+
+class InvestingCashOutflowsInput(_StrictModel):
+    machinery_equipment_payments: NonNegativeNumber = 0
+    other_capital_payments: NonNegativeNumber = 0
+
+
+class FinancingCashInflowsInput(_StrictModel):
+    loan_proceeds: NonNegativeNumber = 0
+
+
+class FinancingCashOutflowsInput(_StrictModel):
+    """Phase 1 Dairy policy places ``interest_paid`` here (ADR-0022 / D-CF1).
+
+    Core does not encode that policy — only this catalogue grouping does.
+    """
+
+    loan_principal_repayments: NonNegativeNumber = 0
+    interest_paid: NonNegativeNumber = 0
+
+
+class MonthlyDairyCashFlowInput(
+    OperatingCashInflowsInput,
+    OperatingCashOutflowsInput,
+    InvestingCashInflowsInput,
+    InvestingCashOutflowsInput,
+    FinancingCashInflowsInput,
+    FinancingCashOutflowsInput,
+):
+    """Explicit monthly Dairy cash drivers (ADR-0022).
+
+    Not derived from P&L. Does not include household drawings (D-CF4 deferred).
+    Does not include opening/closing cash (D-CF3 → P3.4).
+    """
+
+
 class PlMonthlyInput(MonthlyDairyFinancialInput):
     """Flat HTTP / runner input for ``pl.monthly`` (ADR-0019).
 

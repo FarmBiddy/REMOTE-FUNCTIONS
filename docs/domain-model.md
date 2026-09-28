@@ -48,9 +48,9 @@ MonthlyDairyCashFlowModel
 ```
 
 - Phase 1 catalogues include operating receipts/payments plus small investing and financing sets (`loan_proceeds`, `loan_principal_repayments`, `interest_paid`, capex/disposals).
-- Phase 1 Dairy **input grouping** places `interest_paid` under financing outflows; Core does **not** encode that policy (D-CF1).
-- Result shape `MonthlyDairyCashFlowResult`: per-activity inflows/outflows/net + `cash_in` / `cash_out` / `net_cash_flow`.
-- No `calculate_*` cash entrypoint yet (P3.2). No opening/closing cash (P3.4). No household drawings yet (D-CF4). No cash HTTP yet.
+- Phase 1 Dairy **catalogues** place `interest_paid` under financing outflows; Core does **not** encode that policy (D-CF1).
+- **P3.2:** `calculate_monthly_dairy_cash_flow(MonthlyDairyCashFlowModel)` → Dairy `monthly_cash_flow` → `MonthlyDairyCashFlowResult` (per-activity lines/totals/net + `cash_in` / `cash_out` / `net_cash_flow`). Every catalogue key is published in `lines` (zeros included).
+- No opening/closing cash (P3.4). No household drawings yet (D-CF4). No cash HTTP yet (P3.5).
 
 ### Multi-period P&L (ADR-0020)
 

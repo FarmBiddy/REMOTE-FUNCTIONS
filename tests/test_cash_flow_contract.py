@@ -144,7 +144,7 @@ def test_monthly_cash_flow_result_shape_accepts_hand_payload():
     assert not hasattr(result, "opening_cash")
 
 
-def test_no_cash_calculation_entrypoint_yet():
+def test_monthly_cash_calculation_entrypoint_exists():
     import farm_functions.domain as domain
 
-    assert not hasattr(domain, "calculate_monthly_dairy_cash_flow")
+    assert hasattr(domain, "calculate_monthly_dairy_cash_flow")

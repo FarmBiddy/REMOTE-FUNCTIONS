@@ -60,7 +60,7 @@ HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). T
 
 **Multi-period P&L (ADR-0020 / ADR-0021):** Near-term Engine focus is Operating Statements, then Cash Flow. **P2.1** Domain multi-month composition; **P2.2** Domain YTD; **P2.4** public HTTP `pl.months` (nested `months[]` + optional `ytd`; Domain dumps; `ytd: null` when unused). No second P&L engine, no invented months, not annual÷12, not average monthly margins. `pl.summary` and `pl.monthly` stay compatible.
 
-**Cash Flow (ADR-0022 / P3.1):** Separate capability from P&L. Core provides calendar-blind cash nets (`cash_section_net` / `net_cash_flow`) without encoding interest policy. Domain holds `MonthlyDairyCashFlowModel` / `MonthlyDairyCashFlowResult` and Phase 1 cash catalogues (operating + investing + financing). No cash calculation, HTTP, or opening/closing cash yet (P3.2 / P3.4 / P3.5).
+**Cash Flow (ADR-0022 / P3.2):** Explicit monthly cash via `MonthlyDairyCashFlowModel` → `calculate_monthly_dairy_cash_flow` → Dairy `monthly_cash_flow` → Core cash nets. Classification (including Phase 1 `interest_paid` under financing) is Dairy catalogue policy — not Core. Not derived from P&L. No cash HTTP, multi-month cash, or opening/closing cash yet (P3.3–P3.5).
 ## Target layering (progressive)
 
 Intended separation: **Application/API → Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.

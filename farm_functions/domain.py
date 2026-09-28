@@ -15,8 +15,9 @@ YTD (ADR-0020 / P2.2): ``calculate_ytd_dairy_statement`` aggregates contiguous
 January–as_of_month results via Core surplus/margin — not annual÷12, not average
 monthly margins.
 
-Cash Flow (ADR-0022 / P3.1): ``MonthlyDairyCashFlowModel`` / result contracts and
-Core cash arithmetic exist; monthly cash **calculation** arrives in P3.2.
+Cash Flow (ADR-0022 / P3.2): ``calculate_monthly_dairy_cash_flow`` composes
+explicit monthly cash drivers via Dairy ``monthly_cash_flow`` and Core cash
+nets — not derived from P&L.
 """
 
 from typing import Literal
@@ -26,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from farm_functions.core.aggregate import sum_amounts
 from farm_functions.core.rounding import round_margin_pct, round_margin_ratio, round_money
 from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
+from farm_functions.dairy.cash_flow import monthly_cash_flow
 from farm_functions.dairy.costs import OPERATING_COST_CATEGORIES
 from farm_functions.dairy.monthly_statement import monthly_pl_summary
 from farm_functions.dairy.statement import pl_summary
@@ -398,7 +400,7 @@ class CashActivitySectionResult(BaseModel):
 class MonthlyDairyCashFlowModel(BaseModel):
     """In-memory monthly Dairy cash-flow contract (ADR-0022).
 
-    Separates period identity from explicit cash drivers. No calculation in P3.1.
+    Separates period identity from explicit cash drivers.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -409,7 +411,7 @@ class MonthlyDairyCashFlowModel(BaseModel):
 
 
 class MonthlyDairyCashFlowResult(BaseModel):
-    """Structured monthly Cash Flow statement shape (P3.1 contract; composed in P3.2).
+    """Structured monthly Cash Flow statement (P3.2).
 
     No opening/closing cash yet (D-CF3 → P3.4). ``interest_paid`` appears under
     financing outflows by Phase 1 Dairy catalogue policy, not by Core.
@@ -425,3 +427,26 @@ class MonthlyDairyCashFlowResult(BaseModel):
     cash_in: float
     cash_out: float
     net_cash_flow: float
+
+
+def calculate_monthly_dairy_cash_flow(
+    model: MonthlyDairyCashFlowModel,
+) -> MonthlyDairyCashFlowResult:
+    """Compose monthly Cash Flow from explicit cash drivers.
+
+    Period identity is taken from the envelope (not from Dairy primitives).
+    Does not mutate ``model``. Does not derive amounts from P&L.
+    """
+    payload = monthly_cash_flow(**model.inputs.model_dump())
+    return MonthlyDairyCashFlowResult.model_validate(
+        {
+            "currency": model.currency,
+            "period": model.period.model_dump(),
+            "operating": payload["operating"],
+            "investing": payload["investing"],
+            "financing": payload["financing"],
+            "cash_in": payload["cash_in"],
+            "cash_out": payload["cash_out"],
+            "net_cash_flow": payload["net_cash_flow"],
+        }
+    )

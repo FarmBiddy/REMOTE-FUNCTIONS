@@ -61,7 +61,7 @@ P&L merge (branch in use: `cashflow`).
    interest split there).
 3. Direct-method-compatible architecture (gross inflows/outflows by class).
 4. Reuse `MonthlyPeriodIdentity` pattern: calendar on envelope, not Core.
-5. No HTTP, multi-month cash, Dairy cash **calculation**, or Mock changes in P3.1.
+5. No HTTP, multi-month cash, or Mock changes in P3.1 (calculation arrives in P3.2).
 
 ### P3.1 scope
 
@@ -70,8 +70,12 @@ P&L merge (branch in use: `cashflow`).
   remains available.
 - Domain/schemas: Phase 1 monthly Dairy cash **input** catalogues and
   **result** contract shapes; envelope `MonthlyDairyCashFlowModel`.
-- **No** `calculate_monthly_dairy_cash_flow` yet (P3.2).
-- **No** registry/HTTP.
+- **No** registry/HTTP in P3.1.
+
+### P3.2
+
+- Dairy `monthly_cash_flow` + Domain `calculate_monthly_dairy_cash_flow`.
+- No HTTP, multi-month cash, or opening/closing cash.
 
 ## Consequences
 

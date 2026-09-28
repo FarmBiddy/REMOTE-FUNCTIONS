@@ -150,11 +150,12 @@ def _json_safe_value(value: Any) -> Any:
 
 
 def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
-    """Map Pydantic errors from NonNegativeNumber validators to stable codes."""
+    """Map Pydantic errors to stable codes (including nested / period-set)."""
     issues: list[dict[str, Any]] = []
     for err in exc.errors():
         field = _field_from_loc(err.get("loc") or ())
         text = _ctx_error_text(err)
+        err_type = err.get("type") or ""
         raw_input = err.get("input")
         safe_value = _json_safe_value(raw_input)
 
@@ -221,9 +222,67 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     details={"minimum": 1, "maximum": 12},
                 )
             )
+        elif err_type == "missing":
+            issues.append(
+                issue(
+                    MISSING_REQUIRED,
+                    f"{field} is required" if field else "required field is missing",
+                    field=field,
+                )
+            )
+        elif err_type in ("too_short", "list_type") and (
+            field == "months" or "months" in [str(p) for p in (err.get("loc") or ())]
+        ):
+            # Empty months list (min_length=1) or wrong type for months.
+            reason = "empty_months" if err_type == "too_short" else None
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    "months must be a non-empty array" if err_type == "too_short" else text,
+                    field="months",
+                    value=safe_value,
+                    include_value=True,
+                    details={"reason": reason} if reason else None,
+                )
+            )
+        elif err_type == "extra_forbidden":
+            issues.append(
+                issue(
+                    UNKNOWN_FIELD,
+                    f"{field} is not an accepted field" if field else text,
+                    field=field,
+                )
+            )
+        elif "duplicate" in text.lower():
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "duplicate_period"},
+                )
+            )
+        elif "missing months" in text.lower():
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "ytd_incomplete"},
+                )
+            )
+        elif "YTD year=" in text and "but month has year=" in text:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "ytd_year_mismatch"},
+                )
+            )
         else:
             raise ValueError(
                 f"unmapped validation error for structured contract: "
-                f"field={field!r} text={text!r} type={err.get('type')!r}"
+                f"field={field!r} text={text!r} type={err_type!r}"
             )
     return issues

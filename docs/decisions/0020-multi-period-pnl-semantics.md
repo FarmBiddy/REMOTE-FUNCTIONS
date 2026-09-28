@@ -107,10 +107,10 @@ monthly calls; Platform as the official owner of YTD maths.
 ## Consequences
 
 - **P2.0** records semantics only (this ADR). No registry/HTTP/code yet.
-- **P2.1** — multi-month list → list of monthly results.
-- **P2.2** — YTD aggregate (D1–D4) + characterisation tests.
-- **P2.3** — Jan–Dec series shape (sparse OK).
-- **P2.4** — HTTP / external contract; annual and single-month unchanged.
+- **P2.1** — multi-month list → list of monthly results (implemented).
+- **P2.2** — YTD aggregate (D1–D4) + characterisation tests (implemented).
+- **P2.3** — Jan–Dec series confirmed as P2.1 `months[]`; HTTP contract frozen in ADR-0021 (`pl.months`).
+- **P2.4** — ADR-0021 HTTP/registry adapter implemented (`pl.months`); annual and single-month unchanged.
 - **I6** — Mock Platform wires YTD + actual chart series; forecast stays mock.
 
 ## Related

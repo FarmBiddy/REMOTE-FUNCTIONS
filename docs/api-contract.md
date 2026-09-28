@@ -5,7 +5,7 @@ Implementation: `farm_functions/registry.py` (authoritative catalogue), `farm_fu
 
 For a separate frontend (e.g. Next.js mock) integrating annual or monthly Operating Statements over HTTP, start with [`integration-external.md`](integration-external.md) (I2 / P1.4: request/response map, error branching, CORS).
 
-Domain types (`FinancialModel` → `FinancialInput` → calculations → `FinancialResult`) live in `farm_functions/domain.py`. They do **not** change this HTTP contract: request bodies remain a flat JSON object of numbers; statuses remain `ok` / `needs_input` / `error`.
+Domain types (`FinancialModel` → `FinancialInput` → calculations → `FinancialResult`) live in `farm_functions/domain.py`. They do **not** change the annual/monthly HTTP contract: those request bodies remain a flat JSON object of numbers; statuses remain `ok` / `needs_input` / `error`. **Exception (ADR-0021 / P2.4):** `pl.months` uses a nested `months[]` array plus optional `ytd` object.
 
 Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not included in HTTP calculation responses.
 
@@ -13,11 +13,11 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Service:** Stateless annual dairy P&L calculator (validate inputs, run named calculations, return structured results).
 
-**Calculations (9 public IDs):** `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly` — from `CALCULATION_CATALOGUE` only.
+**Calculations (10 public IDs):** `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months` — from `CALCULATION_CATALOGUE` only.
 
-**Inputs:** Flat JSON numbers per calculation. Required fields → `needs_input` when omitted. Optional omitted → `0`. Explicit `0` is valid. Unknown fields / null / negatives / wrong types → `error` with stable codes. Units come from `FIELD_UNITS` / monthly / period-identity lookups on `needs_input` — **not** from discovery.
+**Inputs:** Flat JSON numbers per calculation (except `pl.months`: nested `months[]` + optional `ytd`). Required top-level fields → `needs_input` when omitted. Optional omitted → `0` (or `ytd: null` / omitted for months-only). Explicit `0` is valid. Unknown fields / null / negatives / wrong types → `error` with stable codes. Units come from `FIELD_UNITS` / monthly / period-identity lookups on `needs_input` — **not** from discovery.
 
-**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit, finance}` with `period:"annual"`. `pl.monthly` → same money nests with `period: {kind, year, month}` (ADR-0019).
+**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit, finance}` with `period:"annual"`. `pl.monthly` → same money nests with `period: {kind, year, month}` (ADR-0019). `pl.months` → `{currency, months: MonthlyDairyStatementResult[], ytd: YtdDairyStatementResult | null}` — Domain dumps; no chart DTOs.
 
 **Canonical annual view (ADR-0009):** `pl.summary` is the Phase 1 **canonical annual Operating Statement**. Atomic catalogue IDs remain supporting schedules and must reconcile to `pl.summary` for the same inputs (published aggregates authoritative per ADR-0005). In-process `calculate_annual_pnl` wraps the same composition.
 
@@ -35,15 +35,15 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Scenarios (ADR-0012):** In-process `run_scenario` / `run_scenarios` — caller-defined name + overrides executed through B7. Independent runs from the same base; no ranking, deltas, Base/Best/Worst semantics, or persistence. **Not on HTTP** in Phase 1.
 
-**Out of scope on HTTP today:** persistence, authentication, forecasting, multi-period YTD/series endpoints (semantics only in ADR-0020; implementation P2.1–P2.4), KPIs, multi-currency, AI-generated calculations, Supabase/farm CRUD.
+**Out of scope on HTTP today:** persistence, authentication, forecasting, KPIs, multi-currency, AI-generated calculations, Supabase/farm CRUD. Multi-period OS is available as `pl.months` (ADR-0021).
 
 ### Intentional interface differences
 
 | Layer | Representation |
 |-------|----------------|
-| HTTP / runner | Flat per-calculation field dict |
-| Domain | `FinancialModel` envelope (`period`, `currency`, `inputs: FinancialInput`) for in-process annual P&L only |
-| Discovery | `key`, `description`, `required`, `optional` — no units (by design) |
+| HTTP / runner | Flat per-calculation field dict; **exception** `pl.months` nested `months[]` + optional `ytd` (ADR-0021; P2.4) |
+| Domain | Annual envelope; monthly / multi-month / YTD envelopes in-process (P2.1–P2.2) |
+| Discovery | `key`, `description`, `required`, `optional` — no units (by design); nested month fields documented externally |
 | Provenance | Unrounded formula values via `explain_annual_pnl`; not on HTTP; `pl.summary` explained by components + `finance` (ADR-0010) |
 | Simulation | In-process `simulate_annual_pnl` only (ADR-0011); not on HTTP |
 | Scenarios | In-process named packages via B7 (ADR-0012); not on HTTP |
@@ -65,9 +65,9 @@ Supported endpoints:
 | `POST` | `/v1/functions/<calculation_id>/run` | Run one registered calculation |
 | `POST` | `/v1/demo/pl-summary` | Demo: `pl.summary` on sample farm |
 
-**Nine registered calculation IDs** (`CALCULATION_CATALOGUE` only):
+**Ten registered calculation IDs** (`CALCULATION_CATALOGUE` only):
 
-`revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`
+`revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months`
 
 HTTP request/response envelopes use statuses `ok` / `needs_input` / `error`. On failure, branch on structured `error.code` (see Validation above), not message text.
 

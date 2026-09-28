@@ -28,6 +28,7 @@ EXPECTED_PUBLIC_IDS = (
     "profit.margin",
     "pl.summary",
     "pl.monthly",
+    "pl.months",
 )
 
 MONTHLY_REFERENCE = {
@@ -85,13 +86,15 @@ def _happy_payload(calculation_id: str) -> dict:
         return load_sample_inputs()
     if calculation_id == "pl.monthly":
         return dict(MONTHLY_REFERENCE)
+    if calculation_id == "pl.months":
+        return {"months": [dict(MONTHLY_REFERENCE)]}
     raise AssertionError(f"No happy payload for {calculation_id}")
 
 
-def test_exactly_nine_unique_public_calculation_ids() -> None:
+def test_exactly_ten_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 9
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 9
+    assert len(PUBLIC_CALCULATION_IDS) == 10
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 10
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

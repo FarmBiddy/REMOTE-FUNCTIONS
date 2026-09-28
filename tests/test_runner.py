@@ -58,6 +58,7 @@ def test_discovery_lists_core_functions_only():
     assert keys == {
         "costs.total",
         "pl.monthly",
+        "pl.months",
         "pl.summary",
         "profit.margin",
         "profit.net",

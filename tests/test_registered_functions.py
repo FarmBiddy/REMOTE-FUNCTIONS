@@ -70,6 +70,23 @@ def _happy_payload(key: str) -> dict:
             "fertiliser": 1_000,
             "loan_repayments": 1_500,
         }
+    if key == "pl.months":
+        return {
+            "months": [
+                {
+                    "year": 2026,
+                    "month": 3,
+                    "milk_litres": 40_000,
+                    "milk_price": 0.40,
+                    "biss": 2_000,
+                    "acres": 500,
+                    "cattle_sales": 1_000,
+                    "feed": 5_000,
+                    "fertiliser": 1_000,
+                    "loan_repayments": 1_500,
+                }
+            ]
+        }
     raise AssertionError(f"No happy payload for {key}")
 
 
@@ -79,11 +96,35 @@ def _required_only_payload(key: str) -> dict:
     if not required:
         return {}
     full = _happy_payload(key)
+    if key == "pl.months":
+        # Nested month items: keep only required pl.monthly fields per item.
+        months = []
+        for item in full["months"]:
+            months.append(
+                {
+                    "year": item["year"],
+                    "month": item["month"],
+                    "milk_litres": item["milk_litres"],
+                    "milk_price": item["milk_price"],
+                }
+            )
+        return {"months": months}
     return {name: full[name] for name in required}
 
 
 def _zero_payload(key: str) -> dict:
     """All known fields set explicitly to 0."""
+    if key == "pl.months":
+        return {
+            "months": [
+                {
+                    "year": 1,
+                    "month": 1,
+                    "milk_litres": 0,
+                    "milk_price": 0,
+                }
+            ]
+        }
     known = REQUIRED_FIELDS[key] + OPTIONAL_FIELDS[key]
     payload = {name: 0 for name in known}
     # Calendar identity cannot be zero; keep a valid period with zero money drivers.
@@ -148,6 +189,17 @@ def test_happy_path(key: str) -> None:
         assert body["profit"]["net"] == 13_500
         assert body["profit"]["margin_pct"] == 69.23
         assert body["finance"]["loan_repayments"] == 1_500
+    elif key == "pl.months":
+        body = result["result"]
+        assert body["currency"] == "EUR"
+        assert body["ytd"] is None
+        assert len(body["months"]) == 1
+        assert body["months"][0]["period"] == {
+            "kind": "month",
+            "year": 2026,
+            "month": 3,
+        }
+        assert body["months"][0]["profit"]["net"] == 13_500
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -187,6 +239,13 @@ def test_required_only_optionals_default_to_zero(key: str) -> None:
         assert body["costs"]["total"] == 0
         assert body["profit"]["net"] == 16_000
         assert body["finance"]["loan_repayments"] == 0
+    elif key == "pl.months":
+        body = result["result"]
+        assert body["ytd"] is None
+        assert len(body["months"]) == 1
+        assert body["months"][0]["revenue"]["total"] == 16_000
+        assert body["months"][0]["costs"]["total"] == 0
+        assert body["months"][0]["profit"]["net"] == 16_000
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -216,6 +275,12 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["revenue"]["total"] == 0
         assert result["result"]["costs"]["total"] == 0
         assert result["result"]["profit"]["net"] == 0
+    elif key == "pl.months":
+        body = result["result"]
+        assert body["ytd"] is None
+        assert body["months"][0]["period"] == {"kind": "month", "year": 1, "month": 1}
+        assert body["months"][0]["revenue"]["total"] == 0
+        assert body["months"][0]["profit"]["net"] == 0
 
 
 def _missing_required_cases() -> list[tuple[str, str, dict]]:

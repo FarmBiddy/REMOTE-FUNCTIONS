@@ -24,9 +24,10 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0018](0018-period-domain-contract.md) | Period domain contract (P1.1 monthly identity vs drivers) |
 | [0019](0019-monthly-operating-statement-http.md) | Monthly Operating Statement HTTP contract (`pl.monthly`) |
 | [0020](0020-multi-period-pnl-semantics.md) | Multi-period P&L semantics (P2.0; YTD / series compose monthly) |
+| [0021](0021-multi-period-http.md) | Multi-period Operating Statement HTTP contract (`pl.months`; implemented P2.4) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 
 - Concrete service-to-service auth mechanism (API key, mTLS, signed tokens, etc.)
 - Calculation / API versioning strategy beyond the existing `/v1` prefix
-- Whether typed `FinancialInput` / `FinancialResult` become the **sole HTTP** surface (in-process types exist in `farm_functions/domain.py`; HTTP remains named functions + flat JSON)
+- Whether typed `FinancialInput` / `FinancialResult` become the **sole HTTP** surface (in-process types exist in `farm_functions/domain.py`; HTTP remains named functions + flat JSON; `pl.months` uses nested `months[]` per ADR-0021)

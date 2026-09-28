@@ -36,15 +36,36 @@ MonthlyDairyStatementModel
 - Monthly driver metadata: `MONTHLY_DAIRY_INPUT_FIELD_METADATA` in `farm_functions/schemas.py` (separate from annual `FIELD_UNITS`).
 - **P1.2:** `calculate_monthly_dairy_statement(MonthlyDairyStatementModel)` returns `MonthlyDairyStatementResult` (structured `period` identity + reuse of revenue/costs/profit/finance money shapes). Dairy composes via `monthly_pl_summary` / `milk_revenue_from_litres` using explicit monthly amounts only (no annual ÷ 12).
 
-### Multi-period P&L (P2.0 / ADR-0020 — not implemented yet)
+### Multi-period P&L (ADR-0020)
 
-Future multi-month, YTD, and Jan–Dec **actual** series compose the monthly contract above:
+**P2.1 (implemented, in-process only):** `MultiMonthDairyStatementModel` →
+`calculate_multi_month_dairy_statements` → `MultiMonthDairyStatementResult`.
 
-- Caller supplies **explicit** monthly envelopes only (omitted ≠ zero).
-- Named YTD through month M requires contiguous Jan…M or errors; series may be sparse.
-- YTD money lines sum monthly operating totals; Operating Surplus and margin use Core on **YTD** income and costs (never average of monthly margins). Finance loan sums stay outside OS.
-- YTD and annual `pl.summary` are independent (no forced Dec-YTD = annual).
-- Domain will own list→months→optional YTD composition; prefer one HTTP multi-period ID later (`pl.months`). No code in P2.0.
+- Collection of **explicit** `MonthlyDairyStatementModel` values (min one).
+- Each month runs existing `calculate_monthly_dairy_statement` (no new formulas).
+- Duplicate `{year, month}` rejected; sparse and cross-year series allowed.
+- Results sorted chronologically by `(year, month)`; caller order is not financial meaning.
+- Result contains only `currency` + `months[]` — **not** YTD or cross-month totals.
+
+**P2.2 (implemented, in-process only):** `YtdDairyStatementModel` →
+`calculate_ytd_dairy_statement` → `YtdDairyStatementResult`.
+
+- Identified by `year` + `as_of_month`; result `period.kind` is `"ytd"`.
+- Requires contiguous January…`as_of_month` for that year; wrong-year months
+  rejected; same-year months after `as_of_month` ignored.
+- Reuses P2.1 multi-month → monthly calculator; aggregates with Core
+  `sum_amounts` / `net_profit` / margins / publish rounding.
+- **Not** annual÷12, **not** average of monthly margins, **not** equal to
+  annual `pl.summary` by force. YTD ≠ annual.
+- Cost catalogue lines summed per key so `CostsResult.lines` is complete;
+  `costs.total` is the sum of monthly operating-cost totals (authoritative
+  for surplus). Finance loans summed separately.
+
+**P2.3 / P2.4 (ADR-0021):** Jan–Dec actual financial series needs **no new Domain
+type** — P2.1 `months[]` is sufficient for charts. Public HTTP ID **`pl.months`**
+is live: nested `months[]` + optional `ytd` → Domain multi-month + optional YTD
+dumps (`result.ytd` is `null` when unused). Keep `pl.summary` / `pl.monthly`
+unchanged.
 
 `pl.summary` is the Phase 1 **canonical annual Operating Statement** (ADR-0009): the public annual calculation that returns the full `{currency, period, revenue, costs, profit, finance}` view. Atomic catalogue IDs are supporting schedules; for the same inputs their published results must reconcile with `pl.summary`. `calculate_annual_pnl` wraps the same composition and does not introduce alternate maths.
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 
 def _parse_non_negative_number(value: Any) -> float:
@@ -152,6 +152,28 @@ class PlMonthlyInput(MonthlyDairyFinancialInput):
 
     year: CalendarYear
     month: CalendarMonth
+
+
+class PlMonthItemInput(PlMonthlyInput):
+    """One month item inside ``pl.months`` (same fields as ``pl.monthly``)."""
+
+
+class PlMonthsYtdInput(_StrictModel):
+    """Optional YTD identity for ``pl.months`` (ADR-0021)."""
+
+    year: CalendarYear
+    as_of_month: CalendarMonth
+
+
+class PlMonthsInput(_StrictModel):
+    """HTTP / runner input for ``pl.months`` (ADR-0021).
+
+    Nested ``months`` array (each item = ``pl.monthly`` fields). Optional ``ytd``
+    requests Domain YTD aggregation; omit or JSON ``null`` for months-only.
+    """
+
+    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    ytd: PlMonthsYtdInput | None = None
 
 
 @dataclass(frozen=True)

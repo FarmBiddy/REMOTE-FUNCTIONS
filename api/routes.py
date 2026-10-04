@@ -45,6 +45,13 @@ _EXAMPLE_VALUES: dict[str, float] = {
     "year": 2026,
     "month": 3,
     "milk_litres": 40000,
+    # Monthly cash reference (cf.monthly).
+    "milk": 16000,
+    "machinery_equipment_payments": 6000,
+    "loan_proceeds": 10000,
+    "loan_principal_repayments": 3000,
+    "interest_paid": 500,
+    "opening_cash": 20000,
 }
 
 

@@ -19,16 +19,23 @@ from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
 from farm_functions.domain import (
+    MonthlyDairyCashFlowModel,
     MonthlyDairyStatementModel,
+    MultiMonthDairyCashFlowModel,
     MonthlyPeriodIdentity,
     MultiMonthDairyStatementModel,
     YtdDairyStatementModel,
+    calculate_monthly_dairy_cash_flow,
+    calculate_multi_month_dairy_cash_flow,
     calculate_monthly_dairy_statement,
     calculate_multi_month_dairy_statements,
     calculate_ytd_dairy_statement,
 )
 from farm_functions.schemas import (
+    CfMonthlyInput,
+    CfMonthsInput,
     MilkRevenueInput,
+    MonthlyDairyCashFlowInput,
     MonthlyDairyFinancialInput,
     OtherRevenueInput,
     PlMonthlyInput,
@@ -116,6 +123,30 @@ def _handle_pl_monthly(*, year: int, month: int, **drivers: Any) -> dict[str, An
         inputs=MonthlyDairyFinancialInput.model_validate(drivers),
     )
     return calculate_monthly_dairy_statement(model).model_dump()
+
+
+def _cash_month_envelope(
+    year: int, month: int, opening_cash: float | None = None, **lines: Any
+) -> MonthlyDairyCashFlowModel:
+    return MonthlyDairyCashFlowModel(
+        period=MonthlyPeriodIdentity(year=year, month=month),
+        inputs=MonthlyDairyCashFlowInput.model_validate(lines),
+        opening_cash=opening_cash,
+    )
+
+
+def _handle_cf_monthly(**fields: Any) -> dict[str, Any]:
+    """Assemble Domain monthly cash envelope; cash maths stay in Dairy/Core."""
+    return calculate_monthly_dairy_cash_flow(_cash_month_envelope(**fields)).model_dump()
+
+
+def _handle_cf_months(*, opening_cash: float, months: list[dict[str, Any]]) -> dict[str, Any]:
+    """Assemble consecutive cash months; roll-forward lives in Domain."""
+    model = MultiMonthDairyCashFlowModel(
+        opening_cash=opening_cash,
+        months=[_cash_month_envelope(**item) for item in months],
+    )
+    return calculate_multi_month_dairy_cash_flow(model).model_dump()
 
 
 def _handle_pl_months(
@@ -241,6 +272,28 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=PlMonthsInput,
         handler=_handle_pl_months,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="cf.monthly",
+        description=(
+            "Explicit monthly Dairy Cash Flow (not derived from P&L): operating, "
+            "investing and financing inflows/outflows, cash in, cash out, net cash flow. "
+            "Line IDs match P&L categories."
+        ),
+        input_model=CfMonthlyInput,
+        handler=_handle_cf_monthly,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="cf.months",
+        description=(
+            "Consecutive monthly Dairy Cash Flows rolled forward from opening_cash: "
+            "each month opens with the previous closing cash; period totals and "
+            "closing cash."
+        ),
+        input_model=CfMonthsInput,
+        handler=_handle_cf_months,
         supports_provenance=False,
     ),
 )

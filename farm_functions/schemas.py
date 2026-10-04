@@ -6,11 +6,13 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, create_model
+
+from farm_functions.dairy.cash_flow import CASH_FLOW_LINES
 
 
-def _parse_non_negative_number(value: Any) -> float:
-    """Accept int/float >= 0. Reject bool, null, strings, NaN/Inf, and negatives."""
+def _parse_finite_number(value: Any) -> float:
+    """Accept any finite int/float (negatives allowed). Reject bool, null, strings, NaN/Inf."""
     if value is None:
         raise ValueError("null is not a valid value")
     if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -18,12 +20,20 @@ def _parse_non_negative_number(value: Any) -> float:
     number = float(value)
     if not isfinite(number):
         raise ValueError("must be a finite number")
+    return number
+
+
+def _parse_non_negative_number(value: Any) -> float:
+    """Accept int/float >= 0. Reject bool, null, strings, NaN/Inf, and negatives."""
+    number = _parse_finite_number(value)
     if number < 0:
         raise ValueError("must be greater than or equal to 0")
     return number
 
 
 NonNegativeNumber = Annotated[float, BeforeValidator(_parse_non_negative_number)]
+# Balances (e.g. bank cash) may be negative: an overdraft is a valid position.
+SignedNumber = Annotated[float, BeforeValidator(_parse_finite_number)]
 
 
 def _parse_calendar_year(value: Any) -> int:
@@ -140,6 +150,51 @@ class MonthlyDairyFinancialInput(
     on the Domain envelope (ADR-0018). No annual milk fields
     (``milking_cows``, ``litres_per_cow``).
     """
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 monthly Dairy Cash Flow drivers (ADR-0022 / ADR-0023). Explicit cash
+# amounts for the statement month — not P&L accruals. Fields are generated from
+# Dairy ``CASH_FLOW_LINES`` so the catalogue is declared once. Operating lines
+# share P&L category IDs (``feed``, ``milk`` …). Period identity is Domain only.
+# Not included yet: household drawings (D-CF4), opening/closing cash (D-CF3).
+# ---------------------------------------------------------------------------
+
+MonthlyDairyCashFlowInput = create_model(
+    "MonthlyDairyCashFlowInput",
+    __base__=_StrictModel,
+    **{name: (NonNegativeNumber, 0) for name in CASH_FLOW_LINES},
+)
+
+
+class CfMonthItemInput(MonthlyDairyCashFlowInput):
+    """One month of cash lines plus period identity (``cf.months`` item)."""
+
+    year: CalendarYear
+    month: CalendarMonth
+
+
+class CfMonthlyInput(CfMonthItemInput):
+    """Flat HTTP / runner input for ``cf.monthly`` (ADR-0022 / ADR-0024).
+
+    Application peels ``year`` / ``month`` into ``MonthlyPeriodIdentity`` and
+    the cash lines into ``MonthlyDairyCashFlowInput``. Optional
+    ``opening_cash`` (may be negative) adds ``closing_cash`` to the result.
+    """
+
+    opening_cash: SignedNumber | None = None
+
+
+class CfMonthsInput(_StrictModel):
+    """HTTP / runner input for ``cf.months`` (ADR-0024).
+
+    ``opening_cash`` is the bank position at the start of the first month; each
+    later month opens with the previous month's closing cash. Months must be
+    consecutive (any input order; sorted chronologically).
+    """
+
+    opening_cash: SignedNumber
+    months: list[CfMonthItemInput] = Field(..., min_length=1)
 
 
 class PlMonthlyInput(MonthlyDairyFinancialInput):
@@ -517,11 +572,16 @@ PERIOD_IDENTITY_FIELD_UNITS: dict[str, str] = {
 }
 
 
+# Cash position units for ``cf.monthly`` / ``cf.months`` needs_input.
+CASH_POSITION_FIELD_UNITS: dict[str, str] = {"opening_cash": "EUR"}
+
+
 def missing_field_entry(field: str) -> dict[str, str]:
     """Canonical needs_input.missing item: {field, unit}."""
     unit = (
         FIELD_UNITS.get(field)
         or PERIOD_IDENTITY_FIELD_UNITS.get(field)
+        or CASH_POSITION_FIELD_UNITS.get(field)
         or MONTHLY_FIELD_UNITS.get(field)
         or "unknown"
     )

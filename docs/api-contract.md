@@ -13,11 +13,11 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Service:** Stateless annual dairy P&L calculator (validate inputs, run named calculations, return structured results).
 
-**Calculations (10 public IDs):** `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months` — from `CALCULATION_CATALOGUE` only.
+**Calculations (12 public IDs):** `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months`, `cf.monthly`, `cf.months` — from `CALCULATION_CATALOGUE` only.
 
-**Inputs:** Flat JSON numbers per calculation (except `pl.months`: nested `months[]` + optional `ytd`). Required top-level fields → `needs_input` when omitted. Optional omitted → `0` (or `ytd: null` / omitted for months-only). Explicit `0` is valid. Unknown fields / null / negatives / wrong types → `error` with stable codes. Units come from `FIELD_UNITS` / monthly / period-identity lookups on `needs_input` — **not** from discovery.
+**Inputs:** Flat JSON numbers per calculation (except `pl.months`: nested `months[]` + optional `ytd`; `cf.months`: `opening_cash` + nested `months[]`). Required top-level fields → `needs_input` when omitted. Optional omitted → `0` (or `ytd: null` / omitted for months-only). Explicit `0` is valid. Unknown fields / null / negatives / wrong types → `error` with stable codes. Units come from `FIELD_UNITS` / monthly / period-identity lookups on `needs_input` — **not** from discovery.
 
-**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit, finance}` with `period:"annual"`. `pl.monthly` → same money nests with `period: {kind, year, month}` (ADR-0019). `pl.months` → `{currency, months: MonthlyDairyStatementResult[], ytd: YtdDairyStatementResult | null}` — Domain dumps; no chart DTOs.
+**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit, finance}` with `period:"annual"`. `pl.monthly` → same money nests with `period: {kind, year, month}` (ADR-0019). `pl.months` → `{currency, months: MonthlyDairyStatementResult[], ytd: YtdDairyStatementResult | null}` — Domain dumps; no chart DTOs. `cf.monthly` → `MonthlyDairyCashFlowResult` dump: `{currency, period, operating, investing, financing, cash_in, cash_out, net_cash_flow}`; each activity `{inflows:{lines,total}, outflows:{lines,total}, net}`; every catalogue line published (zeros included); `opening_cash` / `closing_cash` (`null` unless `opening_cash` sent). `cf.months` → `{currency, opening_cash, months: MonthlyDairyCashFlowResult[], cash_in, cash_out, net_cash_flow, closing_cash}`; months consecutive (gap → `details.reason: non_contiguous_months`); `opening_cash` may be negative (ADR-0024).
 
 **Canonical annual view (ADR-0009):** `pl.summary` is the Phase 1 **canonical annual Operating Statement**. Atomic catalogue IDs remain supporting schedules and must reconcile to `pl.summary` for the same inputs (published aggregates authoritative per ADR-0005). In-process `calculate_annual_pnl` wraps the same composition.
 
@@ -67,7 +67,7 @@ Supported endpoints:
 
 **Ten registered calculation IDs** (`CALCULATION_CATALOGUE` only):
 
-`revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months`
+`revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months`, `cf.monthly`, `cf.months`
 
 HTTP request/response envelopes use statuses `ok` / `needs_input` / `error`. On failure, branch on structured `error.code` (see Validation above), not message text.
 

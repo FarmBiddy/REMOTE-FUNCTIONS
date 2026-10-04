@@ -23,6 +23,11 @@ def net_cash_flow(cash_in: float, cash_out: float) -> float:
     return cash_section_net(cash_in, cash_out)
 
 
+def closing_cash(opening_cash: float, net: float) -> float:
+    """Cash position roll-forward: opening + net movement = closing."""
+    return float(opening_cash) + float(net)
+
+
 def sum_cash_amounts(*values: float) -> float:
     """Sum explicit cash line amounts (alias of ``sum_amounts`` for clarity)."""
     return sum_amounts(*values)
@@ -32,6 +37,7 @@ __all__ = [
     "CashActivity",
     "CashDirection",
     "cash_section_net",
+    "closing_cash",
     "net_cash_flow",
     "sum_cash_amounts",
 ]

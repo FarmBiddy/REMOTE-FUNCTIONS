@@ -50,7 +50,8 @@ MonthlyDairyCashFlowModel
 - Phase 1 catalogue: Dairy `CASH_FLOW_CATALOGUE` (declared once; input schema generated from it). Operating lines reuse **P&L category IDs** (`milk`, `biss`, `feed`, `vet` …; ADR-0023) — same ID, statement decides meaning (cost incurred vs cash paid). Small investing and financing sets (`loan_proceeds`, `loan_principal_repayments`, `interest_paid`, capex/disposals).
 - Phase 1 Dairy **catalogues** place `interest_paid` under financing outflows; Core does **not** encode that policy (D-CF1).
 - **P3.2:** `calculate_monthly_dairy_cash_flow(MonthlyDairyCashFlowModel)` → Dairy `monthly_cash_flow` → `MonthlyDairyCashFlowResult` (per-activity lines/totals/net + `cash_in` / `cash_out` / `net_cash_flow`). Every catalogue key is published in `lines` (zeros included).
-- No opening/closing cash (P3.4). No household drawings yet (D-CF4). Public HTTP: `cf.monthly` (P3.3).
+- Public HTTP: `cf.monthly` (P3.3). No household drawings yet (D-CF4).
+- **P3.4 (ADR-0024):** `opening_cash` on the envelope (may be negative) → `closing_cash = opening + net` (Core). `MultiMonthDairyCashFlowModel` → `calculate_multi_month_dairy_cash_flow`: consecutive months only, each opening with the previous published closing; period totals + `closing_cash`. Public HTTP `cf.months`.
 
 ### Multi-period P&L (ADR-0020)
 

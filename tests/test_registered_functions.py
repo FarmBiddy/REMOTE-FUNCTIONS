@@ -98,6 +98,8 @@ def _happy_payload(key: str) -> dict:
         }
     if key == "cf.monthly":
         return dict(SAMPLE_CASH_MONTH)
+    if key == "cf.months":
+        return {"opening_cash": 20_000, "months": [dict(SAMPLE_CASH_MONTH)]}
     raise AssertionError(f"No happy payload for {key}")
 
 
@@ -120,6 +122,8 @@ def _required_only_payload(key: str) -> dict:
                 }
             )
         return {"months": months}
+    if key == "cf.months":
+        return {"opening_cash": 20_000, "months": [{"year": 2026, "month": 3}]}
     return {name: full[name] for name in required}
 
 
@@ -136,6 +140,8 @@ def _zero_payload(key: str) -> dict:
                 }
             ]
         }
+    if key == "cf.months":
+        return {"opening_cash": 0, "months": [{"year": 1, "month": 1}]}
     known = REQUIRED_FIELDS[key] + OPTIONAL_FIELDS[key]
     payload = {name: 0 for name in known}
     # Calendar identity cannot be zero; keep a valid period with zero money drivers.
@@ -221,6 +227,13 @@ def test_happy_path(key: str) -> None:
         assert body["cash_in"] == 28_000
         assert body["cash_out"] == 11_500
         assert body["net_cash_flow"] == 16_500
+        assert body["opening_cash"] is None
+        assert body["closing_cash"] is None
+    elif key == "cf.months":
+        body = result["result"]
+        assert body["opening_cash"] == 20_000
+        assert body["months"][0]["net_cash_flow"] == 16_500
+        assert body["closing_cash"] == 36_500
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -273,6 +286,10 @@ def test_required_only_optionals_default_to_zero(key: str) -> None:
         assert body["cash_in"] == 0
         assert body["cash_out"] == 0
         assert body["net_cash_flow"] == 0
+    elif key == "cf.months":
+        body = result["result"]
+        assert body["net_cash_flow"] == 0
+        assert body["closing_cash"] == 20_000
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -311,6 +328,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "cf.monthly":
         assert result["result"]["period"] == {"kind": "month", "year": 1, "month": 1}
         assert result["result"]["net_cash_flow"] == 0
+    elif key == "cf.months":
+        assert result["result"]["closing_cash"] == 0
 
 
 def _missing_required_cases() -> list[tuple[str, str, dict]]:

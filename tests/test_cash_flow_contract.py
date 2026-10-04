@@ -137,11 +137,13 @@ def test_monthly_cash_flow_result_shape_accepts_hand_payload():
             "cash_in": 66_000,
             "cash_out": 46_200,
             "net_cash_flow": 19_800,
+            "opening_cash": None,
+            "closing_cash": None,
         }
     )
     assert result.net_cash_flow == 19_800
     assert result.financing.outflows.lines["interest_paid"] == 200
-    assert not hasattr(result, "opening_cash")
+    assert result.opening_cash is None and result.closing_cash is None
 
 
 def test_monthly_cash_calculation_entrypoint_exists():

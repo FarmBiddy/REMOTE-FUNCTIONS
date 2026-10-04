@@ -57,6 +57,7 @@ def test_discovery_lists_core_functions_only():
     keys = {item["key"] for item in list_functions()}
     assert keys == {
         "cf.monthly",
+        "cf.months",
         "costs.total",
         "pl.monthly",
         "pl.months",

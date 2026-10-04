@@ -51,6 +51,7 @@ _EXAMPLE_VALUES: dict[str, float] = {
     "loan_proceeds": 10000,
     "loan_principal_repayments": 3000,
     "interest_paid": 500,
+    "opening_cash": 20000,
 }
 
 

@@ -262,6 +262,15 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     details={"reason": "duplicate_period"},
                 )
             )
+        elif "months must be consecutive" in text:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "non_contiguous_months"},
+                )
+            )
         elif "missing months" in text.lower():
             issues.append(
                 issue(

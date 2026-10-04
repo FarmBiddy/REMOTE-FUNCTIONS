@@ -25,6 +25,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from farm_functions.core.aggregate import sum_amounts
+from farm_functions.core.cash import closing_cash, net_cash_flow
 from farm_functions.core.rounding import round_margin_pct, round_margin_ratio, round_money
 from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
 from farm_functions.dairy.cash_flow import monthly_cash_flow
@@ -408,13 +409,16 @@ class MonthlyDairyCashFlowModel(BaseModel):
     currency: Currency = "EUR"
     period: MonthlyPeriodIdentity
     inputs: MonthlyDairyCashFlowInput
+    # Bank position at the start of the month; may be negative (overdraft).
+    opening_cash: float | None = None
 
 
 class MonthlyDairyCashFlowResult(BaseModel):
-    """Structured monthly Cash Flow statement (P3.2).
+    """Structured monthly Cash Flow statement (P3.2 / P3.4).
 
-    No opening/closing cash yet (D-CF3 → P3.4). ``interest_paid`` appears under
-    financing outflows by Phase 1 Dairy catalogue policy, not by Core.
+    ``opening_cash`` / ``closing_cash`` are ``None`` when no opening position
+    was supplied. ``interest_paid`` appears under financing outflows by Phase 1
+    Dairy catalogue policy, not by Core.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -427,6 +431,8 @@ class MonthlyDairyCashFlowResult(BaseModel):
     cash_in: float
     cash_out: float
     net_cash_flow: float
+    opening_cash: float | None
+    closing_cash: float | None
 
 
 def calculate_monthly_dairy_cash_flow(
@@ -438,6 +444,13 @@ def calculate_monthly_dairy_cash_flow(
     Does not mutate ``model``. Does not derive amounts from P&L.
     """
     payload = monthly_cash_flow(**model.inputs.model_dump())
+    opening = None if model.opening_cash is None else round_money(model.opening_cash)
+    # Roll on published figures so opening + net == closing to the cent.
+    closing = (
+        None
+        if opening is None
+        else round_money(closing_cash(opening, payload["net_cash_flow"]))
+    )
     return MonthlyDairyCashFlowResult.model_validate(
         {
             "currency": model.currency,
@@ -448,5 +461,83 @@ def calculate_monthly_dairy_cash_flow(
             "cash_in": payload["cash_in"],
             "cash_out": payload["cash_out"],
             "net_cash_flow": payload["net_cash_flow"],
+            "opening_cash": opening,
+            "closing_cash": closing,
         }
+    )
+
+
+class MultiMonthDairyCashFlowModel(BaseModel):
+    """Consecutive monthly cash envelopes rolled from one opening position (P3.4).
+
+    Any input order; months are sorted chronologically. Duplicates and gaps are
+    rejected: a missing month would hide movements and misstate the balance.
+    Per-month ``opening_cash`` on items is ignored (set by the roll-forward).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    currency: Currency = "EUR"
+    opening_cash: float
+    months: list[MonthlyDairyCashFlowModel] = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def _require_consecutive_months(self) -> "MultiMonthDairyCashFlowModel":
+        keys = sorted((m.period.year, m.period.month) for m in self.months)
+        for prev, cur in zip(keys, keys[1:]):
+            if cur == prev:
+                raise ValueError(
+                    f"duplicate monthly period year={cur[0]} month={cur[1]}"
+                )
+            expected = (prev[0], prev[1] + 1) if prev[1] < 12 else (prev[0] + 1, 1)
+            if cur != expected:
+                raise ValueError(
+                    f"cash flow months must be consecutive: expected "
+                    f"year={expected[0]} month={expected[1]} after "
+                    f"year={prev[0]} month={prev[1]}"
+                )
+        return self
+
+
+class MultiMonthDairyCashFlowResult(BaseModel):
+    """Monthly cash flows with balances rolled forward plus period totals."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    currency: Currency
+    opening_cash: float
+    months: list[MonthlyDairyCashFlowResult]
+    cash_in: float
+    cash_out: float
+    net_cash_flow: float
+    closing_cash: float
+
+
+def calculate_multi_month_dairy_cash_flow(
+    model: MultiMonthDairyCashFlowModel,
+) -> MultiMonthDairyCashFlowResult:
+    """Run monthly cash flow per month, each opening with the previous closing.
+
+    Period ``closing_cash`` equals the last month's closing. Does not mutate
+    ``model``.
+    """
+    ordered = sorted(model.months, key=lambda m: (m.period.year, m.period.month))
+    position = model.opening_cash
+    results: list[MonthlyDairyCashFlowResult] = []
+    for month in ordered:
+        result = calculate_monthly_dairy_cash_flow(
+            month.model_copy(update={"opening_cash": position})
+        )
+        results.append(result)
+        position = result.closing_cash
+    cash_in = sum_amounts(*(r.cash_in for r in results))
+    cash_out = sum_amounts(*(r.cash_out for r in results))
+    return MultiMonthDairyCashFlowResult(
+        currency=model.currency,
+        opening_cash=results[0].opening_cash,
+        months=results,
+        cash_in=round_money(cash_in),
+        cash_out=round_money(cash_out),
+        net_cash_flow=round_money(net_cash_flow(cash_in, cash_out)),
+        closing_cash=results[-1].closing_cash,
     )

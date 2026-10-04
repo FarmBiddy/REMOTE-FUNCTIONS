@@ -8,6 +8,7 @@ from farm_functions.core.cash import (
     CashActivity,
     CashDirection,
     cash_section_net,
+    closing_cash,
     net_cash_flow,
     sum_cash_amounts,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "CashActivity",
     "CashDirection",
     "cash_section_net",
+    "closing_cash",
     "net_cash_flow",
     "net_profit",
     "profit_margin",

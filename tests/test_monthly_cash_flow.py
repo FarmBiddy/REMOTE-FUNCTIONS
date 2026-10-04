@@ -19,6 +19,7 @@ Hand-checkable March 2026 reference (explicit cash — not P&L-derived):
 from pathlib import Path
 
 from farm_functions.dairy.cash_flow import (
+    CASH_FLOW_LINES,
     FINANCING_CASH_OUTFLOW_CATEGORIES,
     INVESTING_CASH_OUTFLOW_CATEGORIES,
     OPERATING_CASH_INFLOW_CATEGORIES,
@@ -36,20 +37,26 @@ from farm_functions.domain import (
     calculate_monthly_dairy_statement,
 )
 from farm_functions.loaders.json_loader import load_sample_inputs
-from farm_functions.schemas import MonthlyDairyCashFlowInput, MonthlyDairyFinancialInput
+from farm_functions.schemas import (
+    MonthlyDairyCashFlowInput,
+    MonthlyDairyFinancialInput,
+    OtherRevenueInput,
+    SchemeRevenueInput,
+    TotalCostsInput,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 DAIRY_CASH = REPO / "farm_functions" / "dairy" / "cash_flow.py"
 
 REFERENCE_PERIOD = {"kind": "month", "year": 2026, "month": 3}
 REFERENCE_INPUTS = {
-    "milk_receipts": 18_000,
-    "cattle_receipts": 1_000,
-    "scheme_receipts": 2_000,
-    "feed_payments": 5_000,
-    "fertiliser_payments": 1_000,
-    "vet_payments": 500,
-    "electricity_payments": 500,
+    "milk": 18_000,
+    "cattle_sales": 1_000,
+    "biss": 2_000,
+    "feed": 5_000,
+    "fertiliser": 1_000,
+    "vet": 500,
+    "electricity": 500,
     "asset_disposal_proceeds": 2_000,
     "machinery_equipment_payments": 6_000,
     "loan_proceeds": 10_000,
@@ -74,9 +81,9 @@ def test_monthly_cash_flow_reference_hand_calculation():
     assert result.operating.inflows.total == 21_000.0
     assert result.operating.outflows.total == 7_000.0
     assert result.operating.net == 14_000.0
-    assert result.operating.inflows.lines["milk_receipts"] == 18_000.0
-    assert result.operating.inflows.lines["cattle_receipts"] == 1_000.0
-    assert result.operating.inflows.lines["scheme_receipts"] == 2_000.0
+    assert result.operating.inflows.lines["milk"] == 18_000.0
+    assert result.operating.inflows.lines["cattle_sales"] == 1_000.0
+    assert result.operating.inflows.lines["biss"] == 2_000.0
 
     assert result.investing.inflows.total == 2_000.0
     assert result.investing.outflows.total == 6_000.0
@@ -208,3 +215,21 @@ def test_monthly_cash_flow_accepts_kwargs_directly():
     assert payload["cash_in"] == 33_000.0
     assert payload["net_cash_flow"] == 16_500.0
     assert "period" not in payload
+
+
+def test_cash_and_pnl_share_category_ids():
+    """ADR-0023: one invoice category ID feeds both statements."""
+    pnl_costs = set(TotalCostsInput.model_fields)
+    pnl_income = set(SchemeRevenueInput.model_fields) | set(OtherRevenueInput.model_fields)
+    assert set(OPERATING_CASH_OUTFLOW_CATEGORIES) == pnl_costs
+    assert set(OPERATING_CASH_INFLOW_CATEGORIES) == pnl_income | {"milk"}
+    assert set(CASH_FLOW_LINES) == set(MonthlyDairyCashFlowInput.model_fields)
+
+
+def test_old_cash_suffix_names_are_rejected():
+    import pytest
+    from pydantic import ValidationError
+
+    for old in ("feed_payments", "milk_receipts", "scheme_receipts"):
+        with pytest.raises(ValidationError):
+            MonthlyDairyCashFlowInput.model_validate({old: 1})

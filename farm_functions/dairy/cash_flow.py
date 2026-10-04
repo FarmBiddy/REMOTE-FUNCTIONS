@@ -2,171 +2,96 @@
 
 Calendar-blind: explicit cash floats only. Period identity is stamped by Domain.
 
-Classification (operating / investing / financing) lives in these Dairy
-catalogues — including Phase 1 placement of ``interest_paid`` under financing
-outflows (ADR-0022 / D-CF1). Core only sums and nets amounts.
+``CASH_FLOW_CATALOGUE`` is the single Dairy cash catalogue: each line belongs to
+one activity (operating / investing / financing) and one direction (in / out).
+Operating line names are the **same category IDs as the P&L** (ADR-0023), so one
+tagged invoice line can feed both statements: accrual date → P&L, payment date
+→ Cash Flow. Amounts are never derived from P&L (ADR-0022).
 
-Does not derive cash from P&L composers or ``loan_repayments``.
+Placement of ``interest_paid`` under financing outflows is Phase 1 Dairy policy
+(D-CF1). Core only sums and nets amounts.
 """
 
-from farm_functions.core.cash import cash_section_net, net_cash_flow, sum_cash_amounts
+from farm_functions.core.cash import (
+    CashActivity,
+    CashDirection,
+    cash_section_net,
+    net_cash_flow,
+    sum_cash_amounts,
+)
 from farm_functions.core.rounding import round_money
+from farm_functions.dairy.costs import OPERATING_COST_CATEGORIES
 
-OPERATING_CASH_INFLOW_CATEGORIES = (
-    "milk_receipts",
-    "cattle_receipts",
-    "scheme_receipts",
-    "land_leasing_receipts",
-    "other_operating_receipts",
-)
+CASH_FLOW_CATALOGUE: dict[tuple[CashActivity, CashDirection], tuple[str, ...]] = {
+    ("operating", "in"): (
+        "milk",
+        "biss",
+        "acres",
+        "other_grants",
+        "cattle_sales",
+        "land_leasing_income",
+        "other",
+    ),
+    ("operating", "out"): OPERATING_COST_CATEGORIES,
+    ("investing", "in"): ("asset_disposal_proceeds",),
+    ("investing", "out"): ("machinery_equipment_payments", "other_capital_payments"),
+    ("financing", "in"): ("loan_proceeds",),
+    ("financing", "out"): ("loan_principal_repayments", "interest_paid"),
+}
 
-OPERATING_CASH_OUTFLOW_CATEGORIES = (
-    "feed_payments",
-    "fertiliser_payments",
-    "vet_payments",
-    "contractor_payments",
-    "labour_payments",
-    "insurance_payments",
-    "fuel_payments",
-    "electricity_payments",
-    "water_payments",
-    "rent_lease_payments",
-    "repairs_maintenance_payments",
-    "professional_fees_payments",
-    "levies_payments",
-    "other_operating_payments",
-)
+CASH_FLOW_LINES = tuple(name for names in CASH_FLOW_CATALOGUE.values() for name in names)
 
-INVESTING_CASH_INFLOW_CATEGORIES = ("asset_disposal_proceeds",)
-
-INVESTING_CASH_OUTFLOW_CATEGORIES = (
-    "machinery_equipment_payments",
-    "other_capital_payments",
-)
-
-FINANCING_CASH_INFLOW_CATEGORIES = ("loan_proceeds",)
-
-FINANCING_CASH_OUTFLOW_CATEGORIES = (
-    "loan_principal_repayments",
-    "interest_paid",
-)
+OPERATING_CASH_INFLOW_CATEGORIES = CASH_FLOW_CATALOGUE[("operating", "in")]
+OPERATING_CASH_OUTFLOW_CATEGORIES = CASH_FLOW_CATALOGUE[("operating", "out")]
+INVESTING_CASH_INFLOW_CATEGORIES = CASH_FLOW_CATALOGUE[("investing", "in")]
+INVESTING_CASH_OUTFLOW_CATEGORIES = CASH_FLOW_CATALOGUE[("investing", "out")]
+FINANCING_CASH_INFLOW_CATEGORIES = CASH_FLOW_CATALOGUE[("financing", "in")]
+FINANCING_CASH_OUTFLOW_CATEGORIES = CASH_FLOW_CATALOGUE[("financing", "out")]
 
 
-def _line_group(categories: tuple[str, ...], values: dict[str, float]) -> dict:
-    lines = {name: round_money(float(values[name])) for name in categories}
-    total = sum_cash_amounts(*(float(values[name]) for name in categories))
-    return {"lines": lines, "total": round_money(total)}
+def monthly_cash_flow(**amounts: float) -> dict:
+    """Compose one monthly Dairy Cash Flow from explicit cash amounts.
 
-
-def _activity_section(
-    inflow_categories: tuple[str, ...],
-    outflow_categories: tuple[str, ...],
-    values: dict[str, float],
-) -> dict:
-    inflows = _line_group(inflow_categories, values)
-    outflows = _line_group(outflow_categories, values)
-    in_raw = sum_cash_amounts(*(float(values[n]) for n in inflow_categories))
-    out_raw = sum_cash_amounts(*(float(values[n]) for n in outflow_categories))
-    return {
-        "inflows": inflows,
-        "outflows": outflows,
-        "net": round_money(cash_section_net(in_raw, out_raw)),
-    }
-
-
-def monthly_cash_flow(
-    milk_receipts: float = 0,
-    cattle_receipts: float = 0,
-    scheme_receipts: float = 0,
-    land_leasing_receipts: float = 0,
-    other_operating_receipts: float = 0,
-    feed_payments: float = 0,
-    fertiliser_payments: float = 0,
-    vet_payments: float = 0,
-    contractor_payments: float = 0,
-    labour_payments: float = 0,
-    insurance_payments: float = 0,
-    fuel_payments: float = 0,
-    electricity_payments: float = 0,
-    water_payments: float = 0,
-    rent_lease_payments: float = 0,
-    repairs_maintenance_payments: float = 0,
-    professional_fees_payments: float = 0,
-    levies_payments: float = 0,
-    other_operating_payments: float = 0,
-    asset_disposal_proceeds: float = 0,
-    machinery_equipment_payments: float = 0,
-    other_capital_payments: float = 0,
-    loan_proceeds: float = 0,
-    loan_principal_repayments: float = 0,
-    interest_paid: float = 0,
-) -> dict:
-    """Compose one monthly Dairy Cash Flow from explicit cash drivers.
-
+    Keys are ``CASH_FLOW_LINES``; missing lines count as 0, unknown keys raise.
     Returns money payload only (no ``period`` key).
     """
-    values = {
-        "milk_receipts": milk_receipts,
-        "cattle_receipts": cattle_receipts,
-        "scheme_receipts": scheme_receipts,
-        "land_leasing_receipts": land_leasing_receipts,
-        "other_operating_receipts": other_operating_receipts,
-        "feed_payments": feed_payments,
-        "fertiliser_payments": fertiliser_payments,
-        "vet_payments": vet_payments,
-        "contractor_payments": contractor_payments,
-        "labour_payments": labour_payments,
-        "insurance_payments": insurance_payments,
-        "fuel_payments": fuel_payments,
-        "electricity_payments": electricity_payments,
-        "water_payments": water_payments,
-        "rent_lease_payments": rent_lease_payments,
-        "repairs_maintenance_payments": repairs_maintenance_payments,
-        "professional_fees_payments": professional_fees_payments,
-        "levies_payments": levies_payments,
-        "other_operating_payments": other_operating_payments,
-        "asset_disposal_proceeds": asset_disposal_proceeds,
-        "machinery_equipment_payments": machinery_equipment_payments,
-        "other_capital_payments": other_capital_payments,
-        "loan_proceeds": loan_proceeds,
-        "loan_principal_repayments": loan_principal_repayments,
-        "interest_paid": interest_paid,
+    unknown = set(amounts) - set(CASH_FLOW_LINES)
+    if unknown:
+        raise TypeError(f"unknown cash lines: {sorted(unknown)}")
+    values = {name: float(amounts.get(name, 0)) for name in CASH_FLOW_LINES}
+
+    raw = {
+        key: sum_cash_amounts(*(values[name] for name in names))
+        for key, names in CASH_FLOW_CATALOGUE.items()
     }
-    operating = _activity_section(
-        OPERATING_CASH_INFLOW_CATEGORIES,
-        OPERATING_CASH_OUTFLOW_CATEGORIES,
-        values,
-    )
-    investing = _activity_section(
-        INVESTING_CASH_INFLOW_CATEGORIES,
-        INVESTING_CASH_OUTFLOW_CATEGORIES,
-        values,
-    )
-    financing = _activity_section(
-        FINANCING_CASH_INFLOW_CATEGORIES,
-        FINANCING_CASH_OUTFLOW_CATEGORIES,
-        values,
-    )
-    op_in = sum_cash_amounts(*(float(values[n]) for n in OPERATING_CASH_INFLOW_CATEGORIES))
-    inv_in = sum_cash_amounts(*(float(values[n]) for n in INVESTING_CASH_INFLOW_CATEGORIES))
-    fin_in = sum_cash_amounts(*(float(values[n]) for n in FINANCING_CASH_INFLOW_CATEGORIES))
-    op_out = sum_cash_amounts(*(float(values[n]) for n in OPERATING_CASH_OUTFLOW_CATEGORIES))
-    inv_out = sum_cash_amounts(*(float(values[n]) for n in INVESTING_CASH_OUTFLOW_CATEGORIES))
-    fin_out = sum_cash_amounts(*(float(values[n]) for n in FINANCING_CASH_OUTFLOW_CATEGORIES))
-    cash_in_raw = sum_cash_amounts(op_in, inv_in, fin_in)
-    cash_out_raw = sum_cash_amounts(op_out, inv_out, fin_out)
-    return {
-        "currency": "EUR",
-        "operating": operating,
-        "investing": investing,
-        "financing": financing,
-        "cash_in": round_money(cash_in_raw),
-        "cash_out": round_money(cash_out_raw),
-        "net_cash_flow": round_money(net_cash_flow(cash_in_raw, cash_out_raw)),
-    }
+    payload: dict = {"currency": "EUR"}
+    for activity in ("operating", "investing", "financing"):
+        groups = {
+            direction: {
+                "lines": {
+                    name: round_money(values[name])
+                    for name in CASH_FLOW_CATALOGUE[(activity, direction)]
+                },
+                "total": round_money(raw[(activity, direction)]),
+            }
+            for direction in ("in", "out")
+        }
+        payload[activity] = {
+            "inflows": groups["in"],
+            "outflows": groups["out"],
+            "net": round_money(cash_section_net(raw[(activity, "in")], raw[(activity, "out")])),
+        }
+    cash_in = sum_cash_amounts(*(v for (_, d), v in raw.items() if d == "in"))
+    cash_out = sum_cash_amounts(*(v for (_, d), v in raw.items() if d == "out"))
+    payload["cash_in"] = round_money(cash_in)
+    payload["cash_out"] = round_money(cash_out)
+    payload["net_cash_flow"] = round_money(net_cash_flow(cash_in, cash_out))
+    return payload
 
 
 __all__ = [
+    "CASH_FLOW_CATALOGUE",
+    "CASH_FLOW_LINES",
     "FINANCING_CASH_INFLOW_CATEGORIES",
     "FINANCING_CASH_OUTFLOW_CATEGORIES",
     "INVESTING_CASH_INFLOW_CATEGORIES",

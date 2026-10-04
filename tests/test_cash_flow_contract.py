@@ -38,7 +38,7 @@ def test_core_cash_module_has_no_interest_policy():
     text = (CORE / "cash.py").read_text(encoding="utf-8")
     assert "interest_paid" not in text
     assert "loan_principal" not in text
-    assert "milk_receipts" not in text
+    assert "milk" not in text
     # No policy mapping tables in Core.
     assert "financing" not in text or "CashActivity" in text
 
@@ -57,12 +57,12 @@ def test_cash_direction_and_activity_literals():
 
 def test_monthly_cash_flow_input_defaults_and_rejects_negatives():
     parsed = MonthlyDairyCashFlowInput.model_validate({})
-    assert parsed.milk_receipts == 0
+    assert parsed.milk == 0
     assert parsed.loan_proceeds == 0
     assert parsed.interest_paid == 0
     assert parsed.machinery_equipment_payments == 0
     with pytest.raises(ValidationError):
-        MonthlyDairyCashFlowInput.model_validate({"milk_receipts": -1})
+        MonthlyDairyCashFlowInput.model_validate({"milk": -1})
 
 
 def test_monthly_cash_flow_input_rejects_pnl_fields_and_calendar():
@@ -90,8 +90,8 @@ def test_monthly_cash_flow_model_separates_identity():
         period=MonthlyPeriodIdentity(year=2026, month=1),
         inputs=MonthlyDairyCashFlowInput.model_validate(
             {
-                "milk_receipts": 16_000,
-                "feed_payments": 5_000,
+                "milk": 16_000,
+                "feed": 5_000,
                 "loan_proceeds": 50_000,
                 "machinery_equipment_payments": 40_000,
                 "loan_principal_repayments": 1_000,
@@ -111,8 +111,8 @@ def test_monthly_cash_flow_result_shape_accepts_hand_payload():
             "currency": "EUR",
             "period": {"kind": "month", "year": 2026, "month": 1},
             "operating": {
-                "inflows": {"lines": {"milk_receipts": 16_000}, "total": 16_000},
-                "outflows": {"lines": {"feed_payments": 5_000}, "total": 5_000},
+                "inflows": {"lines": {"milk": 16_000}, "total": 16_000},
+                "outflows": {"lines": {"feed": 5_000}, "total": 5_000},
                 "net": 11_000,
             },
             "investing": {

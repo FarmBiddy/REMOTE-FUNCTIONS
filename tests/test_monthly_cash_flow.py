@@ -233,3 +233,28 @@ def test_old_cash_suffix_names_are_rejected():
     for old in ("feed_payments", "milk_receipts", "scheme_receipts"):
         with pytest.raises(ValidationError):
             MonthlyDairyCashFlowInput.model_validate({old: 1})
+
+
+def test_cf_monthly_http_matches_domain_and_asks_for_period():
+    from fastapi.testclient import TestClient
+
+    from api.app import app
+
+    client = TestClient(app)
+    body = client.post(
+        "/v1/functions/cf.monthly/run",
+        json={"year": 2026, "month": 3, **REFERENCE_INPUTS},
+    ).json()
+    assert body["status"] == "ok"
+    assert body["result"] == calculate_monthly_dairy_cash_flow(_cash_model()).model_dump()
+
+    missing = client.post("/v1/functions/cf.monthly/run", json={"milk": 1}).json()
+    assert missing["status"] == "needs_input"
+    assert [m["field"] for m in missing["missing"]] == ["year", "month"]
+
+    old = client.post(
+        "/v1/functions/cf.monthly/run",
+        json={"year": 2026, "month": 3, "feed_payments": 1},
+    ).json()
+    assert old["status"] == "error"
+    assert old["errors"][0]["code"] == "unknown_field"

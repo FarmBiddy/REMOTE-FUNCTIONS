@@ -39,6 +39,15 @@ SAMPLE_COSTS = {
     "electricity": 3_000,
 }
 SAMPLE_PROFIT_TOTALS = {"revenue": 240_000, "costs": 163_000}
+SAMPLE_CASH_MONTH = {
+    "year": 2026,
+    "month": 3,
+    "milk": 18_000,
+    "feed": 5_000,
+    "machinery_equipment_payments": 6_000,
+    "loan_proceeds": 10_000,
+    "interest_paid": 500,
+}
 
 
 def _happy_payload(key: str) -> dict:
@@ -87,6 +96,8 @@ def _happy_payload(key: str) -> dict:
                 }
             ]
         }
+    if key == "cf.monthly":
+        return dict(SAMPLE_CASH_MONTH)
     raise AssertionError(f"No happy payload for {key}")
 
 
@@ -128,7 +139,7 @@ def _zero_payload(key: str) -> dict:
     known = REQUIRED_FIELDS[key] + OPTIONAL_FIELDS[key]
     payload = {name: 0 for name in known}
     # Calendar identity cannot be zero; keep a valid period with zero money drivers.
-    if key == "pl.monthly":
+    if key in ("pl.monthly", "cf.monthly"):
         payload["year"] = 1
         payload["month"] = 1
     return payload
@@ -200,6 +211,16 @@ def test_happy_path(key: str) -> None:
             "month": 3,
         }
         assert body["months"][0]["profit"]["net"] == 13_500
+    elif key == "cf.monthly":
+        body = result["result"]
+        assert body["period"] == {"kind": "month", "year": 2026, "month": 3}
+        assert body["operating"]["inflows"]["lines"]["milk"] == 18_000
+        assert body["operating"]["net"] == 13_000
+        assert body["investing"]["net"] == -6_000
+        assert body["financing"]["net"] == 9_500
+        assert body["cash_in"] == 28_000
+        assert body["cash_out"] == 11_500
+        assert body["net_cash_flow"] == 16_500
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -246,6 +267,12 @@ def test_required_only_optionals_default_to_zero(key: str) -> None:
         assert body["months"][0]["revenue"]["total"] == 16_000
         assert body["months"][0]["costs"]["total"] == 0
         assert body["months"][0]["profit"]["net"] == 16_000
+    elif key == "cf.monthly":
+        body = result["result"]
+        assert body["period"] == {"kind": "month", "year": 2026, "month": 3}
+        assert body["cash_in"] == 0
+        assert body["cash_out"] == 0
+        assert body["net_cash_flow"] == 0
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -281,6 +308,9 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert body["months"][0]["period"] == {"kind": "month", "year": 1, "month": 1}
         assert body["months"][0]["revenue"]["total"] == 0
         assert body["months"][0]["profit"]["net"] == 0
+    elif key == "cf.monthly":
+        assert result["result"]["period"] == {"kind": "month", "year": 1, "month": 1}
+        assert result["result"]["net_cash_flow"] == 0
 
 
 def _missing_required_cases() -> list[tuple[str, str, dict]]:

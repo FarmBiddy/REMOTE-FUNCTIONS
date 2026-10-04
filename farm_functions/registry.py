@@ -19,16 +19,20 @@ from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
 from farm_functions.domain import (
+    MonthlyDairyCashFlowModel,
     MonthlyDairyStatementModel,
     MonthlyPeriodIdentity,
     MultiMonthDairyStatementModel,
     YtdDairyStatementModel,
+    calculate_monthly_dairy_cash_flow,
     calculate_monthly_dairy_statement,
     calculate_multi_month_dairy_statements,
     calculate_ytd_dairy_statement,
 )
 from farm_functions.schemas import (
+    CfMonthlyInput,
     MilkRevenueInput,
+    MonthlyDairyCashFlowInput,
     MonthlyDairyFinancialInput,
     OtherRevenueInput,
     PlMonthlyInput,
@@ -116,6 +120,15 @@ def _handle_pl_monthly(*, year: int, month: int, **drivers: Any) -> dict[str, An
         inputs=MonthlyDairyFinancialInput.model_validate(drivers),
     )
     return calculate_monthly_dairy_statement(model).model_dump()
+
+
+def _handle_cf_monthly(*, year: int, month: int, **lines: Any) -> dict[str, Any]:
+    """Assemble Domain monthly cash envelope; cash maths stay in Dairy/Core."""
+    model = MonthlyDairyCashFlowModel(
+        period=MonthlyPeriodIdentity(year=year, month=month),
+        inputs=MonthlyDairyCashFlowInput.model_validate(lines),
+    )
+    return calculate_monthly_dairy_cash_flow(model).model_dump()
 
 
 def _handle_pl_months(
@@ -241,6 +254,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=PlMonthsInput,
         handler=_handle_pl_months,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="cf.monthly",
+        description=(
+            "Explicit monthly Dairy Cash Flow (not derived from P&L): operating, "
+            "investing and financing inflows/outflows, cash in, cash out, net cash flow. "
+            "Line IDs match P&L categories."
+        ),
+        input_model=CfMonthlyInput,
+        handler=_handle_cf_monthly,
         supports_provenance=False,
     ),
 )

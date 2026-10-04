@@ -43,6 +43,7 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | `pl.summary` | milk fields | **canonical** annual Operating Statement + `finance.loan_repayments` |
 | `pl.monthly` | `year`, `month`, `milk_litres`, `milk_price` | Explicit monthly Operating Statement (not annual ÷ 12) + `finance.loan_repayments` |
 | `pl.months` | `months[]` (+ optional `ytd`) | Multi-month OS list + optional YTD (ADR-0021; not annual ÷ 12) |
+| `cf.monthly` | `year`, `month` | Explicit monthly Cash Flow: operating / investing / financing, cash in/out, net (ADR-0022; line IDs = P&L categories, ADR-0023) |
 
 `pl.summary` is the Phase 1 canonical annual Operating Statement (ADR-0009). `pl.monthly` is the explicit monthly statement (ADR-0019). `pl.months` returns chronological monthly statements and optional YTD (ADR-0021). Atomic IDs are supporting schedules that must reconcile to the annual view. `profit.net` and `profit.margin` keep those public IDs (Option A) and expect **already totalled** operating income and operating costs — use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
 
@@ -108,7 +109,7 @@ On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on 
 
 ## Out of scope
 
-KPIs (feed ratio, per cow), monthly cashflow, Monte Carlo, alerts, risk, and farm-file loading from Dairy Financials.
+KPIs (feed ratio, per cow), opening/closing cash and multi-month cash flow (next), Monte Carlo, alerts, risk, and farm-file loading from Dairy Financials.
 
 ## Docs
 

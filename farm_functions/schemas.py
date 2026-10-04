@@ -159,6 +159,18 @@ MonthlyDairyCashFlowInput = create_model(
 )
 
 
+class CfMonthlyInput(MonthlyDairyCashFlowInput):
+    """Flat HTTP / runner input for ``cf.monthly`` (ADR-0022 / ADR-0023).
+
+    Transport includes period identity; Application peels ``year`` / ``month``
+    into ``MonthlyPeriodIdentity`` and the cash lines into
+    ``MonthlyDairyCashFlowInput``.
+    """
+
+    year: CalendarYear
+    month: CalendarMonth
+
+
 class PlMonthlyInput(MonthlyDairyFinancialInput):
     """Flat HTTP / runner input for ``pl.monthly`` (ADR-0019).
 

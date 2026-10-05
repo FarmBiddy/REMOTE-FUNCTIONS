@@ -358,6 +358,11 @@ Optional: `milk_solids_kg` (co-op statements) → `per_kg_ms`; `hectares` →
 Variable / fixed costs and gross margin (revenue − variable costs) follow the
 Teagasc split (ADR-0033).
 
+"How much can I borrow?" (ADR-0036): call `debt.capacity` with 12 months
+(actual or projected), the household `drawings`, `tax`, `off_farm_income`, and
+the loan's `annual_rate`, `term_months` and the lender's `min_cover` (e.g. 1.25).
+Show `new_loan.max_principal` and `repayment_cover`.
+
 Variance (ADR-0035): "vs last year" / "vs budget" columns call `pl.compare` or
 `cf.compare` with the two sets of months. Show `milk.volume_effect` /
 `milk.price_effect` to explain a milk income change. Colour (cost up = bad) is

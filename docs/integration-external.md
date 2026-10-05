@@ -350,6 +350,13 @@ KPI tiles (ADR-0028): call `kpi.summary` with the same months as the chart
 my loans?". `null` means not computable (no litres / cows / repayments).
 Thresholds (e.g. a lender's minimum DSCR) are Platform / Biddy policy.
 
+What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
+the cash months, `opening_cash` and the scenarios the farmer picks (e.g.
+`{"name": "milk -5c", "milk_price_c": -5}`). Show `break_even.cash_milk_price_c`
+as "below X c/L you go overdrawn" and `surplus_milk_price_c` as "below X c/L you
+make a loss". A cash break-even above `milk_price_c` means the base case already
+goes overdrawn (see `scenarios[0].lowest_cash`).
+
 ## Discovery (optional)
 
 `GET /v1/functions` returns calculation `key`, `description`, `required`, `optional` **names** — not units. Units appear on `needs_input.missing[].unit`.

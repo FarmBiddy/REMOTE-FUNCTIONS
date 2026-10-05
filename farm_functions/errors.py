@@ -293,6 +293,24 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     details={"reason": "duplicate_period"},
                 )
             )
+        elif "must be after the last history month" in text:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "forecast_overlaps_history"},
+                )
+            )
+        elif "forecast needs prior-year history" in text:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "missing_prior_year_month"},
+                )
+            )
         elif "months must be consecutive" in text:
             issues.append(
                 issue(

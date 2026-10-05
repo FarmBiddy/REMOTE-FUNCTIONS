@@ -268,6 +268,78 @@ class PlMonthsInput(_StrictModel):
     ytd: PlMonthsYtdInput | None = None
 
 
+# ---------------------------------------------------------------------------
+# Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
+# item shape). ``forecast`` items carry period identity plus optional known
+# values; an omitted (or null) line is projected.
+# ---------------------------------------------------------------------------
+
+
+def _forecast_item_model(name: str, lines: tuple[str, ...]) -> type[BaseModel]:
+    return create_model(
+        name,
+        __base__=_StrictModel,
+        year=(CalendarYear, ...),
+        month=(CalendarMonth, ...),
+        **{line: (NonNegativeNumber | None, None) for line in lines},
+    )
+
+
+def _check_forecast_periods(history: list[Any], forecast: list[Any]) -> None:
+    """Unique periods, forecast after history, prior-year month present."""
+    for items in (history, forecast):
+        seen: set[tuple[int, int]] = set()
+        for item in items:
+            key = (item.year, item.month)
+            if key in seen:
+                raise ValueError(f"duplicate monthly period year={key[0]} month={key[1]}")
+            seen.add(key)
+    actual = {(item.year, item.month) for item in history}
+    last = max(actual)
+    for item in forecast:
+        if (item.year, item.month) <= last:
+            raise ValueError(
+                f"forecast month year={item.year} month={item.month} must be after "
+                f"the last history month year={last[0]} month={last[1]}"
+            )
+        if (item.year - 1, item.month) not in actual:
+            raise ValueError(
+                f"forecast needs prior-year history for year={item.year - 1} month={item.month}"
+            )
+
+
+PlForecastItemInput = _forecast_item_model(
+    "PlForecastItemInput", tuple(MonthlyDairyFinancialInput.model_fields)
+)
+
+
+class PlForecastInput(_StrictModel):
+    """HTTP / runner input for ``pl.forecast`` (ADR-0026)."""
+
+    history: list[PlMonthItemInput] = Field(..., min_length=1)
+    forecast: list[PlForecastItemInput] = Field(..., min_length=1)  # type: ignore[valid-type]
+
+    @model_validator(mode="after")
+    def _periods(self) -> "PlForecastInput":
+        _check_forecast_periods(self.history, self.forecast)
+        return self
+
+
+CfForecastItemInput = _forecast_item_model("CfForecastItemInput", CASH_FLOW_LINES)
+
+
+class CfForecastInput(_StrictModel):
+    """HTTP / runner input for ``cf.forecast`` (ADR-0026)."""
+
+    history: list[CfMonthItemInput] = Field(..., min_length=1)
+    forecast: list[CfForecastItemInput] = Field(..., min_length=1)  # type: ignore[valid-type]
+
+    @model_validator(mode="after")
+    def _periods(self) -> "CfForecastInput":
+        _check_forecast_periods(self.history, self.forecast)
+        return self
+
+
 @dataclass(frozen=True)
 class InputFieldMetadata:
     name: str

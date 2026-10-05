@@ -57,6 +57,22 @@ SAMPLE_LOAN = {
     "month": 10,
     "original_principal": 2_400,
 }
+# Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
+# lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
+SAMPLE_PL_FORECAST = {
+    "history": [
+        {"year": 2025, "month": 10, "milk_litres": 40_000, "milk_price": 0.40, "feed": 5_000},
+        {"year": 2026, "month": 9, "milk_litres": 30_000, "milk_price": 0.45},
+    ],
+    "forecast": [{"year": 2026, "month": 10}],
+}
+# Cash: last October's machinery purchase is a one-off and is not projected.
+SAMPLE_CF_FORECAST = {
+    "history": [
+        {"year": 2025, "month": 10, "milk": 18_000, "feed": 5_000, "machinery_equipment_payments": 6_000}
+    ],
+    "forecast": [{"year": 2026, "month": 10, "interest_paid": 500}],
+}
 
 
 def _happy_payload(key: str) -> dict:
@@ -111,6 +127,10 @@ def _happy_payload(key: str) -> dict:
         return {"opening_cash": 20_000, "months": [dict(SAMPLE_CASH_MONTH)]}
     if key == "loan.schedule":
         return dict(SAMPLE_LOAN)
+    if key == "pl.forecast":
+        return SAMPLE_PL_FORECAST
+    if key == "cf.forecast":
+        return SAMPLE_CF_FORECAST
     raise AssertionError(f"No happy payload for {key}")
 
 
@@ -156,6 +176,11 @@ def _zero_payload(key: str) -> dict:
     if key == "loan.schedule":
         # Instalment count and calendar cannot be zero.
         return {**dict.fromkeys(SAMPLE_LOAN, 0), "remaining_months": 1, "year": 1, "month": 1}
+    if key == "pl.forecast":
+        month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
+        return {"history": [month], "forecast": [{"year": 2, "month": 1, "milk_price": 0}]}
+    if key == "cf.forecast":
+        return {"history": [{"year": 1, "month": 1}], "forecast": [{"year": 2, "month": 1, "feed": 0}]}
     known = REQUIRED_FIELDS[key] + OPTIONAL_FIELDS[key]
     payload = {name: 0 for name in known}
     # Calendar identity cannot be zero; keep a valid period with zero money drivers.
@@ -255,6 +280,16 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "pl.forecast":
+        month = result["result"]["months"][0]
+        assert month["period"] == {"kind": "month", "year": 2026, "month": 10}
+        assert month["inputs"]["milk_price"] == 0.45
+        assert month["statement"]["profit"]["net"] == 13_000
+    elif key == "cf.forecast":
+        month = result["result"]["months"][0]
+        assert month["inputs"]["machinery_equipment_payments"] == 0
+        assert month["cash_flow"]["cash_out"] == 5_500
+        assert month["cash_flow"]["net_cash_flow"] == 12_500
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)

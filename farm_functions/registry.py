@@ -19,6 +19,7 @@ from farm_functions.core.surplus import net_profit, profit_margin, profit_margin
 from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
+from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
     MonthlyDairyStatementModel,
@@ -34,6 +35,7 @@ from farm_functions.domain import (
 )
 from farm_functions.schemas import (
     CfMonthlyInput,
+    CfForecastInput,
     CfMonthsInput,
     LoanScheduleInput,
     MilkRevenueInput,
@@ -41,6 +43,7 @@ from farm_functions.schemas import (
     MonthlyDairyFinancialInput,
     OtherRevenueInput,
     PlMonthlyInput,
+    PlForecastInput,
     PlMonthsInput,
     PlSummaryInput,
     ProfitInput,
@@ -339,6 +342,28 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=LoanScheduleInput,
         handler=_handle_loan_schedule,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="pl.forecast",
+        description=(
+            "Projected monthly Dairy Operating Statements: same month last year × "
+            "year-to-date run-rate per line; milk price carries the latest actual; "
+            "known values on a forecast month override. Returns run-rate factors."
+        ),
+        input_model=PlForecastInput,
+        handler=forecast_pl,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="cf.forecast",
+        description=(
+            "Projected monthly Dairy Cash Flows: operating lines from same month last "
+            "year × run-rate; investing / financing only when given (e.g. "
+            "loan.schedule rows). Projected inputs plug into cf.months."
+        ),
+        input_model=CfForecastInput,
+        handler=forecast_cf,
         supports_provenance=False,
     ),
 )

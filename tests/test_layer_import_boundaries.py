@@ -28,6 +28,7 @@ _APPLICATION_MODULES = (
     FARM / "runner.py",
     FARM / "simulation.py",
     FARM / "scenarios.py",
+    FARM / "forecast.py",
     FARM / "errors.py",
     FARM / "schemas.py",
     FARM / "loaders" / "json_loader.py",

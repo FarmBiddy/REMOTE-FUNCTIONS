@@ -59,6 +59,8 @@ def test_discovery_lists_core_functions_only():
         "cf.monthly",
         "cf.months",
         "loan.schedule",
+        "pl.forecast",
+        "cf.forecast",
         "costs.total",
         "pl.monthly",
         "pl.months",

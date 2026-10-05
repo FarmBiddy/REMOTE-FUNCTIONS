@@ -213,8 +213,8 @@ def _parse_loan_months(value: Any) -> int:
     return int(number)
 
 
-class LoanScheduleInput(_StrictModel):
-    """HTTP / runner input for ``loan.schedule`` (ADR-0025).
+class LoanItemInput(_StrictModel):
+    """One loan inside ``loan.schedule`` (ADR-0025).
 
     State-based: the loan as it stands today. ``year`` / ``month`` is the
     calendar month of the next instalment.
@@ -228,10 +228,16 @@ class LoanScheduleInput(_StrictModel):
     original_principal: NonNegativeNumber | None = None
 
     @model_validator(mode="after")
-    def _principal_covers_balance(self) -> "LoanScheduleInput":
+    def _principal_covers_balance(self) -> "LoanItemInput":
         if self.original_principal is not None and self.original_principal < self.balance:
             raise ValueError("original_principal must be greater than or equal to balance")
         return self
+
+
+class LoanScheduleInput(_StrictModel):
+    """HTTP / runner input for ``loan.schedule``: one or more loans, results in input order."""
+
+    loans: list[LoanItemInput] = Field(..., min_length=1, max_length=50)
 
 
 class PlMonthlyInput(MonthlyDairyFinancialInput):

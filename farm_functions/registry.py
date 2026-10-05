@@ -188,7 +188,7 @@ def _handle_pl_months(
     }
 
 
-def _handle_loan_schedule(
+def _loan_schedule(
     *,
     balance: float,
     annual_rate: float,
@@ -197,7 +197,7 @@ def _handle_loan_schedule(
     month: int,
     original_principal: float | None = None,
 ) -> dict[str, Any]:
-    """Attach calendar periods to Core amortisation rows (ADR-0025)."""
+    """One loan: attach calendar periods to Core amortisation rows (ADR-0025)."""
     rows = amortisation_schedule(balance, annual_rate, remaining_months)
     months = []
     for offset, row in enumerate(rows):
@@ -217,6 +217,32 @@ def _handle_loan_schedule(
         "total_payments": round_money(sum(r["payment"] for r in rows)),
         "repaid_pct": repaid_pct,
         "months": months,
+    }
+
+
+def _handle_loan_schedule(*, loans: list[dict[str, Any]]) -> dict[str, Any]:
+    """Per-loan schedules plus portfolio totals and combined monthly debt service."""
+    schedules = [_loan_schedule(**loan) for loan in loans]
+    combined: dict[tuple[int, int], dict[str, float]] = {}
+    for schedule in schedules:
+        for row in schedule["months"]:
+            key = (row["period"]["year"], row["period"]["month"])
+            totals = combined.setdefault(key, {"payment": 0.0, "interest": 0.0, "principal": 0.0})
+            for name in totals:
+                totals[name] += row[name]
+    return {
+        "currency": "EUR",
+        "loans": schedules,
+        "total_balance": round_money(sum(s["balance"] for s in schedules)),
+        "total_monthly_payment": round_money(sum(s["monthly_payment"] for s in schedules)),
+        "total_interest": round_money(sum(s["total_interest"] for s in schedules)),
+        "months": [
+            {
+                "period": {"kind": "month", "year": year, "month": month},
+                **{name: round_money(value) for name, value in totals.items()},
+            }
+            for (year, month), totals in sorted(combined.items())
+        ],
     }
 
 
@@ -336,9 +362,10 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
     CalculationDefinition(
         id="loan.schedule",
         description=(
-            "Loan amortisation from today's state: equal monthly instalments, "
-            "interest / principal split per month (the cash-flow interest_paid and "
-            "loan_principal_repayments lines), totals and optional % repaid."
+            "Loan amortisation from today's state for one or more loans: equal monthly "
+            "instalments, interest / principal per month, % repaid; portfolio totals and "
+            "combined monthly debt service (the cash-flow interest_paid and "
+            "loan_principal_repayments lines)."
         ),
         input_model=LoanScheduleInput,
         handler=_handle_loan_schedule,

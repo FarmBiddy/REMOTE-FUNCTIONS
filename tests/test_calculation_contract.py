@@ -101,7 +101,7 @@ def _happy_payload(calculation_id: str) -> dict:
             item |= {"milk_litres": 1, "milk_price": 1}
         return {"history": [item], "forecast": [{"year": 2026, "month": 10}]}
     if calculation_id == "loan.schedule":
-        return {"balance": 1_200, "annual_rate": 0, "remaining_months": 12, "year": 2026, "month": 10}
+        return {"loans": [{"balance": 1_200, "annual_rate": 0, "remaining_months": 12, "year": 2026, "month": 10}]}
     if calculation_id == "cf.months":
         return {"opening_cash": 0, "months": [{"year": 2026, "month": 3, "milk": 1}]}
     raise AssertionError(f"No happy payload for {calculation_id}")

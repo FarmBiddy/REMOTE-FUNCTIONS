@@ -126,7 +126,7 @@ def _happy_payload(key: str) -> dict:
     if key == "cf.months":
         return {"opening_cash": 20_000, "months": [dict(SAMPLE_CASH_MONTH)]}
     if key == "loan.schedule":
-        return dict(SAMPLE_LOAN)
+        return {"loans": [dict(SAMPLE_LOAN)]}
     if key == "pl.forecast":
         return SAMPLE_PL_FORECAST
     if key == "cf.forecast":
@@ -175,7 +175,9 @@ def _zero_payload(key: str) -> dict:
         return {"opening_cash": 0, "months": [{"year": 1, "month": 1}]}
     if key == "loan.schedule":
         # Instalment count and calendar cannot be zero.
-        return {**dict.fromkeys(SAMPLE_LOAN, 0), "remaining_months": 1, "year": 1, "month": 1}
+        return {
+            "loans": [{**dict.fromkeys(SAMPLE_LOAN, 0), "remaining_months": 1, "year": 1, "month": 1}]
+        }
     if key == "pl.forecast":
         month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
         return {"history": [month], "forecast": [{"year": 2, "month": 1, "milk_price": 0}]}
@@ -274,7 +276,8 @@ def test_happy_path(key: str) -> None:
         assert body["months"][0]["net_cash_flow"] == 16_500
         assert body["closing_cash"] == 36_500
     elif key == "loan.schedule":
-        body = result["result"]
+        assert result["result"]["total_monthly_payment"] == 100
+        body = result["result"]["loans"][0]
         assert body["monthly_payment"] == 100
         assert body["total_payments"] == 1_200
         assert body["total_interest"] == 0
@@ -347,8 +350,7 @@ def test_required_only_optionals_default_to_zero(key: str) -> None:
         assert body["net_cash_flow"] == 0
         assert body["closing_cash"] == 20_000
     elif key == "loan.schedule":
-        assert result["result"]["repaid_pct"] is None
-        assert result["result"]["months"][-1]["closing_balance"] == 0
+        assert result["result"]["loans"][0]["repaid_pct"] == 50
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -390,8 +392,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "cf.months":
         assert result["result"]["closing_cash"] == 0
     elif key == "loan.schedule":
-        assert result["result"]["monthly_payment"] == 0
-        assert result["result"]["repaid_pct"] is None
+        assert result["result"]["total_monthly_payment"] == 0
+        assert result["result"]["loans"][0]["repaid_pct"] is None
 
 
 def _missing_required_cases() -> list[tuple[str, str, dict]]:

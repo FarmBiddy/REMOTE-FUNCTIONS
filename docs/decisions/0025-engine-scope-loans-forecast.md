@@ -23,7 +23,9 @@ follows once the Dairy prototype is solid.
    `remaining_months`, and the calendar `year` / `month` of the next
    instalment. Optional `original_principal` adds `repaid_pct`.
    Variable-rate loans re-amortise by calling again with the current rate and
-   balance; no rate history is stored or needed.
+   balance; no rate history is stored or needed. One call takes `loans[]` and
+   returns per-loan schedules plus portfolio totals and combined monthly debt
+   service, so the Platform never sums money.
 3. **Equal instalments (annuity).** Interest per month = balance × rate / 12,
    rounded to the cent (ADR-0005). The final instalment absorbs the rounding
    residue so the balance ends at exactly 0. Every row reconciles:

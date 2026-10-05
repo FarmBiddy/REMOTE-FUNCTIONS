@@ -75,7 +75,7 @@ CF_HISTORY = [
 def test_cash_one_offs_not_projected_and_loan_rows_plug_in():
     loan = run_function(
         "loan.schedule",
-        {"balance": 10_000, "annual_rate": 0.12, "remaining_months": 12, "year": 2026, "month": 10},
+        {"loans": [{"balance": 10_000, "annual_rate": 0.12, "remaining_months": 12, "year": 2026, "month": 10}]},
     )["result"]["months"][0]
     body = run_function(
         "cf.forecast",

@@ -45,7 +45,7 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | `pl.months` | `months[]` (+ optional `ytd`) | Multi-month OS list + optional YTD (ADR-0021; not annual ÷ 12) |
 | `cf.monthly` | `year`, `month` (+ optional `opening_cash`) | Explicit monthly Cash Flow: operating / investing / financing, cash in/out, net; closing cash when opening given (ADR-0022/0023/0024) |
 | `cf.months` | `opening_cash`, `months[]` | Consecutive months rolled forward: each month opens with the previous closing cash; period totals + closing cash (ADR-0024) |
-| `loan.schedule` | `balance`, `annual_rate`, `remaining_months`, `year`, `month` (+ optional `original_principal`) | Loan amortisation from today's state: equal monthly instalments, interest / principal per month (feeds `cf.*` `interest_paid` / `loan_principal_repayments`), totals, % repaid (ADR-0025) |
+| `loan.schedule` | `loans[]` (each `balance`, `annual_rate`, `remaining_months`, `year`, `month`, optional `original_principal`) | Per-loan amortisation from today's state (equal instalments, interest / principal, % repaid) + portfolio totals and combined monthly debt service (feeds `cf.*` `interest_paid` / `loan_principal_repayments`) (ADR-0025) |
 | `pl.forecast` | `history[]`, `forecast[]` | Projected monthly Operating Statements: same month last year × YTD run-rate per line; milk price carries the latest actual; known values override (ADR-0026) |
 | `cf.forecast` | `history[]`, `forecast[]` | Projected monthly Cash Flows: operating lines seasonal × run-rate; investing / financing only when given (e.g. `loan.schedule` rows); `inputs` plug into `cf.months` (ADR-0026) |
 

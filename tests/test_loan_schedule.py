@@ -15,18 +15,22 @@ REFERENCE = {"balance": 10_000, "annual_rate": 0.12, "remaining_months": 12, "ye
 
 
 def _schedule(**overrides):
-    return run_function("loan.schedule", {**REFERENCE, **overrides})
+    return run_function("loan.schedule", {"loans": [{**REFERENCE, **overrides}]})
+
+
+def _loan(**overrides):
+    return _schedule(**overrides)["result"]["loans"][0]
 
 
 def test_reference_annuity():
-    body = _schedule()["result"]
+    body = _loan()
     assert body["monthly_payment"] == 888.49
     first = body["months"][0]
     assert (first["interest"], first["principal"], first["closing_balance"]) == (100, 788.49, 9_211.51)
 
 
 def test_every_row_reconciles_and_ends_at_zero():
-    body = _schedule(balance=68_400, annual_rate=0.042, remaining_months=63)["result"]
+    body = _loan(balance=68_400, annual_rate=0.042, remaining_months=63)
     rows = body["months"]
     for row in rows:
         assert round(row["interest"] + row["principal"], 2) == row["payment"]
@@ -39,15 +43,15 @@ def test_every_row_reconciles_and_ends_at_zero():
 
 
 def test_periods_cross_year_boundary():
-    periods = [m["period"] for m in _schedule()["result"]["months"]]
+    periods = [m["period"] for m in _loan()["months"]]
     assert periods[0] == {"kind": "month", "year": 2026, "month": 11}
     assert periods[2] == {"kind": "month", "year": 2027, "month": 1}
     assert periods[-1] == {"kind": "month", "year": 2027, "month": 10}
 
 
 def test_repaid_pct_from_original_principal():
-    assert _schedule(original_principal=40_000)["result"]["repaid_pct"] == 75
-    assert _schedule()["result"]["repaid_pct"] is None
+    assert _loan(original_principal=40_000)["repaid_pct"] == 75
+    assert _loan()["repaid_pct"] is None
 
 
 def test_percent_style_rate_is_rejected():
@@ -85,6 +89,21 @@ def test_rows_feed_cash_flow_lines():
     assert cash["cash_out"] == row["payment"]
 
 
+def test_portfolio_totals_and_combined_debt_service():
+    """Two loans: totals and per-month sums come from the engine, not the UI."""
+    second = {"balance": 1_200, "annual_rate": 0, "remaining_months": 2, "year": 2026, "month": 12}
+    body = run_function("loan.schedule", {"loans": [REFERENCE, second]})["result"]
+    assert [loan["balance"] for loan in body["loans"]] == [10_000, 1_200]
+    assert body["total_balance"] == 11_200
+    assert body["total_monthly_payment"] == round(888.49 + 600, 2)
+    by_month = {(m["period"]["year"], m["period"]["month"]): m for m in body["months"]}
+    assert by_month[(2026, 11)]["payment"] == 888.49  # second loan not started yet
+    dec = by_month[(2026, 12)]
+    assert dec["principal"] == round(body["loans"][0]["months"][1]["principal"] + 600, 2)
+    assert dec["payment"] == round(dec["interest"] + dec["principal"], 2)
+
+
 def test_http_matches_runner():
-    body = client.post("/v1/functions/loan.schedule/run", json=REFERENCE).json()
-    assert body == run_function("loan.schedule", REFERENCE)
+    payload = {"loans": [REFERENCE]}
+    body = client.post("/v1/functions/loan.schedule/run", json=payload).json()
+    assert body == run_function("loan.schedule", payload)

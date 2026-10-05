@@ -331,11 +331,12 @@ Loan product data (lender, purpose, rate type), supplier debt lists, financial
 event calendars, forecast UI and chrome. Jan–Dec **actual** chart series and YTD
 OS cards call `pl.months`; cash balance cards call `cf.months`.
 
-Engine-owned maths (ADR-0025): loan cards call `loan.schedule` with the loan's
-current `balance`, `annual_rate` (0–1), `remaining_months` and next instalment
-`year` / `month` (+ `original_principal` for % repaid). Pass each month's
-`interest` / `principal` into `cf.*` as `interest_paid` /
-`loan_principal_repayments`.
+Engine-owned maths (ADR-0025): the loans card calls `loan.schedule` once with
+`loans[]`, each with its current `balance`, `annual_rate` (0–1),
+`remaining_months` and next instalment `year` / `month` (+ `original_principal`
+for % repaid). Use `total_balance` / `total_monthly_payment` for the card header
+(never sum in the UI). Pass the combined `months[]` `interest` / `principal` into
+`cf.*` as `interest_paid` / `loan_principal_repayments`.
 
 Projected months (ADR-0026): call `pl.forecast` / `cf.forecast` with the actual
 months (incl. the same months last year) and the months to project, adding any

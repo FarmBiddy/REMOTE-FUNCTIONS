@@ -30,6 +30,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0024](0024-cash-position-roll-forward.md) | Opening / closing cash and consecutive multi-month roll-forward (`cf.months`) |
 | [0025](0025-engine-scope-loans-forecast.md) | Engine scope for the platform prototype: loan amortisation (`loan.schedule`), forecast, enterprises |
 | [0026](0026-seasonal-run-rate-forecast.md) | Seasonal run-rate forecast (`pl.forecast`, `cf.forecast`) |
+| [0027](0027-nested-needs-input.md) | Nested `needs_input` with `missing[].path` |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

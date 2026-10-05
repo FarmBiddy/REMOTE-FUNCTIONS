@@ -12,6 +12,12 @@ from farm_functions.core.cash import (
     net_cash_flow,
     sum_cash_amounts,
 )
+from farm_functions.core.forecast import (
+    latest_non_zero,
+    run_rate,
+    run_rate_factors,
+    seasonal_projection,
+)
 from farm_functions.core.loans import (
     AmortisationRow,
     amortisation_schedule,
@@ -32,6 +38,7 @@ __all__ = [
     "annuity_payment",
     "cash_section_net",
     "closing_cash",
+    "latest_non_zero",
     "net_cash_flow",
     "net_profit",
     "profit_margin",
@@ -39,6 +46,9 @@ __all__ = [
     "round_margin_pct",
     "round_margin_ratio",
     "round_money",
+    "run_rate",
+    "run_rate_factors",
+    "seasonal_projection",
     "sum_amounts",
     "sum_cash_amounts",
 ]

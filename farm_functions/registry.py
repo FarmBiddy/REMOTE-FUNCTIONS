@@ -21,7 +21,7 @@ from farm_functions.dairy.statement import pl_summary
 from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
-from farm_functions.loans import schedule_loans
+from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.sensitivity import risk_sensitivity
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
@@ -41,6 +41,7 @@ from farm_functions.schemas import (
     CfCompareInput,
     CfForecastInput,
     CfMonthsInput,
+    DebtCapacityInput,
     KpiSummaryInput,
     RiskSensitivityInput,
     LoanScheduleInput,
@@ -318,6 +319,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=LoanScheduleInput,
         handler=schedule_loans,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="debt.capacity",
+        description=(
+            "Repayment capacity (Operating Surplus + off-farm income − drawings − tax) "
+            "over the months sent, cover of current debt service, and the largest new "
+            "loan affordable at a rate, term and required cover (inverse annuity)."
+        ),
+        input_model=DebtCapacityInput,
+        handler=debt_capacity,
         supports_provenance=False,
     ),
     CalculationDefinition(

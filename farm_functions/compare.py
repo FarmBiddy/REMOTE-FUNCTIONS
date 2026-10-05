@@ -67,7 +67,7 @@ def _span(statements: list[dict[str, Any]]) -> dict[str, Any]:
     return {"from": periods[0]["period"], "to": periods[-1]["period"], "month_count": len(periods)}
 
 
-def _pl_statements(months: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def pl_statements(months: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out = []
     for item in months:
         period, lines = _split(item)
@@ -91,7 +91,7 @@ def _cf_statements(months: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def compare_pl(*, actual: list[dict[str, Any]], comparison: list[dict[str, Any]]) -> dict[str, Any]:
     """``pl.compare``: line-by-line P&L variance plus milk price / volume effects."""
-    a_stmts, c_stmts = _pl_statements(actual), _pl_statements(comparison)
+    a_stmts, c_stmts = pl_statements(actual), pl_statements(comparison)
     a_tot, c_tot = _sum_trees(a_stmts), _sum_trees(c_stmts)
 
     a_litres = sum_amounts(*(m["milk_litres"] for m in actual))

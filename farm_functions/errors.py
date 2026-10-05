@@ -312,6 +312,17 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     details={"reason": "duplicate_period"},
                 )
             )
+        elif text == "must be 1 or greater":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} must be 1 or greater" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 1},
+                )
+            )
         elif text == "must be -100 or greater":
             issues.append(
                 issue(

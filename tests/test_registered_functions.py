@@ -82,6 +82,16 @@ SAMPLE_CF_COMPARE = {
     "actual": [{"year": 2026, "month": 3, "milk": 4_000, "feed": 1_000}],
     "comparison": [{"year": 2025, "month": 3, "milk": 4_000, "feed": 800}],
 }
+# Debt capacity: surplus 3,000 − drawings 1,000 = 2,000 capacity; repayments 1,500
+# → cover 1.33; 500 headroom at 0% over 10 months → max loan 5,000.
+SAMPLE_DEBT_CAPACITY = {
+    "months": [
+        {"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.40, "feed": 1_000, "loan_repayments": 1_500}
+    ],
+    "annual_rate": 0,
+    "term_months": 10,
+    "drawings": 1_000,
+}
 # Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
 # lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
 SAMPLE_PL_FORECAST = {
@@ -160,6 +170,8 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_SENSITIVITY
     if key == "pl.compare":
         return SAMPLE_PL_COMPARE
+    if key == "debt.capacity":
+        return SAMPLE_DEBT_CAPACITY
     if key == "cf.compare":
         return SAMPLE_CF_COMPARE
     if key == "cf.forecast":
@@ -213,6 +225,12 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "debt.capacity":
+        month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
+        return {
+            "months": [month], "annual_rate": 0, "term_months": 1,
+            "drawings": 0, "tax": 0, "off_farm_income": 0, "min_cover": 1,
+        }
     if key == "pl.compare":
         month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
         return {"actual": [month], "comparison": [month]}
@@ -330,6 +348,10 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "debt.capacity":
+        body = result["result"]
+        assert (body["repayment_capacity"], body["repayment_cover"]) == (2_000, 1.33)
+        assert body["new_loan"]["max_principal"] == 5_000
     elif key == "pl.compare":
         body = result["result"]
         assert body["revenue"]["milk"]["change"] == 0
@@ -457,6 +479,9 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "debt.capacity":
+        assert result["result"]["repayment_cover"] is None
+        assert result["result"]["new_loan"]["max_principal"] == 0
     elif key in ("pl.compare", "cf.compare"):
         body = result["result"]
         total = body["revenue"]["total"] if key == "pl.compare" else body["cash_in"]

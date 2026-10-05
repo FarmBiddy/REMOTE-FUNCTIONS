@@ -314,6 +314,35 @@ class CfCompareInput(_StrictModel):
         return self
 
 
+def _parse_cover(value: Any) -> float:
+    """Required debt cover multiple: 1 or more (1.25 = 25% headroom)."""
+    number = _parse_finite_number(value)
+    if number < 1:
+        raise ValueError("must be 1 or greater")
+    return number
+
+
+class DebtCapacityInput(_StrictModel):
+    """HTTP / runner input for ``debt.capacity`` (ADR-0036).
+
+    ``months``: the assessment period (pl.months items, actual or projected).
+    ``drawings`` / ``tax`` / ``off_farm_income``: totals for the same period.
+    """
+
+    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    term_months: Annotated[int, BeforeValidator(_parse_loan_months)]
+    drawings: NonNegativeNumber = 0.0
+    tax: NonNegativeNumber = 0.0
+    off_farm_income: NonNegativeNumber = 0.0
+    min_cover: Annotated[float, BeforeValidator(_parse_cover)] = 1.0
+
+    @model_validator(mode="after")
+    def _unique(self) -> "DebtCapacityInput":
+        _reject_duplicate_months(self.months)
+        return self
+
+
 class KpiSummaryInput(_StrictModel):
     """HTTP / runner input for ``kpi.summary`` (ADR-0028): the pl.months items
     for the period plus the average milking herd over it."""
@@ -848,6 +877,7 @@ LOAN_FIELD_UNITS: dict[str, str] = {
     "annual_rate": "ratio/year",
     "remaining_months": "months",
     "original_principal": "EUR",
+    "term_months": "months",
 }
 
 

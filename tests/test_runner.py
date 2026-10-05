@@ -63,6 +63,7 @@ def test_discovery_lists_core_functions_only():
         "risk.sensitivity",
         "pl.compare",
         "cf.compare",
+        "debt.capacity",
         "pl.forecast",
         "cf.forecast",
         "costs.total",

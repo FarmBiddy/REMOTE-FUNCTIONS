@@ -30,6 +30,7 @@ from farm_functions.core.rounding import (
     round_money,
 )
 from farm_functions.core.sensitivity import break_even_shift, min_shift_all_non_negative
+from farm_functions.core.variance import change_pct, price_volume_effects
 from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
 
 __all__ = [
@@ -40,6 +41,7 @@ __all__ = [
     "break_even_shift",
     "annuity_payment",
     "cash_section_net",
+    "change_pct",
     "closing_cash",
     "coverage_ratio",
     "latest_non_zero",
@@ -48,6 +50,7 @@ __all__ = [
     "net_profit",
     "profit_margin",
     "per_unit",
+    "price_volume_effects",
     "profit_margin_pct",
     "round_margin_pct",
     "round_margin_ratio",

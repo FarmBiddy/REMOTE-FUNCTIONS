@@ -38,6 +38,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0032](0032-kpi-solids-hectare-debt.md) | KPIs per kg milk solids, per hectare and debt |
 | [0033](0033-variable-fixed-costs-herd.md) | Variable / fixed costs, gross margin and herd-size scenarios |
 | [0034](0034-remove-in-process-simulation.md) | Remove in-process annual simulation and named scenarios |
+| [0035](0035-variance-analysis.md) | Variance analysis (`pl.compare`, `cf.compare`) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

@@ -57,6 +57,14 @@ SAMPLE_LOAN = {
     "month": 10,
     "original_principal": 2_400,
 }
+# KPIs: 10,000 L, €4,000 revenue, €2,000 costs (feed), €500 repayments, 10 cows
+# → costs 20 c/L, surplus €200/cow, DSCR 2,000 / 500 = 4.
+SAMPLE_KPI = {
+    "months": [
+        {"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.40, "feed": 2_000, "loan_repayments": 500}
+    ],
+    "milking_cows": 10,
+}
 # Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
 # lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
 SAMPLE_PL_FORECAST = {
@@ -129,6 +137,8 @@ def _happy_payload(key: str) -> dict:
         return {"loans": [dict(SAMPLE_LOAN)]}
     if key == "pl.forecast":
         return SAMPLE_PL_FORECAST
+    if key == "kpi.summary":
+        return SAMPLE_KPI
     if key == "cf.forecast":
         return SAMPLE_CF_FORECAST
     raise AssertionError(f"No happy payload for {key}")
@@ -178,6 +188,8 @@ def _zero_payload(key: str) -> dict:
         return {
             "loans": [{**dict.fromkeys(SAMPLE_LOAN, 0), "remaining_months": 1, "year": 1, "month": 1}]
         }
+    if key == "kpi.summary":
+        return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
     if key == "pl.forecast":
         month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
         return {"history": [month], "forecast": [{"year": 2, "month": 1, "milk_price": 0}]}
@@ -283,6 +295,11 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "kpi.summary":
+        body = result["result"]
+        assert body["per_litre_c"]["costs"] == 20
+        assert body["per_cow"]["surplus"] == 200
+        assert body["dscr"] == 4
     elif key == "pl.forecast":
         month = result["result"]["months"][0]
         assert month["period"] == {"kind": "month", "year": 2026, "month": 10}
@@ -394,6 +411,10 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "kpi.summary":
+        assert result["result"]["per_litre_c"]["costs"] is None
+        assert result["result"]["per_cow"]["surplus"] is None
+        assert result["result"]["dscr"] is None
 
 
 def _missing_required_cases() -> list[tuple[str, str, dict]]:

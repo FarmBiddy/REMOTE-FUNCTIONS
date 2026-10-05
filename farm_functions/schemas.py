@@ -274,6 +274,14 @@ class PlMonthsInput(_StrictModel):
     ytd: PlMonthsYtdInput | None = None
 
 
+class KpiSummaryInput(_StrictModel):
+    """HTTP / runner input for ``kpi.summary`` (ADR-0028): the pl.months items
+    for the period plus the average milking herd over it."""
+
+    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    milking_cows: NonNegativeNumber
+
+
 # ---------------------------------------------------------------------------
 # Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
 # item shape). ``forecast`` items carry period identity plus optional known

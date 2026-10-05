@@ -13,10 +13,12 @@ from typing import Any, Callable
 from pydantic import BaseModel
 
 from farm_functions.agriculture.revenue import scheme_revenue
+from farm_functions.core.aggregate import sum_amounts
 from farm_functions.core.loans import amortisation_schedule
 from farm_functions.core.rounding import round_margin_pct, round_margin_ratio, round_money
 from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
 from farm_functions.dairy.costs import total_costs
+from farm_functions.dairy.kpis import dairy_kpis
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
 from farm_functions.forecast import forecast_cf, forecast_pl
@@ -37,6 +39,7 @@ from farm_functions.schemas import (
     CfMonthlyInput,
     CfForecastInput,
     CfMonthsInput,
+    KpiSummaryInput,
     LoanScheduleInput,
     MilkRevenueInput,
     MonthlyDairyCashFlowInput,
@@ -246,6 +249,47 @@ def _handle_loan_schedule(*, loans: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _handle_kpi_summary(*, months: list[dict[str, Any]], milking_cows: float) -> dict[str, Any]:
+    """Run the monthly statements, total them, then derive Dairy KPIs (ADR-0028)."""
+    statements = calculate_multi_month_dairy_statements(
+        MultiMonthDairyStatementModel(
+            months=[
+                MonthlyDairyStatementModel(
+                    period=MonthlyPeriodIdentity(year=item["year"], month=item["month"]),
+                    inputs=MonthlyDairyFinancialInput.model_validate(
+                        {k: v for k, v in item.items() if k not in ("year", "month")}
+                    ),
+                )
+                for item in months
+            ]
+        )
+    ).model_dump()["months"]
+
+    def total(pick: Callable[[dict[str, Any]], float]) -> float:
+        return sum_amounts(*(pick(s) for s in statements))
+
+    totals = {
+        "milk_litres": sum_amounts(*(item["milk_litres"] for item in months)),
+        "revenue": total(lambda s: s["revenue"]["total"]),
+        "costs": total(lambda s: s["costs"]["total"]),
+        "surplus": total(lambda s: s["profit"]["net"]),
+        "loan_repayments": total(lambda s: s["finance"]["loan_repayments"]),
+    }
+    cost_lines = {
+        name: total(lambda s, name=name: s["costs"]["lines"][name])
+        for name in statements[0]["costs"]["lines"]
+    }
+    return {
+        "currency": "EUR",
+        "from": statements[0]["period"],
+        "to": statements[-1]["period"],
+        "month_count": len(statements),
+        "milking_cows": milking_cows,
+        "totals": {name: round_money(value) for name, value in totals.items()},
+        **dairy_kpis(milking_cows=milking_cows, cost_lines=cost_lines, **totals),
+    }
+
+
 # Authoritative ordered catalogue. Public IDs are the ``id`` fields only.
 CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
     CalculationDefinition(
@@ -369,6 +413,18 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=LoanScheduleInput,
         handler=_handle_loan_schedule,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="kpi.summary",
+        description=(
+            "Dairy KPIs over the given months (actual or projected): revenue, costs, "
+            "each cost line and Operating Surplus in cents per litre; litres, revenue, "
+            "costs and surplus per cow; debt service cover ratio (Operating Surplus / "
+            "loan repayments). Undefined ratios are null."
+        ),
+        input_model=KpiSummaryInput,
+        handler=_handle_kpi_summary,
         supports_provenance=False,
     ),
     CalculationDefinition(

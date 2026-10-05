@@ -26,7 +26,7 @@ analysis is added.
 4. **Outcomes per scenario:** Operating Surplus, loan repayments, DSCR, closing
    cash, lowest month-end cash (period + amount), overdraft months. All come
    from the normal monthly statements and `cf.months` roll-forward.
-5. **Break-evens (base only), solved exactly, not searched:** surplus and cash
+5. **Break-evens (per scenario since ADR-0031), solved exactly, not searched:** surplus and cash
    are linear in the price shift Δ.
    - Surplus: `S + L × Δ = 0` → `P − S / L`.
    - Cash: each month-end balance `C_k + (cumulative milk cash_k / P) × Δ ≥ 0`;

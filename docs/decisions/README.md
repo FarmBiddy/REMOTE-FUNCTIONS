@@ -34,6 +34,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0028](0028-dairy-kpis.md) | Dairy KPIs (`kpi.summary`): c/L, per cow, DSCR |
 | [0029](0029-sensitivity-break-even.md) | Sensitivity scenarios and milk-price break-evens (`risk.sensitivity`) |
 | [0030](0030-household-drawings.md) | Household drawings as a financing cash outflow |
+| [0031](0031-investment-scenarios.md) | Investment scenarios in `risk.sensitivity` ("Can I afford it?"); per-scenario break-evens |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

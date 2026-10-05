@@ -355,10 +355,16 @@ Thresholds (e.g. a lender's minimum DSCR) are Platform / Biddy policy.
 
 What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
 the cash months, `opening_cash` and the scenarios the farmer picks (e.g.
-`{"name": "milk -5c", "milk_price_c": -5}`). Show `break_even.cash_milk_price_c`
-as "below X c/L you go overdrawn" and `surplus_milk_price_c` as "below X c/L you
-make a loss". A cash break-even above `milk_price_c` means the base case already
-goes overdrawn (see `scenarios[0].lowest_cash`).
+`{"name": "milk -5c", "milk_price_c": -5}`). Show each scenario's
+`break_even.cash_milk_price_c` as "below X c/L you go overdrawn" and
+`surplus_milk_price_c` as "below X c/L you make a loss". A cash break-even above
+`milk_price_c` means that scenario already goes overdrawn (see `lowest_cash`).
+
+"Can I afford it?" (ADR-0031): add `investments` to a scenario, e.g.
+`{"name": "new parlour", "investments": [{"year": 2026, "month": 11, "amount": 120000,
+"loan": {"amount": 100000, "annual_rate": 0.05, "remaining_months": 120},
+"monthly_effects": {"labour": -1500}}]}`, and compare it with `base`: DSCR,
+lowest cash, overdraft months, break-evens and `simple_payback_months`.
 
 ## Discovery (optional)
 

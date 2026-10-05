@@ -8,7 +8,11 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, create_model, model_validator
 
-from farm_functions.dairy.cash_flow import CASH_FLOW_LINES
+from farm_functions.dairy.cash_flow import (
+    CASH_FLOW_LINES,
+    OPERATING_CASH_INFLOW_CATEGORIES,
+    OPERATING_CASH_OUTFLOW_CATEGORIES,
+)
 
 
 def _parse_finite_number(value: Any) -> float:
@@ -301,13 +305,53 @@ SHOCKABLE_LINES = tuple(
 )
 
 
+# Operating lines an investment can change by a monthly EUR amount (ADR-0031).
+EFFECT_LINES = tuple(
+    line
+    for activity_lines in (OPERATING_CASH_INFLOW_CATEGORIES, OPERATING_CASH_OUTFLOW_CATEGORIES)
+    for line in activity_lines
+    if line != "milk"
+)
+
+
+class InvestmentLoanInput(_StrictModel):
+    """Loan drawn for an investment; first instalment the month after purchase."""
+
+    amount: NonNegativeNumber
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    remaining_months: Annotated[int, BeforeValidator(_parse_loan_months)]
+
+
+class InvestmentInput(_StrictModel):
+    """A capital purchase inside a scenario (ADR-0031)."""
+
+    year: CalendarYear
+    month: CalendarMonth
+    amount: NonNegativeNumber
+    cash_line: Literal["machinery_equipment_payments", "other_capital_payments"] = (
+        "other_capital_payments"
+    )
+    loan: InvestmentLoanInput | None = None
+    monthly_effects: dict[str, SignedNumber] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _known_effect_lines(self) -> "InvestmentInput":
+        unknown = sorted(set(self.monthly_effects) - set(EFFECT_LINES))
+        if unknown:
+            raise ValueError(
+                f"monthly_effects has lines that cannot be changed: {', '.join(unknown)}"
+            )
+        return self
+
+
 class SensitivityScenarioInput(_StrictModel):
-    """One what-if: milk price in c/L, milk volume %, and % change per line."""
+    """One what-if: milk price in c/L, milk volume %, % change per line, investments."""
 
     name: str | None = Field(None, max_length=40)
     milk_price_c: SignedNumber = 0.0
     milk_volume_pct: PctChange = 0.0
     lines_pct: dict[str, PctChange] = Field(default_factory=dict)
+    investments: list[InvestmentInput] = Field(default_factory=list, max_length=5)
 
     @model_validator(mode="after")
     def _known_lines(self) -> "SensitivityScenarioInput":
@@ -328,6 +372,17 @@ class RiskSensitivityInput(_StrictModel):
     cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
     opening_cash: SignedNumber
     scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def _investments_inside_cash_months(self) -> "RiskSensitivityInput":
+        months = {(m.year, m.month) for m in self.cf_months}
+        for scenario in self.scenarios:
+            for inv in scenario.investments:
+                if (inv.year, inv.month) not in months:
+                    raise ValueError(
+                        f"investment month year={inv.year} month={inv.month} is outside cf_months"
+                    )
+        return self
 
 
 # ---------------------------------------------------------------------------

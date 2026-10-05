@@ -36,8 +36,8 @@ def _run(scenarios=(), opening=-1_000, pl=PL, cf=CF):
 def test_base_and_break_evens():
     body = _run()["result"]
     assert body["milk_price_c"] == 40
-    assert body["break_even"] == {"surplus_milk_price_c": 35, "cash_milk_price_c": 41.25}
     base = body["scenarios"][0]
+    assert base["break_even"] == {"surplus_milk_price_c": 35, "cash_milk_price_c": 41.25}
     assert base["name"] == "base"
     assert (base["surplus"], base["dscr"], base["closing_cash"]) == (6_000, 1.33, 500)
     assert base["lowest_cash"] == {"period": {"kind": "month", "year": 2026, "month": 1}, "amount": -500}
@@ -78,7 +78,7 @@ def test_no_milk_means_no_break_even():
     pl = [{**m, "milk_litres": 0} for m in PL]
     cf = [{**m, "milk": 0} for m in CF]
     body = _run(pl=pl, cf=cf)["result"]
-    assert body["break_even"] == {"surplus_milk_price_c": None, "cash_milk_price_c": None}
+    assert body["scenarios"][0]["break_even"] == {"surplus_milk_price_c": None, "cash_milk_price_c": None}
 
 
 def test_rescue_impossible_before_any_milk():
@@ -97,6 +97,50 @@ def test_list_shape_errors_do_not_crash():
     assert _run([{}] * 21)["status"] == "error"
     assert run_function("loan.schedule", {"loans": []})["status"] == "error"
     assert run_function("pl.forecast", {"history": [], "forecast": []})["status"] == "error"
+
+
+def test_financed_investment_with_labour_saving():
+    """€30,000 machine in Feb, fully financed over 30 months at 0% (€1,000/month from Mar),
+    saving €1,500/month labour from Mar → +€500/month in Mar on both statements."""
+    investment = {
+        "year": 2026,
+        "month": 2,
+        "amount": 30_000,
+        "cash_line": "machinery_equipment_payments",
+        "loan": {"amount": 30_000, "annual_rate": 0, "remaining_months": 30},
+        "monthly_effects": {"labour": -1_500},
+    }
+    s = _run([{"name": "machine", "investments": [investment]}])["result"]["scenarios"][1]
+    assert s["investments"] == [
+        {
+            "period": {"kind": "month", "year": 2026, "month": 2},
+            "amount": 30_000,
+            "loan_monthly_payment": 1_000,
+            "monthly_benefit": 1_500,
+            "simple_payback_months": 20,
+        }
+    ]
+    assert s["closing_cash"] == 500 + 500
+    assert s["surplus"] == 6_000 + 1_500
+    assert s["loan_repayments"] == 4_500 + 1_000
+    assert s["break_even"]["surplus_milk_price_c"] < 35
+
+
+def test_unfinanced_investment_hits_cash_and_shows_overdraft():
+    s = _run([{"investments": [{"year": 2026, "month": 2, "amount": 10_000}]}])["result"]["scenarios"][1]
+    assert s["closing_cash"] == 500 - 10_000
+    assert s["lowest_cash"]["amount"] == -10_000
+    assert s["investments"][0]["simple_payback_months"] is None
+    assert s["surplus"] == 6_000  # capex is not an operating cost
+
+
+def test_investment_errors():
+    outside = _run([{"investments": [{"year": 2027, "month": 1, "amount": 1}]}])
+    assert outside["error"]["details"]["reason"] == "investment_outside_months"
+    bad_line = _run([{"investments": [{"year": 2026, "month": 1, "amount": 1, "monthly_effects": {"milk": 5}}]}])
+    assert bad_line["error"]["code"] == "unknown_field"
+    bad_kind = _run([{"investments": [{"year": 2026, "month": 1, "amount": 1, "cash_line": "feed"}]}])
+    assert bad_kind["status"] == "error"
 
 
 def test_http_matches_runner():

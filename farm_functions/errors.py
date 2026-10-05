@@ -252,6 +252,7 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             "dict_type",
             "string_type",
             "string_too_long",
+            "literal_error",
         ):
             # Shape errors on other nested inputs (loans[], history[], scenarios[] …).
             issues.append(
@@ -324,6 +325,17 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             )
         elif text.startswith("lines_pct has lines that cannot be shocked"):
             issues.append(issue(UNKNOWN_FIELD, text, field="lines_pct"))
+        elif text.startswith("monthly_effects has lines that cannot be changed"):
+            issues.append(issue(UNKNOWN_FIELD, text, field="monthly_effects"))
+        elif "is outside cf_months" in text:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "investment_outside_months"},
+                )
+            )
         elif "must be after the last history month" in text:
             issues.append(
                 issue(

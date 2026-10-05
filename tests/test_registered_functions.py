@@ -313,7 +313,7 @@ def test_happy_path(key: str) -> None:
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
     elif key == "risk.sensitivity":
         body = result["result"]
-        assert body["break_even"]["surplus_milk_price_c"] == 30
+        assert body["scenarios"][0]["break_even"]["surplus_milk_price_c"] == 30
         assert [s["surplus"] for s in body["scenarios"]] == [1_000, 500]
     elif key == "kpi.summary":
         body = result["result"]
@@ -432,7 +432,7 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
     elif key == "risk.sensitivity":
-        assert result["result"]["break_even"]["surplus_milk_price_c"] is None
+        assert result["result"]["scenarios"][0]["break_even"]["surplus_milk_price_c"] is None
         assert [s["name"] for s in result["result"]["scenarios"]] == ["base"]
     elif key == "kpi.summary":
         assert result["result"]["per_litre_c"]["costs"] is None

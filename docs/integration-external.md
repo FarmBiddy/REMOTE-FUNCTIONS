@@ -358,6 +358,10 @@ Optional: `milk_solids_kg` (co-op statements) → `per_kg_ms`; `hectares` →
 Variable / fixed costs and gross margin (revenue − variable costs) follow the
 Teagasc split (ADR-0033).
 
+Machinery and buildings (ADR-0037): keep the register on the Platform and call
+`assets.schedule` for the period to get depreciation and net book values (results
+in input order). Land is not depreciated.
+
 "How much can I borrow?" (ADR-0036): call `debt.capacity` with 12 months
 (actual or projected), the household `drawings`, `tax`, `off_farm_income`, and
 the loan's `annual_rate`, `term_months` and the lender's `min_cover` (e.g. 1.25).

@@ -23,6 +23,7 @@ from farm_functions.core.loans import (
     amortisation_schedule,
     annuity_payment,
 )
+from farm_functions.core.ratios import coverage_ratio, per_unit
 from farm_functions.core.rounding import (
     round_margin_pct,
     round_margin_ratio,
@@ -38,10 +39,12 @@ __all__ = [
     "annuity_payment",
     "cash_section_net",
     "closing_cash",
+    "coverage_ratio",
     "latest_non_zero",
     "net_cash_flow",
     "net_profit",
     "profit_margin",
+    "per_unit",
     "profit_margin_pct",
     "round_margin_pct",
     "round_margin_ratio",

@@ -12,6 +12,7 @@ from farm_functions.core.cash import (
     net_cash_flow,
     sum_cash_amounts,
 )
+from farm_functions.core.depreciation import reducing_balance_nbv, straight_line_nbv
 from farm_functions.core.forecast import (
     latest_non_zero,
     run_rate,
@@ -54,12 +55,14 @@ __all__ = [
     "per_unit",
     "price_volume_effects",
     "profit_margin_pct",
+    "reducing_balance_nbv",
     "round_margin_pct",
     "round_margin_ratio",
     "round_money",
     "run_rate",
     "run_rate_factors",
     "seasonal_projection",
+    "straight_line_nbv",
     "sum_amounts",
     "sum_cash_amounts",
 ]

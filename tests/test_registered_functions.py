@@ -48,6 +48,15 @@ SAMPLE_CASH_MONTH = {
     "loan_proceeds": 10_000,
     "interest_paid": 500,
 }
+# Zero rate keeps the schedule hand-checkable: 1200 / 12 = 100 per month.
+SAMPLE_LOAN = {
+    "balance": 1_200,
+    "annual_rate": 0,
+    "remaining_months": 12,
+    "year": 2026,
+    "month": 10,
+    "original_principal": 2_400,
+}
 
 
 def _happy_payload(key: str) -> dict:
@@ -100,6 +109,8 @@ def _happy_payload(key: str) -> dict:
         return dict(SAMPLE_CASH_MONTH)
     if key == "cf.months":
         return {"opening_cash": 20_000, "months": [dict(SAMPLE_CASH_MONTH)]}
+    if key == "loan.schedule":
+        return dict(SAMPLE_LOAN)
     raise AssertionError(f"No happy payload for {key}")
 
 
@@ -142,6 +153,9 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "cf.months":
         return {"opening_cash": 0, "months": [{"year": 1, "month": 1}]}
+    if key == "loan.schedule":
+        # Instalment count and calendar cannot be zero.
+        return {**dict.fromkeys(SAMPLE_LOAN, 0), "remaining_months": 1, "year": 1, "month": 1}
     known = REQUIRED_FIELDS[key] + OPTIONAL_FIELDS[key]
     payload = {name: 0 for name in known}
     # Calendar identity cannot be zero; keep a valid period with zero money drivers.
@@ -234,6 +248,13 @@ def test_happy_path(key: str) -> None:
         assert body["opening_cash"] == 20_000
         assert body["months"][0]["net_cash_flow"] == 16_500
         assert body["closing_cash"] == 36_500
+    elif key == "loan.schedule":
+        body = result["result"]
+        assert body["monthly_payment"] == 100
+        assert body["total_payments"] == 1_200
+        assert body["total_interest"] == 0
+        assert body["repaid_pct"] == 50
+        assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -290,6 +311,9 @@ def test_required_only_optionals_default_to_zero(key: str) -> None:
         body = result["result"]
         assert body["net_cash_flow"] == 0
         assert body["closing_cash"] == 20_000
+    elif key == "loan.schedule":
+        assert result["result"]["repaid_pct"] is None
+        assert result["result"]["months"][-1]["closing_balance"] == 0
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -330,6 +354,9 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["net_cash_flow"] == 0
     elif key == "cf.months":
         assert result["result"]["closing_cash"] == 0
+    elif key == "loan.schedule":
+        assert result["result"]["monthly_payment"] == 0
+        assert result["result"]["repaid_pct"] is None
 
 
 def _missing_required_cases() -> list[tuple[str, str, dict]]:

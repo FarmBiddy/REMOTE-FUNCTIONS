@@ -12,6 +12,11 @@ from farm_functions.core.cash import (
     net_cash_flow,
     sum_cash_amounts,
 )
+from farm_functions.core.loans import (
+    AmortisationRow,
+    amortisation_schedule,
+    annuity_payment,
+)
 from farm_functions.core.rounding import (
     round_margin_pct,
     round_margin_ratio,
@@ -20,8 +25,11 @@ from farm_functions.core.rounding import (
 from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
 
 __all__ = [
+    "AmortisationRow",
     "CashActivity",
     "CashDirection",
+    "amortisation_schedule",
+    "annuity_payment",
     "cash_section_net",
     "closing_cash",
     "net_cash_flow",

@@ -28,6 +28,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0022](0022-cash-flow-foundation.md) | Cash Flow foundation decisions (P3.0 / P3.1 contracts) |
 | [0023](0023-shared-category-ids.md) | Shared category IDs across P&L and Cash Flow; cash catalogue declared once |
 | [0024](0024-cash-position-roll-forward.md) | Opening / closing cash and consecutive multi-month roll-forward (`cf.months`) |
+| [0025](0025-engine-scope-loans-forecast.md) | Engine scope for the platform prototype: loan amortisation (`loan.schedule`), forecast, enterprises |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

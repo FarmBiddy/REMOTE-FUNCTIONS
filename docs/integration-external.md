@@ -321,15 +321,21 @@ Engine: `127.0.0.1:8000`. Mock UI: typically `localhost:3000`.
 
 ## Client must not
 
-- Recalculate milk revenue, cost totals, or Operating Surplus in the frontend
+- Recalculate milk revenue, cost totals, Operating Surplus, loan balances / instalments, or % repaid in the frontend
 - Call Dairy / Agriculture / Core Python packages
 - Assume HTTP endpoints for simulation, scenarios, provenance, or field-metadata catalogues (deferred)
 
 ## Platform-owned (not this engine)
 
-Loan product cards, supplier debt lists, financial event calendars, forecast UI.
-Jan–Dec **actual** chart series and YTD OS cards should call `pl.months`
-(Engine maths). Forecast and UI chrome remain Platform-owned.
+Loan product data (lender, purpose, rate type), supplier debt lists, financial
+event calendars, forecast UI and chrome. Jan–Dec **actual** chart series and YTD
+OS cards call `pl.months`; cash balance cards call `cf.months`.
+
+Engine-owned maths (ADR-0025): loan cards call `loan.schedule` with the loan's
+current `balance`, `annual_rate` (0–1), `remaining_months` and next instalment
+`year` / `month` (+ `original_principal` for % repaid). Pass each month's
+`interest` / `principal` into `cf.*` as `interest_paid` /
+`loan_principal_repayments`. Projected-month maths will also come from the Engine.
 
 ## Discovery (optional)
 

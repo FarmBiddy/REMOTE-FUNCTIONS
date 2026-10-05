@@ -58,6 +58,7 @@ def test_discovery_lists_core_functions_only():
     assert keys == {
         "cf.monthly",
         "cf.months",
+        "loan.schedule",
         "costs.total",
         "pl.monthly",
         "pl.months",

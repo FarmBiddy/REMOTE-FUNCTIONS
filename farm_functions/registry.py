@@ -13,6 +13,7 @@ from typing import Any, Callable
 from pydantic import BaseModel
 
 from farm_functions.agriculture.revenue import scheme_revenue
+from farm_functions.core.loans import amortisation_schedule
 from farm_functions.core.rounding import round_margin_pct, round_margin_ratio, round_money
 from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
 from farm_functions.dairy.costs import total_costs
@@ -34,6 +35,7 @@ from farm_functions.domain import (
 from farm_functions.schemas import (
     CfMonthlyInput,
     CfMonthsInput,
+    LoanScheduleInput,
     MilkRevenueInput,
     MonthlyDairyCashFlowInput,
     MonthlyDairyFinancialInput,
@@ -183,6 +185,38 @@ def _handle_pl_months(
     }
 
 
+def _handle_loan_schedule(
+    *,
+    balance: float,
+    annual_rate: float,
+    remaining_months: int,
+    year: int,
+    month: int,
+    original_principal: float | None = None,
+) -> dict[str, Any]:
+    """Attach calendar periods to Core amortisation rows (ADR-0025)."""
+    rows = amortisation_schedule(balance, annual_rate, remaining_months)
+    months = []
+    for offset, row in enumerate(rows):
+        index = year * 12 + month - 1 + offset
+        period = {"kind": "month", "year": index // 12, "month": index % 12 + 1}
+        months.append({"period": period, **row})
+    repaid_pct = None
+    if original_principal:
+        repaid_pct = round_margin_pct((original_principal - balance) / original_principal * 100)
+    return {
+        "currency": "EUR",
+        "balance": round_money(balance),
+        "annual_rate": annual_rate,
+        "remaining_months": remaining_months,
+        "monthly_payment": rows[0]["payment"],
+        "total_interest": round_money(sum(r["interest"] for r in rows)),
+        "total_payments": round_money(sum(r["payment"] for r in rows)),
+        "repaid_pct": repaid_pct,
+        "months": months,
+    }
+
+
 # Authoritative ordered catalogue. Public IDs are the ``id`` fields only.
 CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
     CalculationDefinition(
@@ -294,6 +328,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=CfMonthsInput,
         handler=_handle_cf_months,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="loan.schedule",
+        description=(
+            "Loan amortisation from today's state: equal monthly instalments, "
+            "interest / principal split per month (the cash-flow interest_paid and "
+            "loan_principal_repayments lines), totals and optional % repaid."
+        ),
+        input_model=LoanScheduleInput,
+        handler=_handle_loan_schedule,
         supports_provenance=False,
     ),
 )

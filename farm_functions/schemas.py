@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, create_model
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, create_model, model_validator
 
 from farm_functions.dairy.cash_flow import CASH_FLOW_LINES
 
@@ -195,6 +195,43 @@ class CfMonthsInput(_StrictModel):
 
     opening_cash: SignedNumber
     months: list[CfMonthItemInput] = Field(..., min_length=1)
+
+
+def _parse_rate_ratio(value: Any) -> float:
+    """Annual rate as a 0–1 ratio (0.042 = 4.2%). Rejects percent-style 4.2."""
+    number = _parse_non_negative_number(value)
+    if number > 1:
+        raise ValueError("must be between 0 and 1")
+    return number
+
+
+def _parse_loan_months(value: Any) -> int:
+    """Whole number of monthly instalments, 1–600 (50 years)."""
+    number = _parse_finite_number(value)
+    if not number.is_integer() or not 1 <= number <= 600:
+        raise ValueError("must be a whole number between 1 and 600")
+    return int(number)
+
+
+class LoanScheduleInput(_StrictModel):
+    """HTTP / runner input for ``loan.schedule`` (ADR-0025).
+
+    State-based: the loan as it stands today. ``year`` / ``month`` is the
+    calendar month of the next instalment.
+    """
+
+    balance: NonNegativeNumber
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    remaining_months: Annotated[int, BeforeValidator(_parse_loan_months)]
+    year: CalendarYear
+    month: CalendarMonth
+    original_principal: NonNegativeNumber | None = None
+
+    @model_validator(mode="after")
+    def _principal_covers_balance(self) -> "LoanScheduleInput":
+        if self.original_principal is not None and self.original_principal < self.balance:
+            raise ValueError("original_principal must be greater than or equal to balance")
+        return self
 
 
 class PlMonthlyInput(MonthlyDairyFinancialInput):
@@ -575,6 +612,14 @@ PERIOD_IDENTITY_FIELD_UNITS: dict[str, str] = {
 # Cash position units for ``cf.monthly`` / ``cf.months`` needs_input.
 CASH_POSITION_FIELD_UNITS: dict[str, str] = {"opening_cash": "EUR"}
 
+# Loan state units for ``loan.schedule`` needs_input (ADR-0025).
+LOAN_FIELD_UNITS: dict[str, str] = {
+    "balance": "EUR",
+    "annual_rate": "ratio/year",
+    "remaining_months": "months",
+    "original_principal": "EUR",
+}
+
 
 def missing_field_entry(field: str) -> dict[str, str]:
     """Canonical needs_input.missing item: {field, unit}."""
@@ -582,6 +627,7 @@ def missing_field_entry(field: str) -> dict[str, str]:
         FIELD_UNITS.get(field)
         or PERIOD_IDENTITY_FIELD_UNITS.get(field)
         or CASH_POSITION_FIELD_UNITS.get(field)
+        or LOAN_FIELD_UNITS.get(field)
         or MONTHLY_FIELD_UNITS.get(field)
         or "unknown"
     )

@@ -253,6 +253,37 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     field=field,
                 )
             )
+        elif text == "must be between 0 and 1":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} must be between 0 and 1" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 0, "maximum": 1},
+                )
+            )
+        elif text == "must be a whole number between 1 and 600":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} {text}" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 1, "maximum": 600},
+                )
+            )
+        elif text == "original_principal must be greater than or equal to balance":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field="original_principal",
+                    details={"reason": "principal_below_balance"},
+                )
+            )
         elif "duplicate" in text.lower():
             issues.append(
                 issue(

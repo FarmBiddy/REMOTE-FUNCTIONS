@@ -78,7 +78,7 @@ Never guess required missing inputs; the runner must return `needs_input`. Expli
 
 | In this service | Not in this service (later / App Platform) |
 |-----------------|--------------------------------------------|
-| Finite ≥ 0 numbers; required/optional presence; null / type / unknown field errors | Farm benchmarking, “normal” ranges, KPIs |
+| Finite ≥ 0 numbers; required/optional presence; null / type / unknown field errors | Farm benchmarking, “normal” ranges, KPI thresholds |
 | Independent inputs (except fields required to *run* a calculation) | Cross-field inference (cows → feed, etc.) |
 | Explicit zero always valid for non-negative drivers | Soft warnings / anomaly alerts |
 

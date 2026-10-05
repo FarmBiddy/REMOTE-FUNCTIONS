@@ -13,11 +13,11 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Service:** Stateless annual dairy P&L calculator (validate inputs, run named calculations, return structured results).
 
-**Calculations (15 public IDs):** `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months`, `cf.monthly`, `cf.months`, `loan.schedule`, `pl.forecast`, `cf.forecast` — from `CALCULATION_CATALOGUE` only.
+**Calculations (16 public IDs):** `revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months`, `cf.monthly`, `cf.months`, `loan.schedule`, `kpi.summary`, `pl.forecast`, `cf.forecast` — from `CALCULATION_CATALOGUE` only.
 
 **Inputs:** Flat JSON numbers per calculation (except `pl.months`: nested `months[]` + optional `ytd`; `cf.months`: `opening_cash` + nested `months[]`). Required fields → `needs_input` when omitted; nested ones (inside `months[]`, `loans[]`, `history[]`, `forecast[]`) add `path`, e.g. `{"field":"milk_price","unit":"EUR/litre","path":"months[3].milk_price"}`, as long as nothing else is invalid (ADR-0027). Optional omitted → `0` (or `ytd: null` / omitted for months-only). Explicit `0` is valid. Unknown fields / null / negatives / wrong types → `error` with stable codes. Units come from `FIELD_UNITS` / monthly / period-identity lookups on `needs_input` — **not** from discovery.
 
-**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit, finance}` with `period:"annual"`. `pl.monthly` → same money nests with `period: {kind, year, month}` (ADR-0019). `pl.months` → `{currency, months: MonthlyDairyStatementResult[], ytd: YtdDairyStatementResult | null}` — Domain dumps; no chart DTOs. `cf.monthly` → `MonthlyDairyCashFlowResult` dump: `{currency, period, operating, investing, financing, cash_in, cash_out, net_cash_flow}`; each activity `{inflows:{lines,total}, outflows:{lines,total}, net}`; every catalogue line published (zeros included); `opening_cash` / `closing_cash` (`null` unless `opening_cash` sent). `cf.months` → `{currency, opening_cash, months: MonthlyDairyCashFlowResult[], cash_in, cash_out, net_cash_flow, closing_cash}`; months consecutive (gap → `details.reason: non_contiguous_months`); `opening_cash` may be negative (ADR-0024). `loan.schedule` takes `{loans: [{balance, annual_rate, remaining_months, year, month, original_principal?}]}` (1–50) → `{currency, loans[], total_balance, total_monthly_payment, total_interest, months[{period, payment, interest, principal}]}` (combined debt service); each `loans[]` item `{balance, annual_rate, remaining_months, monthly_payment, total_interest, total_payments, repaid_pct, months[{period, opening_balance, payment, interest, principal, closing_balance}]}` in input order (ADR-0025). `annual_rate` is a 0–1 ratio (`4.2` → error); `repaid_pct` is `null` unless `original_principal` is sent; `original_principal < balance` → `details.reason: principal_below_balance`. `pl.forecast` / `cf.forecast` take `{history: [actual month items], forecast: [{year, month, ...known values}]}` and return `{currency, as_of, run_rate, months[]}`; each month `{period, inputs, statement | cash_flow}` where `inputs` plug into `pl.months` / `cf.months` (ADR-0026). Errors: `forecast_overlaps_history`, `missing_prior_year_month`, `duplicate_period`. In forecast items an omitted or `null` line means "project it".
+**Outputs:** Money calculations → `{amount, currency:"EUR"}`. `profit.margin` → margin object. `pl.summary` / in-process `FinancialResult` → `{currency, period, revenue, costs, profit, finance}` with `period:"annual"`. `pl.monthly` → same money nests with `period: {kind, year, month}` (ADR-0019). `pl.months` → `{currency, months: MonthlyDairyStatementResult[], ytd: YtdDairyStatementResult | null}` — Domain dumps; no chart DTOs. `cf.monthly` → `MonthlyDairyCashFlowResult` dump: `{currency, period, operating, investing, financing, cash_in, cash_out, net_cash_flow}`; each activity `{inflows:{lines,total}, outflows:{lines,total}, net}`; every catalogue line published (zeros included); `opening_cash` / `closing_cash` (`null` unless `opening_cash` sent). `cf.months` → `{currency, opening_cash, months: MonthlyDairyCashFlowResult[], cash_in, cash_out, net_cash_flow, closing_cash}`; months consecutive (gap → `details.reason: non_contiguous_months`); `opening_cash` may be negative (ADR-0024). `loan.schedule` takes `{loans: [{balance, annual_rate, remaining_months, year, month, original_principal?}]}` (1–50) → `{currency, loans[], total_balance, total_monthly_payment, total_interest, months[{period, payment, interest, principal}]}` (combined debt service); each `loans[]` item `{balance, annual_rate, remaining_months, monthly_payment, total_interest, total_payments, repaid_pct, months[{period, opening_balance, payment, interest, principal, closing_balance}]}` in input order (ADR-0025). `annual_rate` is a 0–1 ratio (`4.2` → error); `repaid_pct` is `null` unless `original_principal` is sent; `original_principal < balance` → `details.reason: principal_below_balance`. `kpi.summary` takes `{months: [pl.months items], milking_cows}` → `{currency, from, to, month_count, milking_cows, totals{milk_litres, revenue, costs, surplus, loan_repayments}, per_litre_c{revenue, costs, surplus, cost_lines{...}}, per_cow{milk_litres, revenue, costs, surplus}, dscr}`; ratios with a 0 divisor are `null` (ADR-0028). `pl.forecast` / `cf.forecast` take `{history: [actual month items], forecast: [{year, month, ...known values}]}` and return `{currency, as_of, run_rate, months[]}`; each month `{period, inputs, statement | cash_flow}` where `inputs` plug into `pl.months` / `cf.months` (ADR-0026). Errors: `forecast_overlaps_history`, `missing_prior_year_month`, `duplicate_period`. In forecast items an omitted or `null` line means "project it".
 
 **Canonical annual view (ADR-0009):** `pl.summary` is the Phase 1 **canonical annual Operating Statement**. Atomic catalogue IDs remain supporting schedules and must reconcile to `pl.summary` for the same inputs (published aggregates authoritative per ADR-0005). In-process `calculate_annual_pnl` wraps the same composition.
 
@@ -35,7 +35,7 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 
 **Scenarios (ADR-0012):** In-process `run_scenario` / `run_scenarios` — caller-defined name + overrides executed through B7. Independent runs from the same base; no ranking, deltas, Base/Best/Worst semantics, or persistence. **Not on HTTP** in Phase 1.
 
-**Out of scope on HTTP today:** persistence, authentication, forecasting, KPIs, multi-currency, AI-generated calculations, Supabase/farm CRUD. Multi-period OS is available as `pl.months` (ADR-0021).
+**Out of scope on HTTP today:** persistence, authentication, multi-currency, AI-generated calculations, Supabase/farm CRUD. Multi-period OS is available as `pl.months` (ADR-0021); forecasting as `pl.forecast` / `cf.forecast` (ADR-0026); Dairy KPIs as `kpi.summary` (ADR-0028).
 
 ### Intentional interface differences
 
@@ -67,7 +67,7 @@ Supported endpoints:
 
 **Ten registered calculation IDs** (`CALCULATION_CATALOGUE` only):
 
-`revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months`, `cf.monthly`, `cf.months`, `loan.schedule`, `pl.forecast`, `cf.forecast`
+`revenue.milk`, `revenue.schemes`, `revenue.other`, `revenue.total`, `costs.total`, `profit.net`, `profit.margin`, `pl.summary`, `pl.monthly`, `pl.months`, `cf.monthly`, `cf.months`, `loan.schedule`, `kpi.summary`, `pl.forecast`, `cf.forecast`
 
 HTTP request/response envelopes use statuses `ok` / `needs_input` / `error`. On failure, branch on structured `error.code` (see Validation above), not message text.
 
@@ -138,11 +138,11 @@ HTTP calculation bodies and `FinancialInput` use the **flat** field set. The sam
 
 ### Not included (do not assume)
 
-- Principal vs interest split for `loan_repayments`
+- Principal vs interest split for P&L `loan_repayments` (use `loan.schedule` rows for cash flow; ADR-0025)
 - Full accounting net profit (depreciation, tax, drawings, livestock valuation, etc.)
-- Advisory validation, farm benchmarking, anomaly detection, KPIs, normal ranges, soft warnings
+- Advisory validation, farm benchmarking, anomaly detection, normal ranges, soft warnings, KPI thresholds
 - Scenarios as persisted libraries / Base–Best–Worst engine types / sensitivity / forecasting (in-process named packages exist via ADR-0012; persistence and judgement stay elsewhere)
-- Monthly cash flow, balance sheet, KPIs, valuation, optimisation
+- Balance sheet, valuation, optimisation
 - Persistence, database, authentication, farm identity
 - Accounting / banking / CRM integrations
 - Multi-currency, multi-period

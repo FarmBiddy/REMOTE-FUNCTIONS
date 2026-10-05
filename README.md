@@ -46,6 +46,7 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | `cf.monthly` | `year`, `month` (+ optional `opening_cash`) | Explicit monthly Cash Flow: operating / investing / financing, cash in/out, net; closing cash when opening given (ADR-0022/0023/0024) |
 | `cf.months` | `opening_cash`, `months[]` | Consecutive months rolled forward: each month opens with the previous closing cash; period totals + closing cash (ADR-0024) |
 | `loan.schedule` | `loans[]` (each `balance`, `annual_rate`, `remaining_months`, `year`, `month`, optional `original_principal`) | Per-loan amortisation from today's state (equal instalments, interest / principal, % repaid) + portfolio totals and combined monthly debt service (feeds `cf.*` `interest_paid` / `loan_principal_repayments`) (ADR-0025) |
+| `kpi.summary` | `months[]`, `milking_cows` | Dairy KPIs over the months sent: revenue, costs, each cost line and surplus in c/L; per-cow figures; DSCR = Operating Surplus / loan repayments; undefined ratios `null` (ADR-0028) |
 | `pl.forecast` | `history[]`, `forecast[]` | Projected monthly Operating Statements: same month last year × YTD run-rate per line; milk price carries the latest actual; known values override (ADR-0026) |
 | `cf.forecast` | `history[]`, `forecast[]` | Projected monthly Cash Flows: operating lines seasonal × run-rate; investing / financing only when given (e.g. `loan.schedule` rows); `inputs` plug into `cf.months` (ADR-0026) |
 
@@ -113,7 +114,7 @@ On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on 
 
 ## Out of scope
 
-KPIs (feed ratio, per cow), household drawings, VAT, Monte Carlo, alerts, risk, and farm-file loading from Dairy Financials.
+Benchmarking against other farms, household drawings, VAT, Monte Carlo, alerts, risk, and farm-file loading from Dairy Financials.
 
 ## Docs
 

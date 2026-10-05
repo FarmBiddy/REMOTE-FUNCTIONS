@@ -344,6 +344,12 @@ known values (co-op price, scheme payments, `loan.schedule` rows). Chart the
 returned `statement`s; for the cash balance send actual + projected `inputs` to
 `cf.months`. Show `run_rate` to explain the projection.
 
+KPI tiles (ADR-0028): call `kpi.summary` with the same months as the chart
+(actual, or actual + projected `inputs`) and the average `milking_cows`. Use
+`per_litre_c` for c/L cards, `per_cow` for herd cards and `dscr` for "Can I pay
+my loans?". `null` means not computable (no litres / cows / repayments).
+Thresholds (e.g. a lender's minimum DSCR) are Platform / Biddy policy.
+
 ## Discovery (optional)
 
 `GET /v1/functions` returns calculation `key`, `description`, `required`, `optional` **names** — not units. Units appear on `needs_input.missing[].unit`.

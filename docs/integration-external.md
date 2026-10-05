@@ -358,6 +358,11 @@ Optional: `milk_solids_kg` (co-op statements) → `per_kg_ms`; `hectares` →
 Variable / fixed costs and gross margin (revenue − variable costs) follow the
 Teagasc split (ADR-0033).
 
+Variance (ADR-0035): "vs last year" / "vs budget" columns call `pl.compare` or
+`cf.compare` with the two sets of months. Show `milk.volume_effect` /
+`milk.price_effect` to explain a milk income change. Colour (cost up = bad) is
+Platform presentation.
+
 What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
 the cash months, `opening_cash` and the scenarios the farmer picks (e.g.
 `{"name": "milk -5c", "milk_price_c": -5}`). Show each scenario's

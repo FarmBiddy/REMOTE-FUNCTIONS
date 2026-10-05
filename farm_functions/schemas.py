@@ -282,6 +282,54 @@ class KpiSummaryInput(_StrictModel):
     milking_cows: NonNegativeNumber
 
 
+def _parse_pct_change(value: Any) -> float:
+    """Percentage change; -100 (line goes to 0) or greater."""
+    number = _parse_finite_number(value)
+    if number < -100:
+        raise ValueError("must be -100 or greater")
+    return number
+
+
+PctChange = Annotated[float, BeforeValidator(_parse_pct_change)]
+
+# Lines a scenario may shock by %. Milk has dedicated price / volume shocks.
+SHOCKABLE_LINES = tuple(
+    sorted(
+        (set(MonthlyDairyFinancialInput.model_fields) | set(CASH_FLOW_LINES))
+        - {"milk_litres", "milk_price", "milk"}
+    )
+)
+
+
+class SensitivityScenarioInput(_StrictModel):
+    """One what-if: milk price in c/L, milk volume %, and % change per line."""
+
+    name: str | None = Field(None, max_length=40)
+    milk_price_c: SignedNumber = 0.0
+    milk_volume_pct: PctChange = 0.0
+    lines_pct: dict[str, PctChange] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _known_lines(self) -> "SensitivityScenarioInput":
+        unknown = sorted(set(self.lines_pct) - set(SHOCKABLE_LINES))
+        if unknown:
+            raise ValueError(f"lines_pct has lines that cannot be shocked: {', '.join(unknown)}")
+        return self
+
+
+class RiskSensitivityInput(_StrictModel):
+    """HTTP / runner input for ``risk.sensitivity`` (ADR-0029).
+
+    ``pl_months`` drive surplus / DSCR / milk price; ``cf_months`` (consecutive)
+    and ``opening_cash`` drive the cash balance. Both actual + projected.
+    """
+
+    pl_months: list[PlMonthItemInput] = Field(..., min_length=1)
+    cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
+    opening_cash: SignedNumber
+    scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+
+
 # ---------------------------------------------------------------------------
 # Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
 # item shape). ``forecast`` items carry period identity plus optional known

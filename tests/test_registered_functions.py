@@ -65,6 +65,13 @@ SAMPLE_KPI = {
     ],
     "milking_cows": 10,
 }
+# Sensitivity: 10,000 L at €0.40 − €3,000 feed = €1,000 surplus → break-even 30 c/L.
+SAMPLE_SENSITIVITY = {
+    "pl_months": [{"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.40, "feed": 3_000}],
+    "cf_months": [{"year": 2026, "month": 3, "milk": 4_000, "feed": 3_000}],
+    "opening_cash": 0,
+    "scenarios": [{"name": "milk -5c", "milk_price_c": -5}],
+}
 # Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
 # lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
 SAMPLE_PL_FORECAST = {
@@ -139,6 +146,8 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_PL_FORECAST
     if key == "kpi.summary":
         return SAMPLE_KPI
+    if key == "risk.sensitivity":
+        return SAMPLE_SENSITIVITY
     if key == "cf.forecast":
         return SAMPLE_CF_FORECAST
     raise AssertionError(f"No happy payload for {key}")
@@ -190,6 +199,13 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "risk.sensitivity":
+        return {
+            "pl_months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}],
+            "cf_months": [{"year": 1, "month": 1}],
+            "opening_cash": 0,
+            "scenarios": [],
+        }
     if key == "pl.forecast":
         month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
         return {"history": [month], "forecast": [{"year": 2, "month": 1, "milk_price": 0}]}
@@ -295,6 +311,10 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "risk.sensitivity":
+        body = result["result"]
+        assert body["break_even"]["surplus_milk_price_c"] == 30
+        assert [s["surplus"] for s in body["scenarios"]] == [1_000, 500]
     elif key == "kpi.summary":
         body = result["result"]
         assert body["per_litre_c"]["costs"] == 20
@@ -411,6 +431,9 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "risk.sensitivity":
+        assert result["result"]["break_even"]["surplus_milk_price_c"] is None
+        assert [s["name"] for s in result["result"]["scenarios"]] == ["base"]
     elif key == "kpi.summary":
         assert result["result"]["per_litre_c"]["costs"] is None
         assert result["result"]["per_cow"]["surplus"] is None

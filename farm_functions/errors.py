@@ -245,6 +245,24 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     details={"reason": reason} if reason else None,
                 )
             )
+        elif err_type in (
+            "too_short",
+            "too_long",
+            "list_type",
+            "dict_type",
+            "string_type",
+            "string_too_long",
+        ):
+            # Shape errors on other nested inputs (loans[], history[], scenarios[] …).
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field}: {text}" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                )
+            )
         elif err_type == "extra_forbidden":
             issues.append(
                 issue(
@@ -293,6 +311,19 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     details={"reason": "duplicate_period"},
                 )
             )
+        elif text == "must be -100 or greater":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} must be -100 or greater" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": -100},
+                )
+            )
+        elif text.startswith("lines_pct has lines that cannot be shocked"):
+            issues.append(issue(UNKNOWN_FIELD, text, field="lines_pct"))
         elif "must be after the last history month" in text:
             issues.append(
                 issue(

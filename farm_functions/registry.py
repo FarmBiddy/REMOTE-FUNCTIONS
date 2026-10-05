@@ -22,6 +22,7 @@ from farm_functions.dairy.kpis import dairy_kpis
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
 from farm_functions.forecast import forecast_cf, forecast_pl
+from farm_functions.sensitivity import risk_sensitivity
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
     MonthlyDairyStatementModel,
@@ -40,6 +41,7 @@ from farm_functions.schemas import (
     CfForecastInput,
     CfMonthsInput,
     KpiSummaryInput,
+    RiskSensitivityInput,
     LoanScheduleInput,
     MilkRevenueInput,
     MonthlyDairyCashFlowInput,
@@ -425,6 +427,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=KpiSummaryInput,
         handler=_handle_kpi_summary,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="risk.sensitivity",
+        description=(
+            "What-if scenarios over actual + projected months: milk price (c/L), milk "
+            "volume % and % per line; surplus, DSCR, closing and lowest cash, overdraft "
+            "months per scenario; milk-price break-evens for surplus and for cash."
+        ),
+        input_model=RiskSensitivityInput,
+        handler=risk_sensitivity,
         supports_provenance=False,
     ),
     CalculationDefinition(

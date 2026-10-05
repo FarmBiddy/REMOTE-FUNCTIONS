@@ -5,8 +5,10 @@ Teagasc use. Per-cow, per-kg-milk-solids and per-hectare figures are in EUR.
 DSCR = Operating Surplus / loan repayments (principal + interest).
 """
 
+from farm_functions.core.aggregate import sum_amounts
 from farm_functions.core.ratios import coverage_ratio, per_unit
 from farm_functions.core.rounding import round_money
+from farm_functions.dairy.costs import VARIABLE_COST_CATEGORIES
 
 
 def _cents_per_litre(amount: float, litres: float) -> float | None:
@@ -33,15 +35,21 @@ def dairy_kpis(
     debt_balance: float | None = None,
 ) -> dict:
     dscr = coverage_ratio(surplus, loan_repayments)
+    variable = sum_amounts(*(cost_lines[c] for c in VARIABLE_COST_CATEGORIES))
+    # Gross margin = revenue − variable costs (ADR-0033, Teagasc convention).
+    gross_margin = revenue - variable
 
     def money_per(units: float) -> dict:
-        amounts = {"revenue": revenue, "costs": costs, "surplus": surplus}
+        amounts = {"revenue": revenue, "costs": costs, "gross_margin": gross_margin, "surplus": surplus}
         return {name: _per(value, units) for name, value in amounts.items()}
 
     return {
         "per_litre_c": {
             "revenue": _cents_per_litre(revenue, milk_litres),
             "costs": _cents_per_litre(costs, milk_litres),
+            "variable_costs": _cents_per_litre(variable, milk_litres),
+            "fixed_costs": _cents_per_litre(costs - variable, milk_litres),
+            "gross_margin": _cents_per_litre(gross_margin, milk_litres),
             "surplus": _cents_per_litre(surplus, milk_litres),
             "cost_lines": {
                 name: _cents_per_litre(amount, milk_litres) for name, amount in cost_lines.items()

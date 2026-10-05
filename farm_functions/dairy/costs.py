@@ -26,6 +26,15 @@ OPERATING_COST_CATEGORIES = (
     "other_operating_costs",
 )
 
+# Variable vs fixed split (ADR-0033), broadly the Teagasc Profit Monitor:
+# variable costs move with cows / litres, fixed costs do not.
+VARIABLE_COST_CATEGORIES = ("feed", "fertiliser", "vet", "contractor", "levies")
+FIXED_COST_CATEGORIES = tuple(
+    c for c in OPERATING_COST_CATEGORIES if c not in VARIABLE_COST_CATEGORIES
+)
+# Income that moves with herd size (calves, culls). Schemes are per hectare.
+HERD_LINKED_INCOME = ("cattle_sales",)
+
 # Alias kept for call sites that still import COST_CATEGORIES.
 COST_CATEGORIES = OPERATING_COST_CATEGORIES
 
@@ -70,6 +79,9 @@ def total_costs(
 
 __all__ = [
     "COST_CATEGORIES",
+    "FIXED_COST_CATEGORIES",
+    "HERD_LINKED_INCOME",
     "OPERATING_COST_CATEGORIES",
+    "VARIABLE_COST_CATEGORIES",
     "total_costs",
 ]

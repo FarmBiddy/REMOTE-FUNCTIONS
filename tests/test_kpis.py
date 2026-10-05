@@ -51,7 +51,13 @@ def test_reference_quarter():
     assert body["per_litre_c"]["surplus"] == 19.17
     assert body["per_litre_c"]["cost_lines"]["feed"] == 13.33
     assert body["per_litre_c"]["cost_lines"]["vet"] == 0
-    assert body["per_cow"] == {"milk_litres": 1_200, "revenue": 480, "costs": 250, "surplus": 230}
+    assert body["per_cow"] == {
+        "milk_litres": 1_200, "revenue": 480, "costs": 250, "gross_margin": 320, "surplus": 230
+    }
+    # Variable = feed 16,000 (labour is fixed) → 13.33 c/L; gross margin 32,000.
+    assert body["per_litre_c"]["variable_costs"] == 13.33
+    assert body["per_litre_c"]["fixed_costs"] == 7.5
+    assert body["per_litre_c"]["gross_margin"] == 26.67
     assert body["dscr"] == 5.11
 
 
@@ -93,8 +99,10 @@ def test_optional_solids_hectare_and_debt_blocks():
         "kpi.summary",
         {"months": QUARTER, "milking_cows": 100, "milk_solids_kg": 10_000, "hectares": 40, "debt_balance": 86_800},
     )["result"]
-    assert body["per_kg_ms"] == {"revenue": 4.8, "costs": 2.5, "surplus": 2.3}
-    assert body["per_hectare"] == {"milk_litres": 3_000, "revenue": 1_200, "costs": 625, "surplus": 575}
+    assert body["per_kg_ms"] == {"revenue": 4.8, "costs": 2.5, "gross_margin": 3.2, "surplus": 2.3}
+    assert body["per_hectare"] == {
+        "milk_litres": 3_000, "revenue": 1_200, "costs": 625, "gross_margin": 800, "surplus": 575
+    }
     assert body["debt"] == {"balance": 86_800, "per_cow": 868, "per_hectare": 2_170}
 
 

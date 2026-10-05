@@ -143,6 +143,17 @@ def test_investment_errors():
     assert bad_kind["status"] == "error"
 
 
+def test_herd_cut_moves_variable_costs_but_not_fixed():
+    """ADR-0033: 10% fewer cows → litres and feed −10%, labour (fixed) unchanged.
+    Per month: milk 14,400 − feed 9,000 − labour 4,000 = 1,400 (was 2,000)."""
+    herd, volume = _run([{"herd_pct": -10}, {"milk_volume_pct": -10}])["result"]["scenarios"][1:]
+    assert herd["shocks"]["herd_pct"] == -10
+    assert herd["surplus"] == 3 * 1_400
+    assert herd["closing_cash"] == -1_000 + 3 * (1_400 - 1_500)
+    # Same litres lost through yield alone keeps every cost: a worse result.
+    assert volume["surplus"] == 6_000 - 3 * 1_600
+
+
 def test_http_matches_runner():
     payload = {"pl_months": PL, "cf_months": CF, "opening_cash": 0, "scenarios": [{"milk_price_c": -5}]}
     body = client.post("/v1/functions/risk.sensitivity/run", json=payload).json()

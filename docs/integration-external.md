@@ -355,6 +355,8 @@ Thresholds (e.g. a lender's minimum DSCR) are Platform / Biddy policy.
 Optional: `milk_solids_kg` (co-op statements) → `per_kg_ms`; `hectares` →
 `per_hectare`; `debt_balance` (`loan.schedule` `total_balance`) → `debt` per cow / ha
 (ADR-0032).
+Variable / fixed costs and gross margin (revenue − variable costs) follow the
+Teagasc split (ADR-0033).
 
 What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
 the cash months, `opening_cash` and the scenarios the farmer picks (e.g.
@@ -368,6 +370,9 @@ the cash months, `opening_cash` and the scenarios the farmer picks (e.g.
 "loan": {"amount": 100000, "annual_rate": 0.05, "remaining_months": 120},
 "monthly_effects": {"labour": -1500}}]}`, and compare it with `base`: DSCR,
 lowest cash, overdraft months, break-evens and `simple_payback_months`.
+
+Herd size / derogation (ADR-0033): `{"name": "10% fewer cows", "herd_pct": -10}`
+moves litres, variable costs and cattle sales; fixed costs stay.
 
 ## Discovery (optional)
 

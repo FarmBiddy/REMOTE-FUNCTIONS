@@ -16,6 +16,7 @@ from farm_functions.core.ratios import coverage_ratio, per_unit
 from farm_functions.core.rounding import round_money
 from farm_functions.core.sensitivity import break_even_shift, min_shift_all_non_negative
 from farm_functions.dairy.cash_flow import OPERATING_CASH_INFLOW_CATEGORIES
+from farm_functions.dairy.costs import HERD_LINKED_INCOME, VARIABLE_COST_CATEGORIES
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
     MonthlyDairyStatementModel,
@@ -32,6 +33,7 @@ BASE = {
     "name": "base",
     "milk_price_c": 0.0,
     "milk_volume_pct": 0.0,
+    "herd_pct": 0.0,
     "lines_pct": {},
     "investments": [],
 }
@@ -51,8 +53,21 @@ def _shift(period: tuple[int, int], months: int) -> tuple[int, int]:
     return index // 12, index % 12 + 1
 
 
-def _scale_lines(lines: dict[str, Any], lines_pct: dict[str, float]) -> dict[str, Any]:
-    return {k: v * (1 + lines_pct[k] / 100) if k in lines_pct else v for k, v in lines.items()}
+HERD_LINES = VARIABLE_COST_CATEGORIES + HERD_LINKED_INCOME
+
+
+def _scale_lines(
+    lines: dict[str, Any], lines_pct: dict[str, float], herd: float
+) -> dict[str, Any]:
+    """Herd-linked lines move with herd size (ADR-0033), then per-line % shocks."""
+    out = {}
+    for k, v in lines.items():
+        if k in HERD_LINES:
+            v = v * herd
+        if k in lines_pct:
+            v = v * (1 + lines_pct[k] / 100)
+        out[k] = v
+    return out
 
 
 def _statements(pl_months: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -168,19 +183,21 @@ def _outcome(
     pl_months, cf_months, investments = _apply_investments(
         pl_months, cf_months, scenario["investments"]
     )
-    volume = 1 + scenario["milk_volume_pct"] / 100
+    herd = 1 + scenario["herd_pct"] / 100
+    # Litres move with herd size and with yield per cow (milk_volume_pct).
+    volume = herd * (1 + scenario["milk_volume_pct"] / 100)
     price_shift = scenario["milk_price_c"] / 100
     # Milk cheques scale with price × volume (ADR-0029); no P&L price → no cash price effect.
     cash_milk = volume * (max(0.0, base_price + price_shift) / base_price if base_price else 1.0)
 
     shocked_pl = []
     for item in pl_months:
-        lines = _scale_lines(item, scenario["lines_pct"])
+        lines = _scale_lines(item, scenario["lines_pct"], herd)
         lines["milk_price"] = max(0.0, item["milk_price"] + price_shift)
         lines["milk_litres"] = item["milk_litres"] * volume
         shocked_pl.append(lines)
     shocked_cf = [
-        {**_scale_lines(item, scenario["lines_pct"]), "milk": item["milk"] * cash_milk}
+        {**_scale_lines(item, scenario["lines_pct"], herd), "milk": item["milk"] * cash_milk}
         for item in cf_months
     ]
 
@@ -193,7 +210,9 @@ def _outcome(
     _, break_even = _break_even(shocked_pl, statements, cash["months"])
     return {
         "name": scenario["name"],
-        "shocks": {k: scenario[k] for k in ("milk_price_c", "milk_volume_pct", "lines_pct")},
+        "shocks": {
+            k: scenario[k] for k in ("milk_price_c", "milk_volume_pct", "herd_pct", "lines_pct")
+        },
         "investments": investments,
         "surplus": round_money(surplus),
         "loan_repayments": round_money(repayments),

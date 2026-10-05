@@ -349,11 +349,12 @@ class InvestmentInput(_StrictModel):
 
 
 class SensitivityScenarioInput(_StrictModel):
-    """One what-if: milk price in c/L, milk volume %, % change per line, investments."""
+    """One what-if: milk price c/L, milk volume %, herd size %, % per line, investments."""
 
     name: str | None = Field(None, max_length=40)
     milk_price_c: SignedNumber = 0.0
     milk_volume_pct: PctChange = 0.0
+    herd_pct: PctChange = 0.0
     lines_pct: dict[str, PctChange] = Field(default_factory=dict)
     investments: list[InvestmentInput] = Field(default_factory=list, max_length=5)
 

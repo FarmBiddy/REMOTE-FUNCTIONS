@@ -29,6 +29,7 @@ from farm_functions.core.rounding import (
     round_margin_ratio,
     round_money,
 )
+from farm_functions.core.sensitivity import break_even_shift, min_shift_all_non_negative
 from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
 
 __all__ = [
@@ -36,11 +37,13 @@ __all__ = [
     "CashActivity",
     "CashDirection",
     "amortisation_schedule",
+    "break_even_shift",
     "annuity_payment",
     "cash_section_net",
     "closing_cash",
     "coverage_ratio",
     "latest_non_zero",
+    "min_shift_all_non_negative",
     "net_cash_flow",
     "net_profit",
     "profit_margin",

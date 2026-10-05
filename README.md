@@ -46,6 +46,8 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | `cf.monthly` | `year`, `month` (+ optional `opening_cash`) | Explicit monthly Cash Flow: operating / investing / financing, cash in/out, net; closing cash when opening given (ADR-0022/0023/0024) |
 | `cf.months` | `opening_cash`, `months[]` | Consecutive months rolled forward: each month opens with the previous closing cash; period totals + closing cash (ADR-0024) |
 | `loan.schedule` | `balance`, `annual_rate`, `remaining_months`, `year`, `month` (+ optional `original_principal`) | Loan amortisation from today's state: equal monthly instalments, interest / principal per month (feeds `cf.*` `interest_paid` / `loan_principal_repayments`), totals, % repaid (ADR-0025) |
+| `pl.forecast` | `history[]`, `forecast[]` | Projected monthly Operating Statements: same month last year × YTD run-rate per line; milk price carries the latest actual; known values override (ADR-0026) |
+| `cf.forecast` | `history[]`, `forecast[]` | Projected monthly Cash Flows: operating lines seasonal × run-rate; investing / financing only when given (e.g. `loan.schedule` rows); `inputs` plug into `cf.months` (ADR-0026) |
 
 `pl.summary` is the Phase 1 canonical annual Operating Statement (ADR-0009). `pl.monthly` is the explicit monthly statement (ADR-0019). `pl.months` returns chronological monthly statements and optional YTD (ADR-0021). Atomic IDs are supporting schedules that must reconcile to the annual view. `profit.net` and `profit.margin` keep those public IDs (Option A) and expect **already totalled** operating income and operating costs — use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
 

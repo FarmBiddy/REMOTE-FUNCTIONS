@@ -335,7 +335,13 @@ Engine-owned maths (ADR-0025): loan cards call `loan.schedule` with the loan's
 current `balance`, `annual_rate` (0–1), `remaining_months` and next instalment
 `year` / `month` (+ `original_principal` for % repaid). Pass each month's
 `interest` / `principal` into `cf.*` as `interest_paid` /
-`loan_principal_repayments`. Projected-month maths will also come from the Engine.
+`loan_principal_repayments`.
+
+Projected months (ADR-0026): call `pl.forecast` / `cf.forecast` with the actual
+months (incl. the same months last year) and the months to project, adding any
+known values (co-op price, scheme payments, `loan.schedule` rows). Chart the
+returned `statement`s; for the cash balance send actual + projected `inputs` to
+`cf.months`. Show `run_rate` to explain the projection.
 
 ## Discovery (optional)
 

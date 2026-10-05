@@ -157,7 +157,7 @@ class MonthlyDairyFinancialInput(
 # amounts for the statement month — not P&L accruals. Fields are generated from
 # Dairy ``CASH_FLOW_LINES`` so the catalogue is declared once. Operating lines
 # share P&L category IDs (``feed``, ``milk`` …). Period identity is Domain only.
-# Not included yet: household drawings (D-CF4), opening/closing cash (D-CF3).
+# Household drawings are a financing outflow (ADR-0030).
 # ---------------------------------------------------------------------------
 
 MonthlyDairyCashFlowInput = create_model(

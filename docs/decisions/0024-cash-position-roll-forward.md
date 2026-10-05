@@ -36,7 +36,7 @@ cheque) and the first thing a bank checks.
   (Biddy can ask for it via `needs_input`, unit EUR).
 - Forecast months use the same contract: explicit projected cash lines per
   month. Projection logic stays outside this ADR.
-- Not included: household drawings (D-CF4), multiple bank accounts, VAT.
+- Not included: multiple bank accounts, VAT. (Household drawings: ADR-0030.)
 
 ## Related
 

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from farm_functions.runner import run_function
 from farm_functions.core.cash import (
     CashActivity,
     CashDirection,
@@ -72,8 +73,20 @@ def test_monthly_cash_flow_input_rejects_pnl_fields_and_calendar():
         MonthlyDairyCashFlowInput.model_validate({"milking_cows": 100})
     with pytest.raises(ValidationError):
         MonthlyDairyCashFlowInput.model_validate({"year": 2026, "month": 3})
-    with pytest.raises(ValidationError):
-        MonthlyDairyCashFlowInput.model_validate({"household_drawings": 500})
+
+
+def test_household_drawings_are_financing_cash_not_pnl():
+    """ADR-0030: drawings reduce cash under financing; they never reach the P&L."""
+    cash = run_function("cf.monthly", {"year": 2026, "month": 3, "milk": 5_000, "household_drawings": 2_000})
+    body = cash["result"]
+    assert body["financing"]["outflows"]["lines"]["household_drawings"] == 2_000
+    assert body["operating"]["net"] == 5_000
+    assert body["net_cash_flow"] == 3_000
+    pnl = run_function(
+        "pl.monthly",
+        {"year": 2026, "month": 3, "milk_litres": 1, "milk_price": 1, "household_drawings": 2_000},
+    )
+    assert pnl["error"]["code"] == "unknown_field"
 
 
 def test_interest_paid_is_on_financing_catalogue_not_core():

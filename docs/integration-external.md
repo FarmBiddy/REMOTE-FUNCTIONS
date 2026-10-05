@@ -338,6 +338,9 @@ for % repaid). Use `total_balance` / `total_monthly_payment` for the card header
 (never sum in the UI). Pass the combined `months[]` `interest` / `principal` into
 `cf.*` as `interest_paid` / `loan_principal_repayments`.
 
+Family living money taken from the farm account goes in `household_drawings`
+(cash only, financing outflow; recurs in `cf.forecast`; ADR-0030).
+
 Projected months (ADR-0026): call `pl.forecast` / `cf.forecast` with the actual
 months (incl. the same months last year) and the months to project, adding any
 known values (co-op price, scheme payments, `loan.schedule` rows). Chart the

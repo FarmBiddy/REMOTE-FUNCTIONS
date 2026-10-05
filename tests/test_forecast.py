@@ -116,3 +116,16 @@ def test_http_matches_runner():
     payload = {"history": PL_HISTORY, "forecast": OCT_TO_DEC}
     body = client.post("/v1/functions/pl.forecast/run", json=payload).json()
     assert body == run_function("pl.forecast", payload)
+
+
+def test_household_drawings_recur_unlike_other_financing():
+    """ADR-0030: family living money is projected from last year like operating lines."""
+    history = [
+        {"year": 2025, "month": 10, "milk": 16_000, "household_drawings": 2_500, "loan_proceeds": 20_000},
+        {"year": 2026, "month": 9, "milk": 15_000},
+    ]
+    oct_ = run_function(
+        "cf.forecast", {"history": history, "forecast": [{"year": 2026, "month": 10}]}
+    )["result"]["months"][0]
+    assert oct_["inputs"]["household_drawings"] == 2_500
+    assert oct_["inputs"]["loan_proceeds"] == 0

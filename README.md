@@ -115,7 +115,7 @@ On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on 
 
 ## Out of scope
 
-Benchmarking against other farms, household drawings, VAT, Monte Carlo, alerts, risk, and farm-file loading from Dairy Financials.
+Benchmarking against other farms, VAT, Monte Carlo, alerts, and farm-file loading from Dairy Financials.
 
 ## Docs
 

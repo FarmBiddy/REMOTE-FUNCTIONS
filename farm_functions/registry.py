@@ -18,6 +18,7 @@ from farm_functions.core.surplus import net_profit, profit_margin, profit_margin
 from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
+from farm_functions.assets import assets_schedule
 from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
@@ -37,6 +38,7 @@ from farm_functions.domain import (
     calculate_ytd_dairy_statement,
 )
 from farm_functions.schemas import (
+    AssetsScheduleInput,
     CfMonthlyInput,
     CfCompareInput,
     CfForecastInput,
@@ -319,6 +321,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=LoanScheduleInput,
         handler=schedule_loans,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="assets.schedule",
+        description=(
+            "Fixed asset register over a period: straight-line or reducing-balance "
+            "depreciation from the acquisition month; opening NBV + additions − "
+            "depreciation = closing NBV per asset, per category and in total."
+        ),
+        input_model=AssetsScheduleInput,
+        handler=assets_schedule,
         supports_provenance=False,
     ),
     CalculationDefinition(

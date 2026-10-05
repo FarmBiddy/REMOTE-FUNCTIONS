@@ -92,6 +92,14 @@ SAMPLE_DEBT_CAPACITY = {
     "term_months": 10,
     "drawings": 1_000,
 }
+# Assets: 12,000 machine bought Jan 2026, 10 years straight line -> 1,200 in 2026.
+SAMPLE_ASSETS = {
+    "assets": [{"cost": 12_000, "year": 2026, "month": 1, "life_months": 120}],
+    "from_year": 2026,
+    "from_month": 1,
+    "to_year": 2026,
+    "to_month": 12,
+}
 # Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
 # lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
 SAMPLE_PL_FORECAST = {
@@ -172,6 +180,8 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_PL_COMPARE
     if key == "debt.capacity":
         return SAMPLE_DEBT_CAPACITY
+    if key == "assets.schedule":
+        return SAMPLE_ASSETS
     if key == "cf.compare":
         return SAMPLE_CF_COMPARE
     if key == "cf.forecast":
@@ -225,6 +235,11 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "assets.schedule":
+        return {
+            "assets": [{"cost": 0, "year": 1, "month": 1, "life_months": 1, "residual_value": 0}],
+            "from_year": 1, "from_month": 1, "to_year": 1, "to_month": 1,
+        }
     if key == "debt.capacity":
         month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
         return {
@@ -348,6 +363,10 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "assets.schedule":
+        assert result["result"]["total"] == {
+            "opening_nbv": 0, "additions": 12_000, "depreciation": 1_200, "closing_nbv": 10_800
+        }
     elif key == "debt.capacity":
         body = result["result"]
         assert (body["repayment_capacity"], body["repayment_cover"]) == (2_000, 1.33)
@@ -479,6 +498,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "assets.schedule":
+        assert result["result"]["total"]["closing_nbv"] == 0
     elif key == "debt.capacity":
         assert result["result"]["repayment_cover"] is None
         assert result["result"]["new_loan"]["max_principal"] == 0

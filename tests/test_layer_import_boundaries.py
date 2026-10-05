@@ -29,6 +29,7 @@ _APPLICATION_MODULES = (
     FARM / "loans.py",
     FARM / "kpis.py",
     FARM / "compare.py",
+    FARM / "assets.py",
     FARM / "errors.py",
     FARM / "schemas.py",
     FARM / "loaders" / "json_loader.py",

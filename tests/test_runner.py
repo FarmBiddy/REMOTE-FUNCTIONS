@@ -64,6 +64,7 @@ def test_discovery_lists_core_functions_only():
         "pl.compare",
         "cf.compare",
         "debt.capacity",
+        "assets.schedule",
         "pl.forecast",
         "cf.forecast",
         "costs.total",

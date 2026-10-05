@@ -343,6 +343,45 @@ class DebtCapacityInput(_StrictModel):
         return self
 
 
+class AssetInput(_StrictModel):
+    """One fixed asset in the register (ADR-0037). ``year`` / ``month`` = acquired."""
+
+    category: Literal["machinery", "buildings", "other"] = "machinery"
+    cost: NonNegativeNumber
+    year: CalendarYear
+    month: CalendarMonth
+    method: Literal["straight_line", "reducing_balance"] = "straight_line"
+    life_months: Annotated[int, BeforeValidator(_parse_loan_months)] | None = None
+    residual_value: NonNegativeNumber = 0.0
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)] | None = None
+
+    @model_validator(mode="after")
+    def _method_fields(self) -> "AssetInput":
+        if self.method == "straight_line" and self.life_months is None:
+            raise ValueError("life_months is required for straight_line")
+        if self.method == "reducing_balance" and self.annual_rate is None:
+            raise ValueError("annual_rate is required for reducing_balance")
+        if self.residual_value > self.cost:
+            raise ValueError("residual_value must not exceed cost")
+        return self
+
+
+class AssetsScheduleInput(_StrictModel):
+    """HTTP / runner input for ``assets.schedule`` (ADR-0037): register + period."""
+
+    assets: list[AssetInput] = Field(..., min_length=1, max_length=200)
+    from_year: CalendarYear
+    from_month: CalendarMonth
+    to_year: CalendarYear
+    to_month: CalendarMonth
+
+    @model_validator(mode="after")
+    def _ordered(self) -> "AssetsScheduleInput":
+        if (self.to_year, self.to_month) < (self.from_year, self.from_month):
+            raise ValueError("period end must not be before period start")
+        return self
+
+
 class KpiSummaryInput(_StrictModel):
     """HTTP / runner input for ``kpi.summary`` (ADR-0028): the pl.months items
     for the period plus the average milking herd over it."""
@@ -865,6 +904,10 @@ FIELD_UNITS: dict[str, str] = {item.name: item.unit for item in INPUT_FIELD_META
 PERIOD_IDENTITY_FIELD_UNITS: dict[str, str] = {
     "year": "year",
     "month": "month",
+    "from_year": "year",
+    "from_month": "month",
+    "to_year": "year",
+    "to_month": "month",
 }
 
 

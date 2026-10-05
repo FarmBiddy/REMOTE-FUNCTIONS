@@ -312,6 +312,21 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     details={"reason": "duplicate_period"},
                 )
             )
+        elif text.endswith(("is required for straight_line", "is required for reducing_balance")):
+            issues.append(
+                issue(
+                    MISSING_REQUIRED,
+                    text,
+                    field=text.split(" ")[0],
+                    details={"reason": "method_needs_field"},
+                )
+            )
+        elif text == "residual_value must not exceed cost":
+            issues.append(
+                issue(INVALID_TYPE, text, field="residual_value", details={"reason": "residual_above_cost"})
+            )
+        elif text == "period end must not be before period start":
+            issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "period_reversed"}))
         elif text == "must be 1 or greater":
             issues.append(
                 issue(

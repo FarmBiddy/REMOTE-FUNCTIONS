@@ -22,6 +22,7 @@ from farm_functions.core.loans import (
     AmortisationRow,
     amortisation_schedule,
     annuity_payment,
+    annuity_principal,
 )
 from farm_functions.core.ratios import coverage_ratio, per_unit
 from farm_functions.core.rounding import (
@@ -40,6 +41,7 @@ __all__ = [
     "amortisation_schedule",
     "break_even_shift",
     "annuity_payment",
+    "annuity_principal",
     "cash_section_net",
     "change_pct",
     "closing_cash",

@@ -25,6 +25,14 @@ def annuity_payment(balance: float, annual_rate: float, months: int) -> float:
     return balance * rate / (1 - (1 + rate) ** -months)
 
 
+def annuity_principal(payment: float, annual_rate: float, months: int) -> float:
+    """Largest balance an equal monthly ``payment`` repays over ``months`` (inverse annuity)."""
+    rate = annual_rate / 12
+    if rate == 0:
+        return payment * months
+    return payment * (1 - (1 + rate) ** -months) / rate
+
+
 def amortisation_schedule(
     balance: float, annual_rate: float, months: int
 ) -> list[AmortisationRow]:
@@ -50,4 +58,4 @@ def amortisation_schedule(
     return rows
 
 
-__all__ = ["AmortisationRow", "amortisation_schedule", "annuity_payment"]
+__all__ = ["AmortisationRow", "amortisation_schedule", "annuity_payment", "annuity_principal"]

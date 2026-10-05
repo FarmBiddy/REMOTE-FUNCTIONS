@@ -39,6 +39,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0033](0033-variable-fixed-costs-herd.md) | Variable / fixed costs, gross margin and herd-size scenarios |
 | [0034](0034-remove-in-process-simulation.md) | Remove in-process annual simulation and named scenarios |
 | [0035](0035-variance-analysis.md) | Variance analysis (`pl.compare`, `cf.compare`) |
+| [0036](0036-debt-capacity.md) | Repayment capacity and borrowing capacity (`debt.capacity`) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

@@ -278,6 +278,42 @@ class PlMonthsInput(_StrictModel):
     ytd: PlMonthsYtdInput | None = None
 
 
+def _reject_duplicate_months(items: list[Any]) -> None:
+    seen: set[tuple[int, int]] = set()
+    for item in items:
+        key = (item.year, item.month)
+        if key in seen:
+            raise ValueError(f"duplicate monthly period year={key[0]} month={key[1]}")
+        seen.add(key)
+
+
+class PlCompareInput(_StrictModel):
+    """HTTP / runner input for ``pl.compare`` (ADR-0035): actual vs comparison
+    months (prior year or budget), each in pl.months item shape."""
+
+    actual: list[PlMonthItemInput] = Field(..., min_length=1)
+    comparison: list[PlMonthItemInput] = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def _unique(self) -> "PlCompareInput":
+        _reject_duplicate_months(self.actual)
+        _reject_duplicate_months(self.comparison)
+        return self
+
+
+class CfCompareInput(_StrictModel):
+    """HTTP / runner input for ``cf.compare`` (ADR-0035); cf.months item shape."""
+
+    actual: list[CfMonthItemInput] = Field(..., min_length=1)
+    comparison: list[CfMonthItemInput] = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def _unique(self) -> "CfCompareInput":
+        _reject_duplicate_months(self.actual)
+        _reject_duplicate_months(self.comparison)
+        return self
+
+
 class KpiSummaryInput(_StrictModel):
     """HTTP / runner input for ``kpi.summary`` (ADR-0028): the pl.months items
     for the period plus the average milking herd over it."""

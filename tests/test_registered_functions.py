@@ -72,6 +72,16 @@ SAMPLE_SENSITIVITY = {
     "opening_cash": 0,
     "scenarios": [{"name": "milk -5c", "milk_price_c": -5}],
 }
+# Compare: same month, milk 10,000 L at €0.40 vs 8,000 L at €0.50 (both €4,000):
+# volume effect +1,000, price effect −1,000.
+SAMPLE_PL_COMPARE = {
+    "actual": [{"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.40, "feed": 1_000}],
+    "comparison": [{"year": 2025, "month": 3, "milk_litres": 8_000, "milk_price": 0.50, "feed": 800}],
+}
+SAMPLE_CF_COMPARE = {
+    "actual": [{"year": 2026, "month": 3, "milk": 4_000, "feed": 1_000}],
+    "comparison": [{"year": 2025, "month": 3, "milk": 4_000, "feed": 800}],
+}
 # Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
 # lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
 SAMPLE_PL_FORECAST = {
@@ -148,6 +158,10 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_KPI
     if key == "risk.sensitivity":
         return SAMPLE_SENSITIVITY
+    if key == "pl.compare":
+        return SAMPLE_PL_COMPARE
+    if key == "cf.compare":
+        return SAMPLE_CF_COMPARE
     if key == "cf.forecast":
         return SAMPLE_CF_FORECAST
     raise AssertionError(f"No happy payload for {key}")
@@ -199,6 +213,11 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "pl.compare":
+        month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
+        return {"actual": [month], "comparison": [month]}
+    if key == "cf.compare":
+        return {"actual": [{"year": 1, "month": 1}], "comparison": [{"year": 1, "month": 1}]}
     if key == "risk.sensitivity":
         return {
             "pl_months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}],
@@ -311,6 +330,13 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "pl.compare":
+        body = result["result"]
+        assert body["revenue"]["milk"]["change"] == 0
+        assert (body["milk"]["volume_effect"], body["milk"]["price_effect"]) == (1_000, -1_000)
+        assert body["costs"]["lines"]["feed"]["change_pct"] == 25
+    elif key == "cf.compare":
+        assert result["result"]["net_cash_flow"]["change"] == -200
     elif key == "risk.sensitivity":
         body = result["result"]
         assert body["scenarios"][0]["break_even"]["surplus_milk_price_c"] == 30
@@ -431,6 +457,10 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key in ("pl.compare", "cf.compare"):
+        body = result["result"]
+        total = body["revenue"]["total"] if key == "pl.compare" else body["cash_in"]
+        assert total == {"actual": 0, "comparison": 0, "change": 0, "change_pct": None}
     elif key == "risk.sensitivity":
         assert result["result"]["scenarios"][0]["break_even"]["surplus_milk_price_c"] is None
         assert [s["name"] for s in result["result"]["scenarios"]] == ["base"]

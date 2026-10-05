@@ -18,6 +18,7 @@ from farm_functions.core.surplus import net_profit, profit_margin, profit_margin
 from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
+from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
 from farm_functions.loans import schedule_loans
@@ -37,6 +38,7 @@ from farm_functions.domain import (
 )
 from farm_functions.schemas import (
     CfMonthlyInput,
+    CfCompareInput,
     CfForecastInput,
     CfMonthsInput,
     KpiSummaryInput,
@@ -47,6 +49,7 @@ from farm_functions.schemas import (
     MonthlyDairyFinancialInput,
     OtherRevenueInput,
     PlMonthlyInput,
+    PlCompareInput,
     PlForecastInput,
     PlMonthsInput,
     PlSummaryInput,
@@ -327,6 +330,27 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=KpiSummaryInput,
         handler=kpi_summary,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="pl.compare",
+        description=(
+            "P&L variance: actual months vs comparison months (prior year or budget). "
+            "Every line with actual, comparison, change and change %; margin change in "
+            "points; milk revenue change split into volume and price effects."
+        ),
+        input_model=PlCompareInput,
+        handler=compare_pl,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="cf.compare",
+        description=(
+            "Cash flow variance: actual months vs comparison months (prior year or "
+            "budget). Every cash line, section and total with change and change %."
+        ),
+        input_model=CfCompareInput,
+        handler=compare_cf,
         supports_provenance=False,
     ),
     CalculationDefinition(

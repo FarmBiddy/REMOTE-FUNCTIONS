@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (Workstream B7)
+Superseded by ADR-0034 (removed; use `risk.sensitivity`). Originally accepted (Workstream B7).
 
 ## Context
 

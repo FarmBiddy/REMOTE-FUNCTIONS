@@ -101,8 +101,7 @@ Characterisation: `tests/test_validation_independence.py`.
 - Operating Statement **authority / reconciliation** characterisation lives in `tests/test_operating_statement_reconciliation.py` (ADR-0009): `pl.summary` as canonical annual view; published atomic schedules match corresponding summary fields.
 - **Period reconciliation** (annual vs monthly shared primitives) lives in `tests/test_period_reconciliation.py` (P1.3): same Core surplus/margin/rounding, Agriculture schemes, Dairy cost catalogue; period identity must not change financial arithmetic; no annual÷12 allocation.
 - **Multi-period P&L** (ADR-0020 / ADR-0021): P2.1/P2.2 Domain; P2.4 HTTP `pl.months` / `tests/test_pl_months_http.py` (nested `months[]` + optional `ytd`; `details.reason` for period-set errors; annual/monthly unchanged).
-- Annual **input-override simulation** characterisation lives in `tests/test_simulation.py` (ADR-0011): explicit overrides + `calculate_annual_pnl`; not a second formula suite.
-- **Named scenario** characterisation lives in `tests/test_scenarios.py` (ADR-0012): packaging/orchestration via B7; independence and name validation — not a second financial suite.
+- **What-if scenarios** live in `tests/test_sensitivity.py` (ADR-0029 / ADR-0031 / ADR-0033).
 - Structured calculation **error codes** (`farm_functions/errors.py`, `tests/test_error_contract.py`) are the machine-readable failure contract for `run_function` / HTTP. Branch on `error.code`, not message text.
 - Numeric **precision policy** characterisation lives in `tests/test_precision_policy.py` (ADR-0006): float internally, banker's rounding at publication, authoritative aggregate totals.
 - Domain / API **alignment** regressions live in `tests/test_domain_api_alignment.py` (catalogue IDs ↔ discovery ↔ OpenAPI required fields).

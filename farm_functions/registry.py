@@ -18,6 +18,11 @@ from farm_functions.core.surplus import net_profit, profit_margin, profit_margin
 from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
+from farm_functions.compare import compare_cf, compare_pl
+from farm_functions.forecast import forecast_cf, forecast_pl
+from farm_functions.kpis import kpi_summary
+from farm_functions.loans import debt_capacity, schedule_loans
+from farm_functions.sensitivity import risk_sensitivity
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
     MonthlyDairyStatementModel,
@@ -33,12 +38,20 @@ from farm_functions.domain import (
 )
 from farm_functions.schemas import (
     CfMonthlyInput,
+    CfCompareInput,
+    CfForecastInput,
     CfMonthsInput,
+    DebtCapacityInput,
+    KpiSummaryInput,
+    RiskSensitivityInput,
+    LoanScheduleInput,
     MilkRevenueInput,
     MonthlyDairyCashFlowInput,
     MonthlyDairyFinancialInput,
     OtherRevenueInput,
     PlMonthlyInput,
+    PlCompareInput,
+    PlForecastInput,
     PlMonthsInput,
     PlSummaryInput,
     ProfitInput,
@@ -294,6 +307,95 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=CfMonthsInput,
         handler=_handle_cf_months,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="loan.schedule",
+        description=(
+            "Loan amortisation from today's state for one or more loans: equal monthly "
+            "instalments, interest / principal per month, % repaid; portfolio totals and "
+            "combined monthly debt service (the cash-flow interest_paid and "
+            "loan_principal_repayments lines)."
+        ),
+        input_model=LoanScheduleInput,
+        handler=schedule_loans,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="debt.capacity",
+        description=(
+            "Repayment capacity (Operating Surplus + off-farm income − drawings − tax) "
+            "over the months sent, cover of current debt service, and the largest new "
+            "loan affordable at a rate, term and required cover (inverse annuity)."
+        ),
+        input_model=DebtCapacityInput,
+        handler=debt_capacity,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="kpi.summary",
+        description=(
+            "Dairy KPIs over the given months (actual or projected): revenue, costs, "
+            "each cost line and Operating Surplus in cents per litre; litres, revenue, "
+            "costs and surplus per cow; debt service cover ratio (Operating Surplus / "
+            "loan repayments). Undefined ratios are null."
+        ),
+        input_model=KpiSummaryInput,
+        handler=kpi_summary,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="pl.compare",
+        description=(
+            "P&L variance: actual months vs comparison months (prior year or budget). "
+            "Every line with actual, comparison, change and change %; margin change in "
+            "points; milk revenue change split into volume and price effects."
+        ),
+        input_model=PlCompareInput,
+        handler=compare_pl,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="cf.compare",
+        description=(
+            "Cash flow variance: actual months vs comparison months (prior year or "
+            "budget). Every cash line, section and total with change and change %."
+        ),
+        input_model=CfCompareInput,
+        handler=compare_cf,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="risk.sensitivity",
+        description=(
+            "What-if scenarios over actual + projected months: milk price (c/L), milk "
+            "volume % and % per line; surplus, DSCR, closing and lowest cash, overdraft "
+            "months per scenario; milk-price break-evens for surplus and for cash."
+        ),
+        input_model=RiskSensitivityInput,
+        handler=risk_sensitivity,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="pl.forecast",
+        description=(
+            "Projected monthly Dairy Operating Statements: same month last year × "
+            "year-to-date run-rate per line; milk price carries the latest actual; "
+            "known values on a forecast month override. Returns run-rate factors."
+        ),
+        input_model=PlForecastInput,
+        handler=forecast_pl,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="cf.forecast",
+        description=(
+            "Projected monthly Dairy Cash Flows: operating lines from same month last "
+            "year × run-rate; investing / financing only when given (e.g. "
+            "loan.schedule rows). Projected inputs plug into cf.months."
+        ),
+        input_model=CfForecastInput,
+        handler=forecast_cf,
         supports_provenance=False,
     ),
 )

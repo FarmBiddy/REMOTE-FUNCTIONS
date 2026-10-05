@@ -58,6 +58,14 @@ def test_discovery_lists_core_functions_only():
     assert keys == {
         "cf.monthly",
         "cf.months",
+        "loan.schedule",
+        "kpi.summary",
+        "risk.sensitivity",
+        "pl.compare",
+        "cf.compare",
+        "debt.capacity",
+        "pl.forecast",
+        "cf.forecast",
         "costs.total",
         "pl.monthly",
         "pl.months",
@@ -69,3 +77,15 @@ def test_discovery_lists_core_functions_only():
         "revenue.schemes",
         "revenue.total",
     }
+
+
+def test_nested_missing_fields_ask_with_paths():
+    """ADR-0027: Biddy can ask for each missing nested value by its path."""
+    loan = {"annual_rate": 0.04, "remaining_months": 12, "year": 2026, "month": 10}
+    result = run_function("loan.schedule", {"loans": [{**loan, "balance": 1}, loan]})
+    assert result["status"] == "needs_input"
+    assert result["missing"] == [{"field": "balance", "unit": "EUR", "path": "loans[1].balance"}]
+    assert result["provided"] == ["loans"]
+
+    cash = run_function("cf.months", {"opening_cash": 0, "months": [{"year": 2026}]})
+    assert cash["missing"] == [{"field": "month", "unit": "month", "path": "months[0].month"}]

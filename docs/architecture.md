@@ -61,6 +61,10 @@ HTTP still accepts a flat JSON object of numbers (see `docs/api-contract.md`). T
 **Multi-period P&L (ADR-0020 / ADR-0021):** Near-term Engine focus is Operating Statements, then Cash Flow. **P2.1** Domain multi-month composition; **P2.2** Domain YTD; **P2.4** public HTTP `pl.months` (nested `months[]` + optional `ytd`; Domain dumps; `ytd: null` when unused). No second P&L engine, no invented months, not annual÷12, not average monthly margins. `pl.summary` and `pl.monthly` stay compatible.
 
 **Cash Flow (ADR-0022 / P3.2):** Explicit monthly cash via `MonthlyDairyCashFlowModel` → `calculate_monthly_dairy_cash_flow` → Dairy `monthly_cash_flow` → Core cash nets. Classification (including Phase 1 `interest_paid` under financing) is Dairy catalogue policy — not Core. Operating cash lines share P&L category IDs (ADR-0023). Not derived from P&L. Public HTTP `cf.monthly` (P3.3): flat body, `year`/`month` required, every cash line optional. Cash position (ADR-0024 / P3.4): optional `opening_cash` on `cf.monthly`; `cf.months` rolls consecutive months from one opening balance (Core `closing_cash`).
+
+**Loans (ADR-0025):** `loan.schedule` → Core `amortisation_schedule` (calendar-blind annuity rows); Application attaches periods. Rows' `interest` / `principal` are passed by the caller into `cf.*` as `interest_paid` / `loan_principal_repayments`; Cash Flow does not call loans internally.
+
+**Forecast (ADR-0026):** `pl.forecast` / `cf.forecast` → Application `forecast.py` maps months to Core period indexes (`core/forecast.py`: run-rate, seasonal projection), applies Dairy line policy (`dairy/forecast.py`: recurring / price / known-only lines), then runs the normal monthly statement or cash flow on the projected inputs.
 ## Target layering (progressive)
 
 Intended separation: **Application/API → Dairy → Agriculture → Core**, with Dairy allowed to call Core directly. Core must not know Dairy or Agriculture vocabulary.

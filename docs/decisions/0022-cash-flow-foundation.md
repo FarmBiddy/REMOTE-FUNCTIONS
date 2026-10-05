@@ -44,6 +44,8 @@ operating-only charts. Minimum fields:
 
 ### D-CF4 — Household drawings later
 
+*Implemented by ADR-0030 (`household_drawings`, financing outflow).*
+
 Not in Phase 1 Engine catalogues. Not permanently “Platform-only”: future Engine
 cash semantics may include drawings/living as a later gate (family-farm cash
 management). Do not add now.

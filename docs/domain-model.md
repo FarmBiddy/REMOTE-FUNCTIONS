@@ -47,10 +47,10 @@ MonthlyDairyCashFlowModel
     inputs: MonthlyDairyCashFlowInput   # operating / investing / financing catalogues
 ```
 
-- Phase 1 catalogue: Dairy `CASH_FLOW_CATALOGUE` (declared once; input schema generated from it). Operating lines reuse **P&L category IDs** (`milk`, `biss`, `feed`, `vet` …; ADR-0023) — same ID, statement decides meaning (cost incurred vs cash paid). Small investing and financing sets (`loan_proceeds`, `loan_principal_repayments`, `interest_paid`, capex/disposals).
+- Phase 1 catalogue: Dairy `CASH_FLOW_CATALOGUE` (declared once; input schema generated from it). Operating lines reuse **P&L category IDs** (`milk`, `biss`, `feed`, `vet` …; ADR-0023) — same ID, statement decides meaning (cost incurred vs cash paid). Small investing and financing sets (`loan_proceeds`, `loan_principal_repayments`, `interest_paid`, `household_drawings`, capex/disposals).
 - Phase 1 Dairy **catalogues** place `interest_paid` under financing outflows; Core does **not** encode that policy (D-CF1).
 - **P3.2:** `calculate_monthly_dairy_cash_flow(MonthlyDairyCashFlowModel)` → Dairy `monthly_cash_flow` → `MonthlyDairyCashFlowResult` (per-activity lines/totals/net + `cash_in` / `cash_out` / `net_cash_flow`). Every catalogue key is published in `lines` (zeros included).
-- Public HTTP: `cf.monthly` (P3.3). No household drawings yet (D-CF4).
+- Public HTTP: `cf.monthly` (P3.3). Household drawings are a financing outflow, cash only (ADR-0030).
 - **P3.4 (ADR-0024):** `opening_cash` on the envelope (may be negative) → `closing_cash = opening + net` (Core). `MultiMonthDairyCashFlowModel` → `calculate_multi_month_dairy_cash_flow`: consecutive months only, each opening with the previous published closing; period totals + `closing_cash`. Public HTTP `cf.months`.
 
 ### Multi-period P&L (ADR-0020)
@@ -174,44 +174,9 @@ CalculationProvenance
 - Existing calculation functions remain **authoritative**. Provenance records how a result was produced; it does not replace or reimplement the formula.
 - Provenance is structured evidence for UI / Agent presentation. It is not natural-language prose.
 
-### Simulation (input overrides)
+### What-if scenarios
 
-In-process simulation applies **explicit** caller-supplied changes to a **copy** of `FinancialInput` and reruns the canonical annual model (ADR-0011). Implementation: `farm_functions/simulation.py` (`simulate_annual_pnl`).
-
-```text
-base FinancialInput
-+ explicit overrides
-→ validated FinancialInput (copy; base unchanged)
-→ calculate_annual_pnl (base) and calculate_annual_pnl (simulated)
-→ SimulationResult { base, simulated, overrides_applied }
-```
-
-- Simulation contains **no** financial formulas — only merge + `calculate_annual_pnl`.
-- Override keys must be existing `FinancialInput` fields; unknown keys are rejected. Merged values use the same B3 validation as normal inputs.
-- Only named fields change (ADR-0008 independence). Multiple overrides are allowed; no cross-field inference.
-- Returns base and simulated `FinancialResult` for comparison. No engine-side deltas or favourable/unfavourable labels.
-- Not forecasting, sensitivity ranges, or Monte Carlo. Named assumption packages are **scenarios** (ADR-0012) built on this primitive.
-- **Not on HTTP** in Phase 1. Provenance for a simulated run: call `explain_annual_pnl` on the simulated `FinancialInput` (ADR-0010).
-
-### Scenarios (named assumption packages)
-
-In-process scenarios package explicit overrides under a caller-defined name and execute them through B7 simulation (ADR-0012). Implementation: `farm_functions/scenarios.py` (`run_scenario`, `run_scenarios`).
-
-```text
-ScenarioDefinition { name, overrides }
-+ base FinancialInput
-→ SimulationRequest → simulate_annual_pnl (B7)
-→ ScenarioResult { name, overrides_applied, result }
-
-run_scenarios → ScenarioBundle { base, scenarios[] }  # caller order; independent runs
-```
-
-- A scenario is **name + assumptions**, not a forecast. `milk_price = 0.35` means calculate **if** milk were €0.35/L.
-- B8 owns non-blank name validation only. Financial override validation remains B7 / `FinancialInput`.
-- Every scenario starts from the original base (Scenario B does not inherit Scenario A).
-- Duplicate names allowed (positional). No Base/Best/Worst engine types, ranking, deltas, or persistence.
-- Empty overrides are valid (named current-position case).
-- **Not on HTTP** in Phase 1. Persistence of scenario libraries belongs to the App Platform (ADR-0003).
+What-if scenarios run over HTTP `risk.sensitivity` (ADR-0029, ADR-0031, ADR-0033). The former in-process annual simulation and named scenarios (ADR-0011 / ADR-0012) were removed (ADR-0034). Persistence of scenario libraries belongs to the App Platform (ADR-0003).
 
 ### FinancialModel
 

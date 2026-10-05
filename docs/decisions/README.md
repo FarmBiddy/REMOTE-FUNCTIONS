@@ -14,8 +14,8 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0008](0008-phase1-validation-independence.md) | Phase 1 structural validation and input independence |
 | [0009](0009-canonical-operating-statement.md) | Canonical Phase 1 annual Operating Statement (`pl.summary`) |
 | [0010](0010-phase1-provenance-boundary.md) | Phase 1 calculation provenance / explainability boundary |
-| [0011](0011-phase1-input-override-simulation.md) | Phase 1 annual input-override simulation |
-| [0012](0012-phase1-named-scenarios.md) | Phase 1 caller-defined named financial scenarios |
+| [0011](0011-phase1-input-override-simulation.md) | Phase 1 annual input-override simulation — *superseded by 0034* |
+| [0012](0012-phase1-named-scenarios.md) | Phase 1 caller-defined named financial scenarios — *superseded by 0034* |
 | [0013](0013-phase1-layer-ownership.md) | Phase 1 layer ownership (Dairy cost catalogue; land leasing) |
 | [0014](0014-core-agriculture-boundaries.md) | Core and Agriculture package boundaries (L2 / L3) |
 | [0015](0015-dairy-specialisation-boundary.md) | Dairy specialisation package boundary (L4) |
@@ -28,6 +28,18 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0022](0022-cash-flow-foundation.md) | Cash Flow foundation decisions (P3.0 / P3.1 contracts) |
 | [0023](0023-shared-category-ids.md) | Shared category IDs across P&L and Cash Flow; cash catalogue declared once |
 | [0024](0024-cash-position-roll-forward.md) | Opening / closing cash and consecutive multi-month roll-forward (`cf.months`) |
+| [0025](0025-engine-scope-loans-forecast.md) | Engine scope for the platform prototype: loan amortisation (`loan.schedule`), forecast, enterprises |
+| [0026](0026-seasonal-run-rate-forecast.md) | Seasonal run-rate forecast (`pl.forecast`, `cf.forecast`) |
+| [0027](0027-nested-needs-input.md) | Nested `needs_input` with `missing[].path` |
+| [0028](0028-dairy-kpis.md) | Dairy KPIs (`kpi.summary`): c/L, per cow, DSCR |
+| [0029](0029-sensitivity-break-even.md) | Sensitivity scenarios and milk-price break-evens (`risk.sensitivity`) |
+| [0030](0030-household-drawings.md) | Household drawings as a financing cash outflow |
+| [0031](0031-investment-scenarios.md) | Investment scenarios in `risk.sensitivity` ("Can I afford it?"); per-scenario break-evens |
+| [0032](0032-kpi-solids-hectare-debt.md) | KPIs per kg milk solids, per hectare and debt |
+| [0033](0033-variable-fixed-costs-herd.md) | Variable / fixed costs, gross margin and herd-size scenarios |
+| [0034](0034-remove-in-process-simulation.md) | Remove in-process annual simulation and named scenarios |
+| [0035](0035-variance-analysis.md) | Variance analysis (`pl.compare`, `cf.compare`) |
+| [0036](0036-debt-capacity.md) | Repayment capacity and borrowing capacity (`debt.capacity`) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

@@ -31,6 +31,14 @@ EXPECTED_PUBLIC_IDS = (
     "pl.months",
     "cf.monthly",
     "cf.months",
+    "loan.schedule",
+    "debt.capacity",
+    "kpi.summary",
+    "pl.compare",
+    "cf.compare",
+    "risk.sensitivity",
+    "pl.forecast",
+    "cf.forecast",
 )
 
 MONTHLY_REFERENCE = {
@@ -92,15 +100,37 @@ def _happy_payload(calculation_id: str) -> dict:
         return {"months": [dict(MONTHLY_REFERENCE)]}
     if calculation_id == "cf.monthly":
         return {"year": 2026, "month": 3, "milk": 18_000, "feed": 5_000}
+    if calculation_id in ("pl.forecast", "cf.forecast"):
+        item = {"year": 2025, "month": 10}
+        if calculation_id == "pl.forecast":
+            item |= {"milk_litres": 1, "milk_price": 1}
+        return {"history": [item], "forecast": [{"year": 2026, "month": 10}]}
+    if calculation_id == "debt.capacity":
+        return {"months": [dict(MONTHLY_REFERENCE)], "annual_rate": 0.05, "term_months": 120}
+    if calculation_id == "pl.compare":
+        return {"actual": [dict(MONTHLY_REFERENCE)], "comparison": [dict(MONTHLY_REFERENCE)]}
+    if calculation_id == "cf.compare":
+        month = {"year": 2026, "month": 3, "milk": 1}
+        return {"actual": [month], "comparison": [month]}
+    if calculation_id == "risk.sensitivity":
+        return {
+            "pl_months": [dict(MONTHLY_REFERENCE)],
+            "cf_months": [{"year": 2026, "month": 3, "milk": 1}],
+            "opening_cash": 0,
+        }
+    if calculation_id == "kpi.summary":
+        return {"months": [dict(MONTHLY_REFERENCE)], "milking_cows": 100}
+    if calculation_id == "loan.schedule":
+        return {"loans": [{"balance": 1_200, "annual_rate": 0, "remaining_months": 12, "year": 2026, "month": 10}]}
     if calculation_id == "cf.months":
         return {"opening_cash": 0, "months": [{"year": 2026, "month": 3, "milk": 1}]}
     raise AssertionError(f"No happy payload for {calculation_id}")
 
 
-def test_exactly_twelve_unique_public_calculation_ids() -> None:
+def test_exactly_twenty_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 12
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 12
+    assert len(PUBLIC_CALCULATION_IDS) == 20
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 20
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

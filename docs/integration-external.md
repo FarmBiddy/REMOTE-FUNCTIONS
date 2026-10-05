@@ -321,15 +321,68 @@ Engine: `127.0.0.1:8000`. Mock UI: typically `localhost:3000`.
 
 ## Client must not
 
-- Recalculate milk revenue, cost totals, or Operating Surplus in the frontend
+- Recalculate milk revenue, cost totals, Operating Surplus, loan balances / instalments, or % repaid in the frontend
 - Call Dairy / Agriculture / Core Python packages
 - Assume HTTP endpoints for simulation, scenarios, provenance, or field-metadata catalogues (deferred)
 
 ## Platform-owned (not this engine)
 
-Loan product cards, supplier debt lists, financial event calendars, forecast UI.
-Jan–Dec **actual** chart series and YTD OS cards should call `pl.months`
-(Engine maths). Forecast and UI chrome remain Platform-owned.
+Loan product data (lender, purpose, rate type), supplier debt lists, financial
+event calendars, forecast UI and chrome. Jan–Dec **actual** chart series and YTD
+OS cards call `pl.months`; cash balance cards call `cf.months`.
+
+Engine-owned maths (ADR-0025): the loans card calls `loan.schedule` once with
+`loans[]`, each with its current `balance`, `annual_rate` (0–1),
+`remaining_months` and next instalment `year` / `month` (+ `original_principal`
+for % repaid). Use `total_balance` / `total_monthly_payment` for the card header
+(never sum in the UI). Pass the combined `months[]` `interest` / `principal` into
+`cf.*` as `interest_paid` / `loan_principal_repayments`.
+
+Family living money taken from the farm account goes in `household_drawings`
+(cash only, financing outflow; recurs in `cf.forecast`; ADR-0030).
+
+Projected months (ADR-0026): call `pl.forecast` / `cf.forecast` with the actual
+months (incl. the same months last year) and the months to project, adding any
+known values (co-op price, scheme payments, `loan.schedule` rows). Chart the
+returned `statement`s; for the cash balance send actual + projected `inputs` to
+`cf.months`. Show `run_rate` to explain the projection.
+
+KPI tiles (ADR-0028): call `kpi.summary` with the same months as the chart
+(actual, or actual + projected `inputs`) and the average `milking_cows`. Use
+`per_litre_c` for c/L cards, `per_cow` for herd cards and `dscr` for "Can I pay
+my loans?". `null` means not computable (no litres / cows / repayments).
+Thresholds (e.g. a lender's minimum DSCR) are Platform / Biddy policy.
+Optional: `milk_solids_kg` (co-op statements) → `per_kg_ms`; `hectares` →
+`per_hectare`; `debt_balance` (`loan.schedule` `total_balance`) → `debt` per cow / ha
+(ADR-0032).
+Variable / fixed costs and gross margin (revenue − variable costs) follow the
+Teagasc split (ADR-0033).
+
+"How much can I borrow?" (ADR-0036): call `debt.capacity` with 12 months
+(actual or projected), the household `drawings`, `tax`, `off_farm_income`, and
+the loan's `annual_rate`, `term_months` and the lender's `min_cover` (e.g. 1.25).
+Show `new_loan.max_principal` and `repayment_cover`.
+
+Variance (ADR-0035): "vs last year" / "vs budget" columns call `pl.compare` or
+`cf.compare` with the two sets of months. Show `milk.volume_effect` /
+`milk.price_effect` to explain a milk income change. Colour (cost up = bad) is
+Platform presentation.
+
+What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
+the cash months, `opening_cash` and the scenarios the farmer picks (e.g.
+`{"name": "milk -5c", "milk_price_c": -5}`). Show each scenario's
+`break_even.cash_milk_price_c` as "below X c/L you go overdrawn" and
+`surplus_milk_price_c` as "below X c/L you make a loss". A cash break-even above
+`milk_price_c` means that scenario already goes overdrawn (see `lowest_cash`).
+
+"Can I afford it?" (ADR-0031): add `investments` to a scenario, e.g.
+`{"name": "new parlour", "investments": [{"year": 2026, "month": 11, "amount": 120000,
+"loan": {"amount": 100000, "annual_rate": 0.05, "remaining_months": 120},
+"monthly_effects": {"labour": -1500}}]}`, and compare it with `base`: DSCR,
+lowest cash, overdraft months, break-evens and `simple_payback_months`.
+
+Herd size / derogation (ADR-0033): `{"name": "10% fewer cows", "herd_pct": -10}`
+moves litres, variable costs and cattle sales; fixed costs stay.
 
 ## Discovery (optional)
 

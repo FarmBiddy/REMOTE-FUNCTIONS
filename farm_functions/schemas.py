@@ -6,9 +6,13 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, create_model
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, create_model, model_validator
 
-from farm_functions.dairy.cash_flow import CASH_FLOW_LINES
+from farm_functions.dairy.cash_flow import (
+    CASH_FLOW_LINES,
+    OPERATING_CASH_INFLOW_CATEGORIES,
+    OPERATING_CASH_OUTFLOW_CATEGORIES,
+)
 
 
 def _parse_finite_number(value: Any) -> float:
@@ -157,7 +161,7 @@ class MonthlyDairyFinancialInput(
 # amounts for the statement month — not P&L accruals. Fields are generated from
 # Dairy ``CASH_FLOW_LINES`` so the catalogue is declared once. Operating lines
 # share P&L category IDs (``feed``, ``milk`` …). Period identity is Domain only.
-# Not included yet: household drawings (D-CF4), opening/closing cash (D-CF3).
+# Household drawings are a financing outflow (ADR-0030).
 # ---------------------------------------------------------------------------
 
 MonthlyDairyCashFlowInput = create_model(
@@ -197,6 +201,49 @@ class CfMonthsInput(_StrictModel):
     months: list[CfMonthItemInput] = Field(..., min_length=1)
 
 
+def _parse_rate_ratio(value: Any) -> float:
+    """Annual rate as a 0–1 ratio (0.042 = 4.2%). Rejects percent-style 4.2."""
+    number = _parse_non_negative_number(value)
+    if number > 1:
+        raise ValueError("must be between 0 and 1")
+    return number
+
+
+def _parse_loan_months(value: Any) -> int:
+    """Whole number of monthly instalments, 1–600 (50 years)."""
+    number = _parse_finite_number(value)
+    if not number.is_integer() or not 1 <= number <= 600:
+        raise ValueError("must be a whole number between 1 and 600")
+    return int(number)
+
+
+class LoanItemInput(_StrictModel):
+    """One loan inside ``loan.schedule`` (ADR-0025).
+
+    State-based: the loan as it stands today. ``year`` / ``month`` is the
+    calendar month of the next instalment.
+    """
+
+    balance: NonNegativeNumber
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    remaining_months: Annotated[int, BeforeValidator(_parse_loan_months)]
+    year: CalendarYear
+    month: CalendarMonth
+    original_principal: NonNegativeNumber | None = None
+
+    @model_validator(mode="after")
+    def _principal_covers_balance(self) -> "LoanItemInput":
+        if self.original_principal is not None and self.original_principal < self.balance:
+            raise ValueError("original_principal must be greater than or equal to balance")
+        return self
+
+
+class LoanScheduleInput(_StrictModel):
+    """HTTP / runner input for ``loan.schedule``: one or more loans, results in input order."""
+
+    loans: list[LoanItemInput] = Field(..., min_length=1, max_length=50)
+
+
 class PlMonthlyInput(MonthlyDairyFinancialInput):
     """Flat HTTP / runner input for ``pl.monthly`` (ADR-0019).
 
@@ -229,6 +276,255 @@ class PlMonthsInput(_StrictModel):
 
     months: list[PlMonthItemInput] = Field(..., min_length=1)
     ytd: PlMonthsYtdInput | None = None
+
+
+def _reject_duplicate_months(items: list[Any]) -> None:
+    seen: set[tuple[int, int]] = set()
+    for item in items:
+        key = (item.year, item.month)
+        if key in seen:
+            raise ValueError(f"duplicate monthly period year={key[0]} month={key[1]}")
+        seen.add(key)
+
+
+class PlCompareInput(_StrictModel):
+    """HTTP / runner input for ``pl.compare`` (ADR-0035): actual vs comparison
+    months (prior year or budget), each in pl.months item shape."""
+
+    actual: list[PlMonthItemInput] = Field(..., min_length=1)
+    comparison: list[PlMonthItemInput] = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def _unique(self) -> "PlCompareInput":
+        _reject_duplicate_months(self.actual)
+        _reject_duplicate_months(self.comparison)
+        return self
+
+
+class CfCompareInput(_StrictModel):
+    """HTTP / runner input for ``cf.compare`` (ADR-0035); cf.months item shape."""
+
+    actual: list[CfMonthItemInput] = Field(..., min_length=1)
+    comparison: list[CfMonthItemInput] = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def _unique(self) -> "CfCompareInput":
+        _reject_duplicate_months(self.actual)
+        _reject_duplicate_months(self.comparison)
+        return self
+
+
+def _parse_cover(value: Any) -> float:
+    """Required debt cover multiple: 1 or more (1.25 = 25% headroom)."""
+    number = _parse_finite_number(value)
+    if number < 1:
+        raise ValueError("must be 1 or greater")
+    return number
+
+
+class DebtCapacityInput(_StrictModel):
+    """HTTP / runner input for ``debt.capacity`` (ADR-0036).
+
+    ``months``: the assessment period (pl.months items, actual or projected).
+    ``drawings`` / ``tax`` / ``off_farm_income``: totals for the same period.
+    """
+
+    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    term_months: Annotated[int, BeforeValidator(_parse_loan_months)]
+    drawings: NonNegativeNumber = 0.0
+    tax: NonNegativeNumber = 0.0
+    off_farm_income: NonNegativeNumber = 0.0
+    min_cover: Annotated[float, BeforeValidator(_parse_cover)] = 1.0
+
+    @model_validator(mode="after")
+    def _unique(self) -> "DebtCapacityInput":
+        _reject_duplicate_months(self.months)
+        return self
+
+
+class KpiSummaryInput(_StrictModel):
+    """HTTP / runner input for ``kpi.summary`` (ADR-0028): the pl.months items
+    for the period plus the average milking herd over it."""
+
+    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    milking_cows: NonNegativeNumber
+    # Optional period totals (ADR-0032).
+    milk_solids_kg: NonNegativeNumber | None = None
+    hectares: NonNegativeNumber | None = None
+    debt_balance: NonNegativeNumber | None = None
+
+
+def _parse_pct_change(value: Any) -> float:
+    """Percentage change; -100 (line goes to 0) or greater."""
+    number = _parse_finite_number(value)
+    if number < -100:
+        raise ValueError("must be -100 or greater")
+    return number
+
+
+PctChange = Annotated[float, BeforeValidator(_parse_pct_change)]
+
+# Lines a scenario may shock by %. Milk has dedicated price / volume shocks.
+SHOCKABLE_LINES = tuple(
+    sorted(
+        (set(MonthlyDairyFinancialInput.model_fields) | set(CASH_FLOW_LINES))
+        - {"milk_litres", "milk_price", "milk"}
+    )
+)
+
+
+# Operating lines an investment can change by a monthly EUR amount (ADR-0031).
+EFFECT_LINES = tuple(
+    line
+    for activity_lines in (OPERATING_CASH_INFLOW_CATEGORIES, OPERATING_CASH_OUTFLOW_CATEGORIES)
+    for line in activity_lines
+    if line != "milk"
+)
+
+
+class InvestmentLoanInput(_StrictModel):
+    """Loan drawn for an investment; first instalment the month after purchase."""
+
+    amount: NonNegativeNumber
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    remaining_months: Annotated[int, BeforeValidator(_parse_loan_months)]
+
+
+class InvestmentInput(_StrictModel):
+    """A capital purchase inside a scenario (ADR-0031)."""
+
+    year: CalendarYear
+    month: CalendarMonth
+    amount: NonNegativeNumber
+    cash_line: Literal["machinery_equipment_payments", "other_capital_payments"] = (
+        "other_capital_payments"
+    )
+    loan: InvestmentLoanInput | None = None
+    monthly_effects: dict[str, SignedNumber] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _known_effect_lines(self) -> "InvestmentInput":
+        unknown = sorted(set(self.monthly_effects) - set(EFFECT_LINES))
+        if unknown:
+            raise ValueError(
+                f"monthly_effects has lines that cannot be changed: {', '.join(unknown)}"
+            )
+        return self
+
+
+class SensitivityScenarioInput(_StrictModel):
+    """One what-if: milk price c/L, milk volume %, herd size %, % per line, investments."""
+
+    name: str | None = Field(None, max_length=40)
+    milk_price_c: SignedNumber = 0.0
+    milk_volume_pct: PctChange = 0.0
+    herd_pct: PctChange = 0.0
+    lines_pct: dict[str, PctChange] = Field(default_factory=dict)
+    investments: list[InvestmentInput] = Field(default_factory=list, max_length=5)
+
+    @model_validator(mode="after")
+    def _known_lines(self) -> "SensitivityScenarioInput":
+        unknown = sorted(set(self.lines_pct) - set(SHOCKABLE_LINES))
+        if unknown:
+            raise ValueError(f"lines_pct has lines that cannot be shocked: {', '.join(unknown)}")
+        return self
+
+
+class RiskSensitivityInput(_StrictModel):
+    """HTTP / runner input for ``risk.sensitivity`` (ADR-0029).
+
+    ``pl_months`` drive surplus / DSCR / milk price; ``cf_months`` (consecutive)
+    and ``opening_cash`` drive the cash balance. Both actual + projected.
+    """
+
+    pl_months: list[PlMonthItemInput] = Field(..., min_length=1)
+    cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
+    opening_cash: SignedNumber
+    scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def _investments_inside_cash_months(self) -> "RiskSensitivityInput":
+        months = {(m.year, m.month) for m in self.cf_months}
+        for scenario in self.scenarios:
+            for inv in scenario.investments:
+                if (inv.year, inv.month) not in months:
+                    raise ValueError(
+                        f"investment month year={inv.year} month={inv.month} is outside cf_months"
+                    )
+        return self
+
+
+# ---------------------------------------------------------------------------
+# Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
+# item shape). ``forecast`` items carry period identity plus optional known
+# values; an omitted (or null) line is projected.
+# ---------------------------------------------------------------------------
+
+
+def _forecast_item_model(name: str, lines: tuple[str, ...]) -> type[BaseModel]:
+    return create_model(
+        name,
+        __base__=_StrictModel,
+        year=(CalendarYear, ...),
+        month=(CalendarMonth, ...),
+        **{line: (NonNegativeNumber | None, None) for line in lines},
+    )
+
+
+def _check_forecast_periods(history: list[Any], forecast: list[Any]) -> None:
+    """Unique periods, forecast after history, prior-year month present."""
+    for items in (history, forecast):
+        seen: set[tuple[int, int]] = set()
+        for item in items:
+            key = (item.year, item.month)
+            if key in seen:
+                raise ValueError(f"duplicate monthly period year={key[0]} month={key[1]}")
+            seen.add(key)
+    actual = {(item.year, item.month) for item in history}
+    last = max(actual)
+    for item in forecast:
+        if (item.year, item.month) <= last:
+            raise ValueError(
+                f"forecast month year={item.year} month={item.month} must be after "
+                f"the last history month year={last[0]} month={last[1]}"
+            )
+        if (item.year - 1, item.month) not in actual:
+            raise ValueError(
+                f"forecast needs prior-year history for year={item.year - 1} month={item.month}"
+            )
+
+
+PlForecastItemInput = _forecast_item_model(
+    "PlForecastItemInput", tuple(MonthlyDairyFinancialInput.model_fields)
+)
+
+
+class PlForecastInput(_StrictModel):
+    """HTTP / runner input for ``pl.forecast`` (ADR-0026)."""
+
+    history: list[PlMonthItemInput] = Field(..., min_length=1)
+    forecast: list[PlForecastItemInput] = Field(..., min_length=1)  # type: ignore[valid-type]
+
+    @model_validator(mode="after")
+    def _periods(self) -> "PlForecastInput":
+        _check_forecast_periods(self.history, self.forecast)
+        return self
+
+
+CfForecastItemInput = _forecast_item_model("CfForecastItemInput", CASH_FLOW_LINES)
+
+
+class CfForecastInput(_StrictModel):
+    """HTTP / runner input for ``cf.forecast`` (ADR-0026)."""
+
+    history: list[CfMonthItemInput] = Field(..., min_length=1)
+    forecast: list[CfForecastItemInput] = Field(..., min_length=1)  # type: ignore[valid-type]
+
+    @model_validator(mode="after")
+    def _periods(self) -> "CfForecastInput":
+        _check_forecast_periods(self.history, self.forecast)
+        return self
 
 
 @dataclass(frozen=True)
@@ -575,6 +871,15 @@ PERIOD_IDENTITY_FIELD_UNITS: dict[str, str] = {
 # Cash position units for ``cf.monthly`` / ``cf.months`` needs_input.
 CASH_POSITION_FIELD_UNITS: dict[str, str] = {"opening_cash": "EUR"}
 
+# Loan state units for ``loan.schedule`` needs_input (ADR-0025).
+LOAN_FIELD_UNITS: dict[str, str] = {
+    "balance": "EUR",
+    "annual_rate": "ratio/year",
+    "remaining_months": "months",
+    "original_principal": "EUR",
+    "term_months": "months",
+}
+
 
 def missing_field_entry(field: str) -> dict[str, str]:
     """Canonical needs_input.missing item: {field, unit}."""
@@ -582,6 +887,7 @@ def missing_field_entry(field: str) -> dict[str, str]:
         FIELD_UNITS.get(field)
         or PERIOD_IDENTITY_FIELD_UNITS.get(field)
         or CASH_POSITION_FIELD_UNITS.get(field)
+        or LOAN_FIELD_UNITS.get(field)
         or MONTHLY_FIELD_UNITS.get(field)
         or "unknown"
     )

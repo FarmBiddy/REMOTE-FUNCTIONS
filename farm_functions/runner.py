@@ -8,8 +8,10 @@ from typing import Any, Union, get_args, get_origin
 from pydantic import BaseModel, ValidationError
 
 from farm_functions.errors import (
+    MISSING_REQUIRED,
     attach_issues,
     invalid_inputs_envelope,
+    issue,
     map_validation_error,
     missing_required_issues,
     non_object_envelope,
@@ -46,6 +48,38 @@ def _field_allows_none(model: type[BaseModel], field_name: str) -> bool:
     if origin is Union or origin is UnionType:
         return type(None) in get_args(annotation)
     return False
+
+
+def _path(loc: tuple[Any, ...]) -> str:
+    """Pydantic loc → caller path, e.g. ``months[3].milk_price``."""
+    out = ""
+    for part in loc:
+        out += f"[{part}]" if isinstance(part, int) else (f".{part}" if out else str(part))
+    return out
+
+
+def _nested_needs_input(
+    name: str, payload: dict[str, Any], known: tuple[str, ...], exc: ValidationError
+) -> dict[str, Any] | None:
+    """ADR-0027: when the only problems are missing nested fields, ask for them."""
+    errors = exc.errors()
+    if not errors or any(err["type"] != "missing" for err in errors):
+        return None
+    missing = []
+    issues = []
+    for err in errors:
+        leaf, path = str(err["loc"][-1]), _path(err["loc"])
+        missing.append({**missing_field_entry(leaf), "path": path})
+        issues.append(issue(MISSING_REQUIRED, f"{path} is required", field=leaf, details={"path": path}))
+    return attach_issues(
+        {
+            "status": "needs_input",
+            "function": name,
+            "missing": missing,
+            "provided": _present_keys(payload, known),
+        },
+        issues,
+    )
 
 
 def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -88,7 +122,9 @@ def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, A
     try:
         parsed = model.model_validate(payload)
     except ValidationError as exc:
-        return invalid_inputs_envelope(name, map_validation_error(exc))
+        return _nested_needs_input(name, payload, known, exc) or invalid_inputs_envelope(
+            name, map_validation_error(exc)
+        )
 
     try:
         result = spec.handler(**parsed.model_dump())

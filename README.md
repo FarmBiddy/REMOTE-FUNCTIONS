@@ -21,9 +21,9 @@ Every call returns one of:
 }
 ```
 
-Missing inputs are listed with field name and unit. They are never guessed. Extra / unknown fields are rejected (`error`). Explicit `0` is valid; `null` and negatives are invalid. Full contract: [`docs/api-contract.md`](docs/api-contract.md).
+Missing inputs are listed with field name and unit (plus `path`, e.g. `months[3].milk_price`, when nested; ADR-0027). They are never guessed. Extra / unknown fields are rejected (`error`). Explicit `0` is valid; `null` and negatives are invalid. Full contract: [`docs/api-contract.md`](docs/api-contract.md).
 
-**Phase 1 public surface (freeze):** HTTP exposes the eight calculation IDs above. In-process-only capabilities — `calculate_annual_pnl`, `explain_annual_pnl`, `simulate_annual_pnl`, `run_scenario` / `run_scenarios` — are documented in [`docs/api-contract.md`](docs/api-contract.md) (Phase 1 public surface). Catalogue `description` is the human-readable label source (`profit.net` = Operating Surplus). HTTP/runner failures use structured `error.code`; in-process domain/sim/scenarios may raise Pydantic/`ValueError` (intentional Phase 1 split).
+**Phase 1 public surface (freeze):** HTTP exposes the eight calculation IDs above. In-process-only capabilities — `calculate_annual_pnl`, `explain_annual_pnl` — are documented in [`docs/api-contract.md`](docs/api-contract.md) (Phase 1 public surface). Catalogue `description` is the human-readable label source (`profit.net` = Operating Surplus). HTTP/runner failures use structured `error.code`; in-process domain calls may raise Pydantic/`ValueError` (intentional Phase 1 split).
 
 Units: **EUR**, **annual**. `profit.margin` returns a 0–1 `margin` and a `margin_pct`. Published money and margins use **banker's rounding** (round half to even; ADR-0005).
 
@@ -45,6 +45,14 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | `pl.months` | `months[]` (+ optional `ytd`) | Multi-month OS list + optional YTD (ADR-0021; not annual ÷ 12) |
 | `cf.monthly` | `year`, `month` (+ optional `opening_cash`) | Explicit monthly Cash Flow: operating / investing / financing, cash in/out, net; closing cash when opening given (ADR-0022/0023/0024) |
 | `cf.months` | `opening_cash`, `months[]` | Consecutive months rolled forward: each month opens with the previous closing cash; period totals + closing cash (ADR-0024) |
+| `loan.schedule` | `loans[]` (each `balance`, `annual_rate`, `remaining_months`, `year`, `month`, optional `original_principal`) | Per-loan amortisation from today's state (equal instalments, interest / principal, % repaid) + portfolio totals and combined monthly debt service (feeds `cf.*` `interest_paid` / `loan_principal_repayments`) (ADR-0025) |
+| `debt.capacity` | `months[]`, `annual_rate`, `term_months` (+ optional `drawings`, `tax`, `off_farm_income`, `min_cover`) | Repayment capacity (surplus + off-farm − drawings − tax), cover of current debt service, and the largest affordable new loan (ADR-0036) |
+| `kpi.summary` | `months[]`, `milking_cows` (+ optional `milk_solids_kg`, `hectares`, `debt_balance`) | Dairy KPIs over the months sent: c/L (incl. each cost line, variable / fixed, gross margin), per cow, per kg milk solids, per hectare, debt per cow / ha; DSCR = Operating Surplus / loan repayments; undefined ratios `null` (ADR-0028, ADR-0032) |
+| `pl.compare` | `actual[]`, `comparison[]` | P&L variance vs prior year or budget: every line with change and %, margin change in points, milk change split into volume and price effects (ADR-0035) |
+| `cf.compare` | `actual[]`, `comparison[]` | Cash flow variance vs prior year or budget: every line, section and total (movements only) (ADR-0035) |
+| `risk.sensitivity` | `pl_months[]`, `cf_months[]`, `opening_cash` (+ `scenarios[]`) | What-if scenarios (milk c/L, volume %, herd size %, % per line): surplus, DSCR, closing / lowest cash, overdraft months; investments with optional loan and monthly effects ("Can I afford it?", payback); exact milk-price break-evens per scenario (ADR-0029, ADR-0031) |
+| `pl.forecast` | `history[]`, `forecast[]` | Projected monthly Operating Statements: same month last year × YTD run-rate per line; milk price carries the latest actual; known values override (ADR-0026) |
+| `cf.forecast` | `history[]`, `forecast[]` | Projected monthly Cash Flows: operating lines seasonal × run-rate; investing / financing only when given (e.g. `loan.schedule` rows); `inputs` plug into `cf.months` (ADR-0026) |
 
 `pl.summary` is the Phase 1 canonical annual Operating Statement (ADR-0009). `pl.monthly` is the explicit monthly statement (ADR-0019). `pl.months` returns chronological monthly statements and optional YTD (ADR-0021). Atomic IDs are supporting schedules that must reconcile to the annual view. `profit.net` and `profit.margin` keep those public IDs (Option A) and expect **already totalled** operating income and operating costs — use `pl.summary` when you still have the raw farm numbers. Loan repayments do not reduce Operating Surplus.
 
@@ -110,7 +118,7 @@ On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on 
 
 ## Out of scope
 
-KPIs (feed ratio, per cow), household drawings, VAT, Monte Carlo, alerts, risk, and farm-file loading from Dairy Financials.
+Benchmarking against other farms, VAT, Monte Carlo, alerts, and farm-file loading from Dairy Financials.
 
 ## Docs
 

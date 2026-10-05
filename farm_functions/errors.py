@@ -245,12 +245,62 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     details={"reason": reason} if reason else None,
                 )
             )
+        elif err_type in (
+            "too_short",
+            "too_long",
+            "list_type",
+            "dict_type",
+            "string_type",
+            "string_too_long",
+            "literal_error",
+        ):
+            # Shape errors on other nested inputs (loans[], history[], scenarios[] …).
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field}: {text}" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                )
+            )
         elif err_type == "extra_forbidden":
             issues.append(
                 issue(
                     UNKNOWN_FIELD,
                     f"{field} is not an accepted field" if field else text,
                     field=field,
+                )
+            )
+        elif text == "must be between 0 and 1":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} must be between 0 and 1" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 0, "maximum": 1},
+                )
+            )
+        elif text == "must be a whole number between 1 and 600":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} {text}" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 1, "maximum": 600},
+                )
+            )
+        elif text == "original_principal must be greater than or equal to balance":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field="original_principal",
+                    details={"reason": "principal_below_balance"},
                 )
             )
         elif "duplicate" in text.lower():
@@ -260,6 +310,59 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                     text,
                     field=field,
                     details={"reason": "duplicate_period"},
+                )
+            )
+        elif text == "must be 1 or greater":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} must be 1 or greater" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 1},
+                )
+            )
+        elif text == "must be -100 or greater":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} must be -100 or greater" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": -100},
+                )
+            )
+        elif text.startswith("lines_pct has lines that cannot be shocked"):
+            issues.append(issue(UNKNOWN_FIELD, text, field="lines_pct"))
+        elif text.startswith("monthly_effects has lines that cannot be changed"):
+            issues.append(issue(UNKNOWN_FIELD, text, field="monthly_effects"))
+        elif "is outside cf_months" in text:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "investment_outside_months"},
+                )
+            )
+        elif "must be after the last history month" in text:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "forecast_overlaps_history"},
+                )
+            )
+        elif "forecast needs prior-year history" in text:
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    text,
+                    field=field,
+                    details={"reason": "missing_prior_year_month"},
                 )
             )
         elif "months must be consecutive" in text:

@@ -36,7 +36,9 @@ CASH_FLOW_CATALOGUE: dict[tuple[CashActivity, CashDirection], tuple[str, ...]] =
     ("investing", "in"): ("asset_disposal_proceeds",),
     ("investing", "out"): ("machinery_equipment_payments", "other_capital_payments"),
     ("financing", "in"): ("loan_proceeds",),
-    ("financing", "out"): ("loan_principal_repayments", "interest_paid"),
+    # Household drawings: owner's family living money out of the farm account
+    # (ADR-0030). Financing, never an operating cost, never on the P&L.
+    ("financing", "out"): ("loan_principal_repayments", "interest_paid", "household_drawings"),
 }
 
 CASH_FLOW_LINES = tuple(name for names in CASH_FLOW_CATALOGUE.values() for name in names)

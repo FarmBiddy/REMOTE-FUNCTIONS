@@ -89,7 +89,7 @@ not crash on unmapped Pydantic types.
 | Missing top-level `months` | `needs_input` | `missing_required` | — |
 | `months: []` | `error` | `invalid_type` | `empty_months` |
 | Duplicate `{year,month}` | `error` | `invalid_type` | `duplicate_period` |
-| Nested missing required driver | `error` | `missing_required` | — (not `needs_input`; runner only scans top-level) |
+| Nested missing required driver | `needs_input` (superseded by ADR-0027; `missing[].path`) | `missing_required` | — |
 | Nested null / negative / non-finite / bad type | `error` | existing codes | — |
 | Invalid calendar `year` / `month` / `as_of_month` | `error` | `invalid_type` | — |
 | YTD gap / missing January | `error` | `invalid_type` | `ytd_incomplete` |

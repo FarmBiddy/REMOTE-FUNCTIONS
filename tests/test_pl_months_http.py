@@ -225,13 +225,25 @@ def test_empty_months_error() -> None:
 
 
 def test_nested_missing_required_field() -> None:
+    """ADR-0027: a missing nested driver is asked for, with its path."""
     result = run_function(
         "pl.months",
         {"months": [{"year": 2026, "month": 1, "milk_price": 1.0}]},
     )
-    assert result["status"] == "error"
+    assert result["status"] == "needs_input"
+    assert result["missing"] == [
+        {"field": "milk_litres", "unit": "litres", "path": "months[0].milk_litres"}
+    ]
     assert result["error"]["code"] == MISSING_REQUIRED
     assert result["error"]["field"] == "milk_litres"
+
+
+def test_nested_missing_with_other_errors_stays_error() -> None:
+    result = run_function(
+        "pl.months",
+        {"months": [{"year": 2026, "month": 1, "milk_price": -1.0}]},
+    )
+    assert result["status"] == "error"
 
 
 def test_negative_monthly_value() -> None:

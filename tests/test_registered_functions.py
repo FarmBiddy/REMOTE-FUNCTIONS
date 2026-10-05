@@ -48,6 +48,66 @@ SAMPLE_CASH_MONTH = {
     "loan_proceeds": 10_000,
     "interest_paid": 500,
 }
+# Zero rate keeps the schedule hand-checkable: 1200 / 12 = 100 per month.
+SAMPLE_LOAN = {
+    "balance": 1_200,
+    "annual_rate": 0,
+    "remaining_months": 12,
+    "year": 2026,
+    "month": 10,
+    "original_principal": 2_400,
+}
+# KPIs: 10,000 L, €4,000 revenue, €2,000 costs (feed), €500 repayments, 10 cows
+# → costs 20 c/L, surplus €200/cow, DSCR 2,000 / 500 = 4.
+SAMPLE_KPI = {
+    "months": [
+        {"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.40, "feed": 2_000, "loan_repayments": 500}
+    ],
+    "milking_cows": 10,
+}
+# Sensitivity: 10,000 L at €0.40 − €3,000 feed = €1,000 surplus → break-even 30 c/L.
+SAMPLE_SENSITIVITY = {
+    "pl_months": [{"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.40, "feed": 3_000}],
+    "cf_months": [{"year": 2026, "month": 3, "milk": 4_000, "feed": 3_000}],
+    "opening_cash": 0,
+    "scenarios": [{"name": "milk -5c", "milk_price_c": -5}],
+}
+# Compare: same month, milk 10,000 L at €0.40 vs 8,000 L at €0.50 (both €4,000):
+# volume effect +1,000, price effect −1,000.
+SAMPLE_PL_COMPARE = {
+    "actual": [{"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.40, "feed": 1_000}],
+    "comparison": [{"year": 2025, "month": 3, "milk_litres": 8_000, "milk_price": 0.50, "feed": 800}],
+}
+SAMPLE_CF_COMPARE = {
+    "actual": [{"year": 2026, "month": 3, "milk": 4_000, "feed": 1_000}],
+    "comparison": [{"year": 2025, "month": 3, "milk": 4_000, "feed": 800}],
+}
+# Debt capacity: surplus 3,000 − drawings 1,000 = 2,000 capacity; repayments 1,500
+# → cover 1.33; 500 headroom at 0% over 10 months → max loan 5,000.
+SAMPLE_DEBT_CAPACITY = {
+    "months": [
+        {"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.40, "feed": 1_000, "loan_repayments": 1_500}
+    ],
+    "annual_rate": 0,
+    "term_months": 10,
+    "drawings": 1_000,
+}
+# Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
+# lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
+SAMPLE_PL_FORECAST = {
+    "history": [
+        {"year": 2025, "month": 10, "milk_litres": 40_000, "milk_price": 0.40, "feed": 5_000},
+        {"year": 2026, "month": 9, "milk_litres": 30_000, "milk_price": 0.45},
+    ],
+    "forecast": [{"year": 2026, "month": 10}],
+}
+# Cash: last October's machinery purchase is a one-off and is not projected.
+SAMPLE_CF_FORECAST = {
+    "history": [
+        {"year": 2025, "month": 10, "milk": 18_000, "feed": 5_000, "machinery_equipment_payments": 6_000}
+    ],
+    "forecast": [{"year": 2026, "month": 10, "interest_paid": 500}],
+}
 
 
 def _happy_payload(key: str) -> dict:
@@ -100,6 +160,22 @@ def _happy_payload(key: str) -> dict:
         return dict(SAMPLE_CASH_MONTH)
     if key == "cf.months":
         return {"opening_cash": 20_000, "months": [dict(SAMPLE_CASH_MONTH)]}
+    if key == "loan.schedule":
+        return {"loans": [dict(SAMPLE_LOAN)]}
+    if key == "pl.forecast":
+        return SAMPLE_PL_FORECAST
+    if key == "kpi.summary":
+        return SAMPLE_KPI
+    if key == "risk.sensitivity":
+        return SAMPLE_SENSITIVITY
+    if key == "pl.compare":
+        return SAMPLE_PL_COMPARE
+    if key == "debt.capacity":
+        return SAMPLE_DEBT_CAPACITY
+    if key == "cf.compare":
+        return SAMPLE_CF_COMPARE
+    if key == "cf.forecast":
+        return SAMPLE_CF_FORECAST
     raise AssertionError(f"No happy payload for {key}")
 
 
@@ -142,6 +218,36 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "cf.months":
         return {"opening_cash": 0, "months": [{"year": 1, "month": 1}]}
+    if key == "loan.schedule":
+        # Instalment count and calendar cannot be zero.
+        return {
+            "loans": [{**dict.fromkeys(SAMPLE_LOAN, 0), "remaining_months": 1, "year": 1, "month": 1}]
+        }
+    if key == "kpi.summary":
+        return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "debt.capacity":
+        month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
+        return {
+            "months": [month], "annual_rate": 0, "term_months": 1,
+            "drawings": 0, "tax": 0, "off_farm_income": 0, "min_cover": 1,
+        }
+    if key == "pl.compare":
+        month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
+        return {"actual": [month], "comparison": [month]}
+    if key == "cf.compare":
+        return {"actual": [{"year": 1, "month": 1}], "comparison": [{"year": 1, "month": 1}]}
+    if key == "risk.sensitivity":
+        return {
+            "pl_months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}],
+            "cf_months": [{"year": 1, "month": 1}],
+            "opening_cash": 0,
+            "scenarios": [],
+        }
+    if key == "pl.forecast":
+        month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
+        return {"history": [month], "forecast": [{"year": 2, "month": 1, "milk_price": 0}]}
+    if key == "cf.forecast":
+        return {"history": [{"year": 1, "month": 1}], "forecast": [{"year": 2, "month": 1, "feed": 0}]}
     known = REQUIRED_FIELDS[key] + OPTIONAL_FIELDS[key]
     payload = {name: 0 for name in known}
     # Calendar identity cannot be zero; keep a valid period with zero money drivers.
@@ -234,6 +340,44 @@ def test_happy_path(key: str) -> None:
         assert body["opening_cash"] == 20_000
         assert body["months"][0]["net_cash_flow"] == 16_500
         assert body["closing_cash"] == 36_500
+    elif key == "loan.schedule":
+        assert result["result"]["total_monthly_payment"] == 100
+        body = result["result"]["loans"][0]
+        assert body["monthly_payment"] == 100
+        assert body["total_payments"] == 1_200
+        assert body["total_interest"] == 0
+        assert body["repaid_pct"] == 50
+        assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "debt.capacity":
+        body = result["result"]
+        assert (body["repayment_capacity"], body["repayment_cover"]) == (2_000, 1.33)
+        assert body["new_loan"]["max_principal"] == 5_000
+    elif key == "pl.compare":
+        body = result["result"]
+        assert body["revenue"]["milk"]["change"] == 0
+        assert (body["milk"]["volume_effect"], body["milk"]["price_effect"]) == (1_000, -1_000)
+        assert body["costs"]["lines"]["feed"]["change_pct"] == 25
+    elif key == "cf.compare":
+        assert result["result"]["net_cash_flow"]["change"] == -200
+    elif key == "risk.sensitivity":
+        body = result["result"]
+        assert body["scenarios"][0]["break_even"]["surplus_milk_price_c"] == 30
+        assert [s["surplus"] for s in body["scenarios"]] == [1_000, 500]
+    elif key == "kpi.summary":
+        body = result["result"]
+        assert body["per_litre_c"]["costs"] == 20
+        assert body["per_cow"]["surplus"] == 200
+        assert body["dscr"] == 4
+    elif key == "pl.forecast":
+        month = result["result"]["months"][0]
+        assert month["period"] == {"kind": "month", "year": 2026, "month": 10}
+        assert month["inputs"]["milk_price"] == 0.45
+        assert month["statement"]["profit"]["net"] == 13_000
+    elif key == "cf.forecast":
+        month = result["result"]["months"][0]
+        assert month["inputs"]["machinery_equipment_payments"] == 0
+        assert month["cash_flow"]["cash_out"] == 5_500
+        assert month["cash_flow"]["net_cash_flow"] == 12_500
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -290,6 +434,8 @@ def test_required_only_optionals_default_to_zero(key: str) -> None:
         body = result["result"]
         assert body["net_cash_flow"] == 0
         assert body["closing_cash"] == 20_000
+    elif key == "loan.schedule":
+        assert result["result"]["loans"][0]["repaid_pct"] == 50
 
 
 @pytest.mark.parametrize("key", FUNCTION_KEYS)
@@ -330,6 +476,23 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["net_cash_flow"] == 0
     elif key == "cf.months":
         assert result["result"]["closing_cash"] == 0
+    elif key == "loan.schedule":
+        assert result["result"]["total_monthly_payment"] == 0
+        assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "debt.capacity":
+        assert result["result"]["repayment_cover"] is None
+        assert result["result"]["new_loan"]["max_principal"] == 0
+    elif key in ("pl.compare", "cf.compare"):
+        body = result["result"]
+        total = body["revenue"]["total"] if key == "pl.compare" else body["cash_in"]
+        assert total == {"actual": 0, "comparison": 0, "change": 0, "change_pct": None}
+    elif key == "risk.sensitivity":
+        assert result["result"]["scenarios"][0]["break_even"]["surplus_milk_price_c"] is None
+        assert [s["name"] for s in result["result"]["scenarios"]] == ["base"]
+    elif key == "kpi.summary":
+        assert result["result"]["per_litre_c"]["costs"] is None
+        assert result["result"]["per_cow"]["surplus"] is None
+        assert result["result"]["dscr"] is None
 
 
 def _missing_required_cases() -> list[tuple[str, str, dict]]:

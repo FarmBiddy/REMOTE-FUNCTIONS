@@ -352,6 +352,9 @@ KPI tiles (ADR-0028): call `kpi.summary` with the same months as the chart
 `per_litre_c` for c/L cards, `per_cow` for herd cards and `dscr` for "Can I pay
 my loans?". `null` means not computable (no litres / cows / repayments).
 Thresholds (e.g. a lender's minimum DSCR) are Platform / Biddy policy.
+Optional: `milk_solids_kg` (co-op statements) → `per_kg_ms`; `hectares` →
+`per_hectare`; `debt_balance` (`loan.schedule` `total_balance`) → `debt` per cow / ha
+(ADR-0032).
 
 What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
 the cash months, `opening_cash` and the scenarios the farmer picks (e.g.

@@ -85,3 +85,23 @@ def test_http_matches_runner():
     payload = {"months": QUARTER, "milking_cows": 100}
     body = client.post("/v1/functions/kpi.summary/run", json=payload).json()
     assert body == run_function("kpi.summary", payload)
+
+
+def test_optional_solids_hectare_and_debt_blocks():
+    """10,000 kg MS, 40 ha, €86,800 debt over the reference quarter (100 cows)."""
+    body = run_function(
+        "kpi.summary",
+        {"months": QUARTER, "milking_cows": 100, "milk_solids_kg": 10_000, "hectares": 40, "debt_balance": 86_800},
+    )["result"]
+    assert body["per_kg_ms"] == {"revenue": 4.8, "costs": 2.5, "surplus": 2.3}
+    assert body["per_hectare"] == {"milk_litres": 3_000, "revenue": 1_200, "costs": 625, "surplus": 575}
+    assert body["debt"] == {"balance": 86_800, "per_cow": 868, "per_hectare": 2_170}
+
+
+def test_optional_blocks_are_null_when_not_sent():
+    body = _kpis()["result"]
+    assert body["per_kg_ms"] is None and body["per_hectare"] is None and body["debt"] is None
+    no_ha = run_function(
+        "kpi.summary", {"months": QUARTER, "milking_cows": 100, "debt_balance": 1_000}
+    )["result"]
+    assert no_ha["debt"]["per_hectare"] is None

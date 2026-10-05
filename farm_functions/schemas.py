@@ -284,6 +284,10 @@ class KpiSummaryInput(_StrictModel):
 
     months: list[PlMonthItemInput] = Field(..., min_length=1)
     milking_cows: NonNegativeNumber
+    # Optional period totals (ADR-0032).
+    milk_solids_kg: NonNegativeNumber | None = None
+    hectares: NonNegativeNumber | None = None
+    debt_balance: NonNegativeNumber | None = None
 
 
 def _parse_pct_change(value: Any) -> float:

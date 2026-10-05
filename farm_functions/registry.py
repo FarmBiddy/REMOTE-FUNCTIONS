@@ -251,7 +251,14 @@ def _handle_loan_schedule(*, loans: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _handle_kpi_summary(*, months: list[dict[str, Any]], milking_cows: float) -> dict[str, Any]:
+def _handle_kpi_summary(
+    *,
+    months: list[dict[str, Any]],
+    milking_cows: float,
+    milk_solids_kg: float | None = None,
+    hectares: float | None = None,
+    debt_balance: float | None = None,
+) -> dict[str, Any]:
     """Run the monthly statements, total them, then derive Dairy KPIs (ADR-0028)."""
     statements = calculate_multi_month_dairy_statements(
         MultiMonthDairyStatementModel(
@@ -288,7 +295,14 @@ def _handle_kpi_summary(*, months: list[dict[str, Any]], milking_cows: float) ->
         "month_count": len(statements),
         "milking_cows": milking_cows,
         "totals": {name: round_money(value) for name, value in totals.items()},
-        **dairy_kpis(milking_cows=milking_cows, cost_lines=cost_lines, **totals),
+        **dairy_kpis(
+            milking_cows=milking_cows,
+            cost_lines=cost_lines,
+            milk_solids_kg=milk_solids_kg,
+            hectares=hectares,
+            debt_balance=debt_balance,
+            **totals,
+        ),
     }
 
 

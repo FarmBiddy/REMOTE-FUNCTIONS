@@ -35,7 +35,7 @@ of scope for Phase 1; the prototype now needs them.
 ## Consequences
 
 - KPIs over a forecast: send actual + projected months together.
-- Not included: milk solids (kg MS) basis, per-hectare figures, stocking rate,
+- kg MS, per-hectare and debt ratios: ADR-0032. Not included: stocking rate,
   benchmarks against other farms.
 
 ## Related

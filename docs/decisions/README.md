@@ -35,6 +35,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0029](0029-sensitivity-break-even.md) | Sensitivity scenarios and milk-price break-evens (`risk.sensitivity`) |
 | [0030](0030-household-drawings.md) | Household drawings as a financing cash outflow |
 | [0031](0031-investment-scenarios.md) | Investment scenarios in `risk.sensitivity` ("Can I afford it?"); per-scenario break-evens |
+| [0032](0032-kpi-solids-hectare-debt.md) | KPIs per kg milk solids, per hectare and debt |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

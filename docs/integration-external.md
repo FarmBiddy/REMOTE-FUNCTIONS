@@ -397,6 +397,10 @@ Platform presentation.
 Send `shocks_from_year` / `shocks_from_month` = the first projected month so
 scenarios mean "from now on" and past months stay as they happened (ADR-0040).
 
+"What affects me most?" (ADR-0044): call `risk.tornado` with the same months
+as the what-if panel and draw `drivers` as a tornado chart (bars from `low` to
+`high`, already sorted). `rank_by: closing_cash` for a cash view.
+
 Interest rates and stress tests (ADR-0043): mark variable-rate loans with
 `variable: true`. Send the same `loans` to `risk.sensitivity` and use
 `rate_shift_pp` per scenario, or `interest_rate_shift_pp` per year in

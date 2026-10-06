@@ -362,6 +362,10 @@ Machinery and buildings (ADR-0037): keep the register on the Platform and call
 `assets.schedule` for the period to get depreciation and net book values (results
 in input order). Land is not depreciated.
 
+Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
+(`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
+interest) and the livestock / stock valuations at start and end.
+
 "How much can I borrow?" (ADR-0036): call `debt.capacity` with 12 months
 (actual or projected), the household `drawings`, `tax`, `off_farm_income`, and
 the loan's `annual_rate`, `term_months` and the lender's `min_cover` (e.g. 1.25).

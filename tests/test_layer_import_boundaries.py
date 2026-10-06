@@ -33,6 +33,7 @@ _APPLICATION_MODULES = (
     FARM / "accounts.py",
     FARM / "reports.py",
     FARM / "projections.py",
+    FARM / "decisions.py",
     FARM / "errors.py",
     FARM / "schemas.py",
     FARM / "loaders" / "json_loader.py",

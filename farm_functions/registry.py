@@ -21,12 +21,13 @@ from farm_functions.dairy.statement import pl_summary
 from farm_functions.accounts import bs_summary, pl_net
 from farm_functions.assets import assets_schedule
 from farm_functions.compare import compare_cf, compare_pl
+from farm_functions.decisions import investment_appraisal, partial_budget
 from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.reports import report_accountant, report_advisor, report_bank
-from farm_functions.sensitivity import risk_sensitivity
+from farm_functions.sensitivity import risk_sensitivity, risk_tornado
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
     MonthlyDairyStatementModel,
@@ -51,6 +52,7 @@ from farm_functions.schemas import (
     DebtCapacityInput,
     KpiSummaryInput,
     RiskSensitivityInput,
+    RiskTornadoInput,
     LoanScheduleInput,
     MilkRevenueInput,
     MonthlyDairyCashFlowInput,
@@ -58,6 +60,8 @@ from farm_functions.schemas import (
     OtherRevenueInput,
     PlMonthlyInput,
     PlCompareInput,
+    InvestmentAppraisalInput,
+    PartialBudgetInput,
     PlanProjectionInput,
     PlForecastInput,
     PlNetInput,
@@ -417,6 +421,39 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=RiskSensitivityInput,
         handler=risk_sensitivity,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="risk.tornado",
+        description=(
+            "Driver ranking: moves milk price, milk volume, herd size, each line with "
+            "an amount and (for variable loans) the interest rate one at a time down "
+            "and up by a step; ranks drivers by their swing in surplus or cash."
+        ),
+        input_model=RiskTornadoInput,
+        handler=risk_tornado,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="decision.partial_budget",
+        description=(
+            "Partial budget for a farm change: added income + reduced costs − added "
+            "costs − reduced income − annual capital charge = net annual change; "
+            "payback and return on investment when capital is tied up."
+        ),
+        input_model=PartialBudgetInput,
+        handler=partial_budget,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="decision.investment",
+        description=(
+            "Investment appraisal over the asset's life: NPV at a discount rate, IRR, "
+            "simple and discounted payback, profitability index and the discounted "
+            "year-by-year schedule. Constant or explicit annual cash flows."
+        ),
+        input_model=InvestmentAppraisalInput,
+        handler=investment_appraisal,
         supports_provenance=False,
     ),
     CalculationDefinition(

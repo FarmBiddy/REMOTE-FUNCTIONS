@@ -230,6 +230,8 @@ class LoanItemInput(_StrictModel):
     year: CalendarYear
     month: CalendarMonth
     original_principal: NonNegativeNumber | None = None
+    # Variable-rate loans follow interest-rate shocks (ADR-0043); fixed ones do not.
+    variable: bool = False
 
     @model_validator(mode="after")
     def _principal_covers_balance(self) -> "LoanItemInput":
@@ -499,6 +501,8 @@ class SensitivityScenarioInput(_StrictModel):
     milk_price_c: SignedNumber = 0.0
     milk_volume_pct: PctChange = 0.0
     herd_pct: PctChange = 0.0
+    # Percentage points added to variable-rate loans in ``loans`` (ADR-0043).
+    rate_shift_pp: SignedNumber = 0.0
     lines_pct: dict[str, PctChange] = Field(default_factory=dict)
     investments: list[InvestmentInput] = Field(default_factory=list, max_length=5)
 
@@ -510,8 +514,8 @@ class SensitivityScenarioInput(_StrictModel):
         return self
 
 
-class RiskSensitivityInput(_StrictModel):
-    """HTTP / runner input for ``risk.sensitivity`` (ADR-0029).
+class _RiskBaseInput(_StrictModel):
+    """Months, cash, loans and shock start shared by the risk IDs.
 
     ``pl_months`` drive surplus / DSCR / milk price; ``cf_months`` (consecutive)
     and ``opening_cash`` drive the cash balance. Both actual + projected.
@@ -520,15 +524,26 @@ class RiskSensitivityInput(_StrictModel):
     pl_months: list[PlMonthItemInput] = Field(..., min_length=1)
     cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
     opening_cash: SignedNumber
-    scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+    # Loans behind the months' loan lines; variable ones follow rate shocks (ADR-0043).
+    loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
     # Optional: shocks apply from this month on; earlier months are history (ADR-0040).
     shocks_from_year: CalendarYear | None = None
     shocks_from_month: CalendarMonth | None = None
 
     @model_validator(mode="after")
-    def _investments_inside_cash_months(self) -> "RiskSensitivityInput":
+    def _shock_start_pair(self) -> "_RiskBaseInput":
         if (self.shocks_from_year is None) != (self.shocks_from_month is None):
             raise ValueError("shocks_from_year and shocks_from_month must be sent together")
+        return self
+
+
+class RiskSensitivityInput(_RiskBaseInput):
+    """HTTP / runner input for ``risk.sensitivity`` (ADR-0029)."""
+
+    scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def _investments_inside_cash_months(self) -> "RiskSensitivityInput":
         months = {(m.year, m.month) for m in self.cf_months}
         for scenario in self.scenarios:
             for inv in scenario.investments:
@@ -536,6 +551,87 @@ class RiskSensitivityInput(_StrictModel):
                     raise ValueError(
                         f"investment month year={inv.year} month={inv.month} is outside cf_months"
                     )
+        return self
+
+
+def _parse_step_pct(value: Any) -> float:
+    """Tornado step: a % above 0 and at most 100."""
+    number = _parse_finite_number(value)
+    if not 0 < number <= 100:
+        raise ValueError("must be above 0 and at most 100")
+    return number
+
+
+class RiskTornadoInput(_RiskBaseInput):
+    """HTTP / runner input for ``risk.tornado`` (ADR-0044)."""
+
+    step_pct: Annotated[float, BeforeValidator(_parse_step_pct)] = 10.0
+    rate_step_pp: Annotated[float, BeforeValidator(_parse_non_negative_number)] = 1.0
+    rank_by: Literal["surplus", "closing_cash", "lowest_cash"] = "surplus"
+
+
+def _parse_life_years(value: Any) -> float:
+    """Asset life in years: above 0, at most 100."""
+    number = _parse_finite_number(value)
+    if not 0 < number <= 100:
+        raise ValueError("must be above 0 and at most 100")
+    return number
+
+
+class BudgetItemInput(_StrictModel):
+    """One labelled annual amount in a partial budget (ADR-0045)."""
+
+    label: str = Field(..., min_length=1, max_length=60)
+    amount: NonNegativeNumber
+
+
+class CapitalInput(_StrictModel):
+    """Capital tied up by the change: charged as depreciation + interest on half."""
+
+    amount: NonNegativeNumber
+    life_years: Annotated[float, BeforeValidator(_parse_life_years)]
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)] = 0.0
+
+
+class PartialBudgetInput(_StrictModel):
+    """HTTP / runner input for ``decision.partial_budget`` (ADR-0045)."""
+
+    added_income: list[BudgetItemInput] = Field(default_factory=list, max_length=30)
+    reduced_costs: list[BudgetItemInput] = Field(default_factory=list, max_length=30)
+    added_costs: list[BudgetItemInput] = Field(default_factory=list, max_length=30)
+    reduced_income: list[BudgetItemInput] = Field(default_factory=list, max_length=30)
+    capital: CapitalInput | None = None
+
+
+def _parse_life_years_whole(value: Any) -> int:
+    """Investment life: whole number of years, 1–40."""
+    number = _parse_finite_number(value)
+    if not number.is_integer() or not 1 <= number <= 40:
+        raise ValueError("must be a whole number between 1 and 40")
+    return int(number)
+
+
+class InvestmentAppraisalInput(_StrictModel):
+    """HTTP / runner input for ``decision.investment`` (ADR-0046).
+
+    Benefits either as a constant ``annual_benefit`` over ``life_years`` or as
+    explicit year-by-year ``cash_flows`` (year 1 first; may be negative).
+    """
+
+    amount: NonNegativeNumber
+    discount_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    annual_benefit: SignedNumber | None = None
+    life_years: Annotated[int, BeforeValidator(_parse_life_years_whole)] | None = None
+    cash_flows: list[SignedNumber] = Field(default_factory=list, max_length=40)
+    residual_value: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _one_benefit_form(self) -> "InvestmentAppraisalInput":
+        simple = self.annual_benefit is not None or self.life_years is not None
+        if simple == bool(self.cash_flows):
+            raise ValueError("send either annual_benefit with life_years, or cash_flows")
+        if simple and (self.annual_benefit is None or self.life_years is None):
+            raise ValueError("send either annual_benefit with life_years, or cash_flows")
         return self
 
 
@@ -625,6 +721,8 @@ class ProjectionAssumptionsInput(_StrictModel):
     drawings: list[NonNegativeNumber] = Field(default_factory=list)
     tax: list[NonNegativeNumber] = Field(default_factory=list)
     off_farm_income: list[NonNegativeNumber] = Field(default_factory=list)
+    # Percentage points on variable-rate loans vs today, per year; carried (ADR-0043).
+    interest_rate_shift_pp: list[SignedNumber] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _known_lines(self) -> "ProjectionAssumptionsInput":
@@ -639,7 +737,7 @@ class ProjectionAssumptionsInput(_StrictModel):
     def lists(self) -> list[list[float]]:
         return [
             self.milk_price, self.herd_pct, self.yield_pct, self.cost_inflation_pct,
-            self.drawings, self.tax, self.off_farm_income,
+            self.drawings, self.tax, self.off_farm_income, self.interest_rate_shift_pp,
             *self.lines_inflation_pct.values(), *self.lines_amount.values(),
         ]
 

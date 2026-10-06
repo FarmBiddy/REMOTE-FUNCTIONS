@@ -251,6 +251,7 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             "list_type",
             "dict_type",
             "string_type",
+            "string_too_short",
             "string_too_long",
             "literal_error",
         ):
@@ -354,6 +355,30 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(issue(INVALID_TYPE, text, field="investments", details={"reason": "investment_outside_years"}))
         elif text == "period end must not be before period start":
             issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "period_reversed"}))
+        elif text == "must be above 0 and at most 100":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} {text}" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum_exclusive": 0, "maximum": 100},
+                )
+            )
+        elif text == "must be a whole number between 1 and 40":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} {text}" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 1, "maximum": 40},
+                )
+            )
+        elif text == "send either annual_benefit with life_years, or cash_flows":
+            issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "benefit_form"}))
         elif text == "must be 1 or greater":
             issues.append(
                 issue(

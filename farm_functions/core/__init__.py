@@ -20,11 +20,13 @@ from farm_functions.core.forecast import (
     seasonal_projection,
 )
 from farm_functions.core.growth import carry_forward, compound_indexes
+from farm_functions.core.investment import annual_capital_charge, discounted_payback, irr, npv
 from farm_functions.core.loans import (
     AmortisationRow,
     amortisation_schedule,
     annuity_payment,
     annuity_principal,
+    repricing_schedule,
 )
 from farm_functions.core.ratios import coverage_ratio, per_unit
 from farm_functions.core.rounding import (
@@ -41,6 +43,7 @@ __all__ = [
     "CashActivity",
     "CashDirection",
     "amortisation_schedule",
+    "annual_capital_charge",
     "break_even_shift",
     "carry_forward",
     "annuity_payment",
@@ -49,16 +52,20 @@ __all__ = [
     "change_pct",
     "closing_cash",
     "compound_indexes",
+    "discounted_payback",
     "coverage_ratio",
+    "irr",
     "latest_non_zero",
     "min_shift_all_non_negative",
     "net_cash_flow",
     "net_profit",
+    "npv",
     "profit_margin",
     "per_unit",
     "price_volume_effects",
     "profit_margin_pct",
     "reducing_balance_nbv",
+    "repricing_schedule",
     "round_margin_pct",
     "round_margin_ratio",
     "round_money",

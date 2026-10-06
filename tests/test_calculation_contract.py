@@ -40,6 +40,9 @@ EXPECTED_PUBLIC_IDS = (
     "pl.compare",
     "cf.compare",
     "risk.sensitivity",
+    "risk.tornado",
+    "decision.partial_budget",
+    "decision.investment",
     "report.bank",
     "report.advisor",
     "report.accountant",
@@ -121,6 +124,16 @@ def _happy_payload(calculation_id: str) -> dict:
         return {"months": [dict(MONTHLY_REFERENCE)], "annual_rate": 0.05, "term_months": 120}
     if calculation_id == "pl.net":
         return {"months": [dict(MONTHLY_REFERENCE)], "depreciation": 100, "interest": 50}
+    if calculation_id == "decision.investment":
+        return {"amount": 1_000, "discount_rate": 0.05, "annual_benefit": 200, "life_years": 10}
+    if calculation_id == "decision.partial_budget":
+        return {"added_income": [{"label": "a", "amount": 1}]}
+    if calculation_id == "risk.tornado":
+        return {
+            "pl_months": [dict(MONTHLY_REFERENCE)],
+            "cf_months": [{"year": 2026, "month": 3, "milk": 1}],
+            "opening_cash": 0,
+        }
     if calculation_id == "plan.projection":
         months = [{**MONTHLY_REFERENCE, "year": 2025, "month": m} for m in range(1, 13)]
         return {"base_pl_months": months, "opening_cash": 0, "milking_cows": 100}
@@ -153,10 +166,10 @@ def _happy_payload(calculation_id: str) -> dict:
     raise AssertionError(f"No happy payload for {calculation_id}")
 
 
-def test_exactly_twenty_seven_unique_public_calculation_ids() -> None:
+def test_exactly_thirty_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 27
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 27
+    assert len(PUBLIC_CALCULATION_IDS) == 30
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 30
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

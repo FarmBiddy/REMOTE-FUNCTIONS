@@ -397,6 +397,25 @@ Platform presentation.
 Send `shocks_from_year` / `shocks_from_month` = the first projected month so
 scenarios mean "from now on" and past months stay as they happened (ADR-0040).
 
+"Is this change worth it?" (ADR-0045): `decision.partial_budget` with the
+farmer's or advisor's labelled annual amounts (rent land, contract rearing, buy
+vs grow feed). Labels are yours and come back unchanged.
+
+"Is it a good investment over its life?" (ADR-0046): `decision.investment`
+with the outlay, the yearly benefit (or year-by-year cash flows), any resale
+value and the discount rate the user or lender chooses. Show NPV and IRR with
+the discounted payback; pair with `risk.sensitivity` for affordability.
+
+"What affects me most?" (ADR-0044): call `risk.tornado` with the same months
+as the what-if panel and draw `drivers` as a tornado chart (bars from `low` to
+`high`, already sorted). `rank_by: closing_cash` for a cash view.
+
+Interest rates and stress tests (ADR-0043): mark variable-rate loans with
+`variable: true`. Send the same `loans` to `risk.sensitivity` and use
+`rate_shift_pp` per scenario, or `interest_rate_shift_pp` per year in
+`plan.projection`. Stress tests are your named presets of combined shocks
+(e.g. "2016": milk_price_c −9, lines_pct.feed +20, rate_shift_pp +2).
+
 What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
 the cash months, `opening_cash` and the scenarios the farmer picks (e.g.
 `{"name": "milk -5c", "milk_price_c": -5}`). Show each scenario's

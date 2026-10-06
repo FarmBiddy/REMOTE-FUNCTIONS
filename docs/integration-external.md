@@ -358,6 +358,24 @@ Optional: `milk_solids_kg` (co-op statements) → `per_kg_ms`; `hectares` →
 Variable / fixed costs and gross margin (revenue − variable costs) follow the
 Teagasc split (ADR-0033).
 
+Machinery and buildings (ADR-0037): keep the register on the Platform and call
+`assets.schedule` for the period to get depreciation and net book values (results
+in input order). Land is not depreciated.
+
+Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
+(`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
+interest) and the livestock / stock valuations at start and end.
+
+Reports (ADR-0041): build one farm file and call `report.bank`,
+`report.advisor` or `report.accountant`. Each returns structured sections
+(outputs of the matching IDs) for the Platform to render as a PDF or screen.
+`drawings` / `tax` / `off_farm_income` are totals for the reporting period.
+
+Balance sheet (ADR-0039): call `bs.summary` for a month end with the bank
+balance (`cash`, negative = overdraft), debtors, stock, livestock and land values,
+creditors (supplier debt card), the same `loans[]` as `loan.schedule` and the
+same register as `assets.schedule`. The Engine splits loans and values assets.
+
 "How much can I borrow?" (ADR-0036): call `debt.capacity` with 12 months
 (actual or projected), the household `drawings`, `tax`, `off_farm_income`, and
 the loan's `annual_rate`, `term_months` and the lender's `min_cover` (e.g. 1.25).
@@ -367,6 +385,9 @@ Variance (ADR-0035): "vs last year" / "vs budget" columns call `pl.compare` or
 `cf.compare` with the two sets of months. Show `milk.volume_effect` /
 `milk.price_effect` to explain a milk income change. Colour (cost up = bad) is
 Platform presentation.
+
+Send `shocks_from_year` / `shocks_from_month` = the first projected month so
+scenarios mean "from now on" and past months stay as they happened (ADR-0040).
 
 What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
 the cash months, `opening_cash` and the scenarios the farmer picks (e.g.

@@ -343,6 +343,85 @@ class DebtCapacityInput(_StrictModel):
         return self
 
 
+class PlNetInput(_StrictModel):
+    """HTTP / runner input for ``pl.net`` (ADR-0038): months + period totals.
+
+    ``depreciation`` from ``assets.schedule``, ``interest`` from ``loan.schedule``
+    rows; livestock / stock values are Platform valuations at period start / end.
+    """
+
+    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    depreciation: NonNegativeNumber = 0.0
+    interest: NonNegativeNumber = 0.0
+    livestock_opening_value: NonNegativeNumber = 0.0
+    livestock_closing_value: NonNegativeNumber = 0.0
+    stock_opening_value: NonNegativeNumber = 0.0
+    stock_closing_value: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _unique(self) -> "PlNetInput":
+        _reject_duplicate_months(self.months)
+        return self
+
+
+class AssetInput(_StrictModel):
+    """One fixed asset in the register (ADR-0037). ``year`` / ``month`` = acquired."""
+
+    category: Literal["machinery", "buildings", "other"] = "machinery"
+    cost: NonNegativeNumber
+    year: CalendarYear
+    month: CalendarMonth
+    method: Literal["straight_line", "reducing_balance"] = "straight_line"
+    life_months: Annotated[int, BeforeValidator(_parse_loan_months)] | None = None
+    residual_value: NonNegativeNumber = 0.0
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)] | None = None
+
+    @model_validator(mode="after")
+    def _method_fields(self) -> "AssetInput":
+        if self.method == "straight_line" and self.life_months is None:
+            raise ValueError("life_months is required for straight_line")
+        if self.method == "reducing_balance" and self.annual_rate is None:
+            raise ValueError("annual_rate is required for reducing_balance")
+        if self.residual_value > self.cost:
+            raise ValueError("residual_value must not exceed cost")
+        return self
+
+
+class BsSummaryInput(_StrictModel):
+    """HTTP / runner input for ``bs.summary`` (ADR-0039): balance sheet at the end
+    of ``year`` / ``month``. Loans and the asset register use the
+    ``loan.schedule`` / ``assets.schedule`` item shapes; other values are
+    Platform valuations / balances at that date."""
+
+    year: CalendarYear
+    month: CalendarMonth
+    cash: SignedNumber = 0.0
+    debtors: NonNegativeNumber = 0.0
+    stock: NonNegativeNumber = 0.0
+    livestock: NonNegativeNumber = 0.0
+    land: NonNegativeNumber = 0.0
+    creditors: NonNegativeNumber = 0.0
+    other_long_term_liabilities: NonNegativeNumber = 0.0
+    loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
+    assets: list[AssetInput] = Field(default_factory=list, max_length=200)
+
+
+class AssetsScheduleInput(_StrictModel):
+    """HTTP / runner input for ``assets.schedule`` (ADR-0037): register + period."""
+
+    assets: list[AssetInput] = Field(..., min_length=1, max_length=200)
+    from_year: CalendarYear
+    from_month: CalendarMonth
+    to_year: CalendarYear
+    to_month: CalendarMonth
+
+    @model_validator(mode="after")
+    def _ordered(self) -> "AssetsScheduleInput":
+        if (self.to_year, self.to_month) < (self.from_year, self.from_month):
+            raise ValueError("period end must not be before period start")
+        return self
+
+
 class KpiSummaryInput(_StrictModel):
     """HTTP / runner input for ``kpi.summary`` (ADR-0028): the pl.months items
     for the period plus the average milking herd over it."""
@@ -442,9 +521,14 @@ class RiskSensitivityInput(_StrictModel):
     cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
     opening_cash: SignedNumber
     scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+    # Optional: shocks apply from this month on; earlier months are history (ADR-0040).
+    shocks_from_year: CalendarYear | None = None
+    shocks_from_month: CalendarMonth | None = None
 
     @model_validator(mode="after")
     def _investments_inside_cash_months(self) -> "RiskSensitivityInput":
+        if (self.shocks_from_year is None) != (self.shocks_from_month is None):
+            raise ValueError("shocks_from_year and shocks_from_month must be sent together")
         months = {(m.year, m.month) for m in self.cf_months}
         for scenario in self.scenarios:
             for inv in scenario.investments:
@@ -452,6 +536,63 @@ class RiskSensitivityInput(_StrictModel):
                     raise ValueError(
                         f"investment month year={inv.year} month={inv.month} is outside cf_months"
                     )
+        return self
+
+
+class NewLoanTermsInput(_StrictModel):
+    """Terms of the loan being applied for (``debt.capacity`` in the bank report)."""
+
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    term_months: Annotated[int, BeforeValidator(_parse_loan_months)]
+    min_cover: Annotated[float, BeforeValidator(_parse_cover)] = 1.0
+
+
+class FarmReportInput(_StrictModel):
+    """Farm file shared by ``report.bank`` / ``report.advisor`` / ``report.accountant``
+    (ADR-0041). Reporting period = ``pl_months``; report date = its last month.
+
+    Item shapes reuse the other IDs: ``pl.months``, ``cf.months``,
+    ``loan.schedule`` (loans as at the report date), ``assets.schedule``.
+    Balances / valuations are at the report date; opening valuations default to
+    the closing ones (no change).
+    """
+
+    pl_months: list[PlMonthItemInput] = Field(..., min_length=1)
+    cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
+    opening_cash: SignedNumber
+    milking_cows: NonNegativeNumber
+    hectares: NonNegativeNumber | None = None
+    milk_solids_kg: NonNegativeNumber | None = None
+    prior_pl_months: list[PlMonthItemInput] = Field(default_factory=list)
+    projected_pl_months: list[PlMonthItemInput] = Field(default_factory=list)
+    projected_cf_months: list[CfMonthItemInput] = Field(default_factory=list)
+    loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
+    assets: list[AssetInput] = Field(default_factory=list, max_length=200)
+    debtors: NonNegativeNumber = 0.0
+    stock: NonNegativeNumber = 0.0
+    livestock: NonNegativeNumber = 0.0
+    land: NonNegativeNumber = 0.0
+    creditors: NonNegativeNumber = 0.0
+    other_long_term_liabilities: NonNegativeNumber = 0.0
+    livestock_opening_value: NonNegativeNumber | None = None
+    stock_opening_value: NonNegativeNumber | None = None
+    drawings: NonNegativeNumber = 0.0
+    tax: NonNegativeNumber = 0.0
+    off_farm_income: NonNegativeNumber = 0.0
+    new_loan: NewLoanTermsInput | None = None
+    scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def _aligned(self) -> "FarmReportInput":
+        for items in (self.pl_months, self.prior_pl_months, self.projected_pl_months):
+            _reject_duplicate_months(items)
+        last_pl = max((m.year, m.month) for m in self.pl_months)
+        last_cf = max((m.year, m.month) for m in self.cf_months)
+        if last_pl != last_cf:
+            raise ValueError("cf_months must end in the same month as pl_months")
+        for items in (self.projected_pl_months, self.projected_cf_months):
+            if items and min((m.year, m.month) for m in items) <= last_pl:
+                raise ValueError("projected months must be after the reporting period")
         return self
 
 
@@ -865,6 +1006,10 @@ FIELD_UNITS: dict[str, str] = {item.name: item.unit for item in INPUT_FIELD_META
 PERIOD_IDENTITY_FIELD_UNITS: dict[str, str] = {
     "year": "year",
     "month": "month",
+    "from_year": "year",
+    "from_month": "month",
+    "to_year": "year",
+    "to_month": "month",
 }
 
 

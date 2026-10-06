@@ -126,7 +126,7 @@ For the current annual P&L it matches `pl.summary` JSON: `currency`, `period`, n
 - `profit.margin` / `margin_pct` — Operating Surplus margin (public ID kept)
 - `finance.loan_repayments` — debt service reported separately; does not reduce Operating Surplus
 
-Phase 1 is a basic annual Operating Statement, not full accounting net profit (no depreciation, tax, drawings, livestock valuation, etc.).
+Phase 1 is a basic annual Operating Statement, not full accounting net profit (no depreciation, tax, drawings, livestock valuation, etc.). Net profit before tax is a separate bridge, `pl.net` (ADR-0038).
 
 ### Rounding and numeric precision
 

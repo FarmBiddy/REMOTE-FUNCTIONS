@@ -434,6 +434,10 @@ moves litres, variable costs and cattle sales; fixed costs stay.
 
 ## Discovery (optional)
 
-`GET /v1/functions` returns calculation `key`, `description`, `required`, `optional` **names** — not units. Units appear on `needs_input.missing[].unit`.
+`GET /v1/functions` returns calculation `key`, `description`, `required`, `optional` names.
+`GET /v1/functions/{id}` adds `units` (every field, nested ones included) and
+`input_schema` (JSON Schema: types, nested item shapes, required, defaults,
+choices) so forms and Biddy questions can be generated instead of hand-coded.
+The same units appear on `needs_input.missing[].unit` (ADR-0048).
 
 Full public contract: [`api-contract.md`](api-contract.md).

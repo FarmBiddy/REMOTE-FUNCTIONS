@@ -120,6 +120,7 @@ On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on 
 - `GET /livez` — liveness
 - `GET /health` — liveness alias
 - `GET /v1/functions` — discovery
+- `GET /v1/functions/<key>` — input schema and units for one ID
 - `POST /v1/functions/<key>/run` — one typed route per function (e.g. `revenue.milk`); body is a JSON object of numbers; OpenAPI shows the real field names
 - `POST /v1/demo/pl-summary` — runs `pl.summary` on the sample farm
 - OpenAPI: `http://127.0.0.1:8000/docs`

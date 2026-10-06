@@ -62,6 +62,7 @@ from farm_functions.schemas import (
     PlCompareInput,
     InvestmentAppraisalInput,
     PartialBudgetInput,
+    field_unit,
     PlanProjectionInput,
     PlForecastInput,
     PlNetInput,
@@ -555,3 +556,27 @@ def list_functions() -> list[dict[str, Any]]:
     ]
     payload.sort(key=lambda item: item["key"])
     return payload
+
+
+def _field_names(schema: dict[str, Any]) -> set[str]:
+    names: set[str] = set()
+    for node in [schema, *schema.get("$defs", {}).values()]:
+        names.update(node.get("properties", {}))
+    return names
+
+
+def describe_function(key: str) -> dict[str, Any] | None:
+    """Full discovery for one ID (ADR-0048): JSON Schema of the input (types,
+    nested lists, required, defaults, choices) plus the unit of every field."""
+    spec = get_function(key)
+    if spec is None:
+        return None
+    schema = spec.input_model.model_json_schema()
+    return {
+        "key": spec.id,
+        "description": spec.description,
+        "required": list(spec.required),
+        "optional": list(spec.optional),
+        "units": {name: field_unit(name) for name in sorted(_field_names(schema))},
+        "input_schema": schema,
+    }

@@ -1219,17 +1219,73 @@ LOAN_FIELD_UNITS: dict[str, str] = {
 }
 
 
-def missing_field_entry(field: str) -> dict[str, str]:
-    """Canonical needs_input.missing item: {field, unit}."""
-    unit = (
+# Units for every other input field (ADR-0048). Structural fields say what they
+# hold ("list", "object", "text", "choice", "boolean"), so no field is "unknown".
+_EUR = "EUR"
+OTHER_FIELD_UNITS: dict[str, str] = {
+    **{line: _EUR for line in CASH_FLOW_LINES},
+    **dict.fromkeys(
+        (
+            "amount", "annual_benefit", "cash", "cost", "creditors", "debt_balance", "debtors",
+            "depreciation", "drawings", "interest", "land", "livestock", "livestock_closing_value",
+            "livestock_opening_value", "off_farm_income", "other_long_term_liabilities",
+            "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax",
+        ),
+        _EUR,
+    ),
+    **dict.fromkeys(
+        ("cost_inflation_pct", "herd_pct", "milk_volume_pct", "step_pct", "yield_pct"), "%"
+    ),
+    **dict.fromkeys(("rate_shift_pp", "rate_step_pp", "interest_rate_shift_pp"), "percentage points"),
+    "discount_rate": "ratio/year",
+    "min_cover": "times",
+    "milk_price_c": "c/L",
+    "milk_solids_kg": "kg",
+    "hectares": "ha",
+    "life_months": "months",
+    "life_years": "years",
+    "years": "years",
+    "as_of_month": "month",
+    "shocks_from_year": "year",
+    "shocks_from_month": "month",
+    **dict.fromkeys(
+        (
+            "actual", "added_costs", "added_income", "assets", "base_pl_months", "cash_flows",
+            "cf_months", "comparison", "forecast", "history", "investments", "loans", "months",
+            "pl_months", "prior_pl_months", "projected_cf_months", "projected_pl_months",
+            "reduced_costs", "reduced_income", "scenarios",
+        ),
+        "list",
+    ),
+    **dict.fromkeys(
+        (
+            "annual_effects", "assumptions", "capital", "lines_amount", "lines_inflation_pct",
+            "lines_pct", "loan", "monthly_effects", "new_loan", "ytd",
+        ),
+        "object",
+    ),
+    **dict.fromkeys(("label", "name"), "text"),
+    **dict.fromkeys(("cash_line", "category", "method", "rank_by"), "choice"),
+    "variable": "boolean",
+}
+
+
+def field_unit(field: str) -> str:
+    """Unit of an input field by name (single lookup for needs_input and discovery)."""
+    return (
         FIELD_UNITS.get(field)
         or PERIOD_IDENTITY_FIELD_UNITS.get(field)
         or CASH_POSITION_FIELD_UNITS.get(field)
         or LOAN_FIELD_UNITS.get(field)
         or MONTHLY_FIELD_UNITS.get(field)
+        or OTHER_FIELD_UNITS.get(field)
         or "unknown"
     )
-    return {"field": field, "unit": unit}
+
+
+def missing_field_entry(field: str) -> dict[str, str]:
+    """Canonical needs_input.missing item: {field, unit}."""
+    return {"field": field, "unit": field_unit(field)}
 
 
 # Monthly Dairy statement financial-driver metadata (ADR-0018). Separate from

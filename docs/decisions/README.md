@@ -50,6 +50,8 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0044](0044-tornado-driver-ranking.md) | Driver ranking (`risk.tornado`) |
 | [0045](0045-partial-budget.md) | Partial budget (`decision.partial_budget`) |
 | [0046](0046-investment-appraisal.md) | Investment appraisal: NPV, IRR, discounted payback (`decision.investment`) |
+| [0047](0047-multi-enterprise-rules.md) | Multi-enterprise farms: per-enterprise vs farm analysis rules |
+| [0048](0048-catalogue-discovery.md) | Per-ID catalogue discovery with input schema and units |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

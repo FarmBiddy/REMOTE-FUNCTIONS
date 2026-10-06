@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from farm_functions.errors import unknown_calculation_envelope
 from farm_functions.loaders.json_loader import load_sample_inputs
-from farm_functions.registry import CALCULATION_CATALOGUE, list_functions
+from farm_functions.registry import CALCULATION_CATALOGUE, describe_function, list_functions
 from farm_functions.runner import run_function
 
 router = APIRouter()
@@ -126,6 +126,15 @@ def health() -> dict[str, bool]:
 @router.get("/v1/functions")
 def functions() -> dict[str, Any]:
     return {"functions": list_functions()}
+
+
+@router.get("/v1/functions/{key}")
+def function_detail(key: str) -> Any:
+    """Input schema and units for one calculation ID (ADR-0048)."""
+    detail = describe_function(key)
+    if detail is None:
+        return JSONResponse(status_code=404, content=unknown_calculation_envelope(key))
+    return detail
 
 
 @router.post("/v1/demo/pl-summary")

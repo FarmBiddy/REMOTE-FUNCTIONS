@@ -41,6 +41,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0035](0035-variance-analysis.md) | Variance analysis (`pl.compare`, `cf.compare`) |
 | [0036](0036-debt-capacity.md) | Repayment capacity and borrowing capacity (`debt.capacity`) |
 | [0037](0037-asset-register-depreciation.md) | Fixed asset register and depreciation (`assets.schedule`) |
+| [0038](0038-net-profit-bridge.md) | Net profit before tax bridge (`pl.net`) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

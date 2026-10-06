@@ -100,6 +100,14 @@ SAMPLE_ASSETS = {
     "to_year": 2026,
     "to_month": 12,
 }
+# Net profit: surplus 3,000 + livestock +500 - depreciation 1,000 - interest 200 = 2,300.
+SAMPLE_PL_NET = {
+    "months": [{"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.40, "feed": 1_000}],
+    "depreciation": 1_000,
+    "interest": 200,
+    "livestock_opening_value": 100_000,
+    "livestock_closing_value": 100_500,
+}
 # Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
 # lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
 SAMPLE_PL_FORECAST = {
@@ -182,6 +190,8 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_DEBT_CAPACITY
     if key == "assets.schedule":
         return SAMPLE_ASSETS
+    if key == "pl.net":
+        return SAMPLE_PL_NET
     if key == "cf.compare":
         return SAMPLE_CF_COMPARE
     if key == "cf.forecast":
@@ -235,6 +245,13 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "pl.net":
+        return {
+            "months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}],
+            "depreciation": 0, "interest": 0,
+            "livestock_opening_value": 0, "livestock_closing_value": 0,
+            "stock_opening_value": 0, "stock_closing_value": 0,
+        }
     if key == "assets.schedule":
         return {
             "assets": [{"cost": 0, "year": 1, "month": 1, "life_months": 1, "residual_value": 0}],
@@ -363,6 +380,9 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "pl.net":
+        body = result["result"]
+        assert (body["adjusted_surplus"], body["ebit"], body["net_profit_before_tax"]) == (3_500, 2_500, 2_300)
     elif key == "assets.schedule":
         assert result["result"]["total"] == {
             "opening_nbv": 0, "additions": 12_000, "depreciation": 1_200, "closing_nbv": 10_800
@@ -498,6 +518,9 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "pl.net":
+        assert result["result"]["net_profit_before_tax"] == 0
+        assert result["result"]["net_margin_pct"] is None
     elif key == "assets.schedule":
         assert result["result"]["total"]["closing_nbv"] == 0
     elif key == "debt.capacity":

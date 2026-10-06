@@ -343,6 +343,27 @@ class DebtCapacityInput(_StrictModel):
         return self
 
 
+class PlNetInput(_StrictModel):
+    """HTTP / runner input for ``pl.net`` (ADR-0038): months + period totals.
+
+    ``depreciation`` from ``assets.schedule``, ``interest`` from ``loan.schedule``
+    rows; livestock / stock values are Platform valuations at period start / end.
+    """
+
+    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    depreciation: NonNegativeNumber = 0.0
+    interest: NonNegativeNumber = 0.0
+    livestock_opening_value: NonNegativeNumber = 0.0
+    livestock_closing_value: NonNegativeNumber = 0.0
+    stock_opening_value: NonNegativeNumber = 0.0
+    stock_closing_value: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _unique(self) -> "PlNetInput":
+        _reject_duplicate_months(self.months)
+        return self
+
+
 class AssetInput(_StrictModel):
     """One fixed asset in the register (ADR-0037). ``year`` / ``month`` = acquired."""
 

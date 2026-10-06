@@ -18,6 +18,7 @@ from farm_functions.core.surplus import net_profit, profit_margin, profit_margin
 from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
+from farm_functions.accounts import pl_net
 from farm_functions.assets import assets_schedule
 from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.forecast import forecast_cf, forecast_pl
@@ -54,6 +55,7 @@ from farm_functions.schemas import (
     PlMonthlyInput,
     PlCompareInput,
     PlForecastInput,
+    PlNetInput,
     PlMonthsInput,
     PlSummaryInput,
     ProfitInput,
@@ -355,6 +357,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=KpiSummaryInput,
         handler=kpi_summary,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="pl.net",
+        description=(
+            "Net profit before tax bridge: Operating Surplus ± livestock and stock "
+            "valuation changes − depreciation − interest, with EBIT and net margin. "
+            "Depreciation and interest come from assets.schedule / loan.schedule."
+        ),
+        input_model=PlNetInput,
+        handler=pl_net,
         supports_provenance=False,
     ),
     CalculationDefinition(

@@ -30,6 +30,7 @@ _APPLICATION_MODULES = (
     FARM / "kpis.py",
     FARM / "compare.py",
     FARM / "assets.py",
+    FARM / "accounts.py",
     FARM / "errors.py",
     FARM / "schemas.py",
     FARM / "loaders" / "json_loader.py",

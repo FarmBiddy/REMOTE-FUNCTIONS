@@ -19,6 +19,7 @@ from farm_functions.core.forecast import (
     run_rate_factors,
     seasonal_projection,
 )
+from farm_functions.core.growth import carry_forward, compound_indexes
 from farm_functions.core.loans import (
     AmortisationRow,
     amortisation_schedule,
@@ -41,11 +42,13 @@ __all__ = [
     "CashDirection",
     "amortisation_schedule",
     "break_even_shift",
+    "carry_forward",
     "annuity_payment",
     "annuity_principal",
     "cash_section_net",
     "change_pct",
     "closing_cash",
+    "compound_indexes",
     "coverage_ratio",
     "latest_non_zero",
     "min_shift_all_non_negative",

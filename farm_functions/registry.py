@@ -26,7 +26,7 @@ from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.reports import report_accountant, report_advisor, report_bank
-from farm_functions.sensitivity import risk_sensitivity
+from farm_functions.sensitivity import risk_sensitivity, risk_tornado
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
     MonthlyDairyStatementModel,
@@ -51,6 +51,7 @@ from farm_functions.schemas import (
     DebtCapacityInput,
     KpiSummaryInput,
     RiskSensitivityInput,
+    RiskTornadoInput,
     LoanScheduleInput,
     MilkRevenueInput,
     MonthlyDairyCashFlowInput,
@@ -417,6 +418,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=RiskSensitivityInput,
         handler=risk_sensitivity,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="risk.tornado",
+        description=(
+            "Driver ranking: moves milk price, milk volume, herd size, each line with "
+            "an amount and (for variable loans) the interest rate one at a time down "
+            "and up by a step; ranks drivers by their swing in surplus or cash."
+        ),
+        input_model=RiskTornadoInput,
+        handler=risk_tornado,
         supports_provenance=False,
     ),
     CalculationDefinition(

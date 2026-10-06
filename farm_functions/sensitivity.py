@@ -16,7 +16,11 @@ from farm_functions.core.ratios import coverage_ratio, per_unit
 from farm_functions.core.rounding import round_money
 from farm_functions.core.sensitivity import break_even_shift, min_shift_all_non_negative
 from farm_functions.dairy.cash_flow import OPERATING_CASH_INFLOW_CATEGORIES
-from farm_functions.dairy.costs import HERD_LINKED_INCOME, VARIABLE_COST_CATEGORIES
+from farm_functions.dairy.costs import (
+    HERD_LINKED_INCOME,
+    OPERATING_COST_CATEGORIES,
+    VARIABLE_COST_CATEGORIES,
+)
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
     MonthlyDairyStatementModel,
@@ -315,4 +319,98 @@ def risk_sensitivity(
             _outcome(s, pl_months, cf_months, opening_cash, base_price, start, loans or [])
             for s in [BASE, *named]
         ],
+    }
+
+
+# Lines a tornado may move: operating income (except milk, which has price /
+# volume / herd drivers), operating costs, and household drawings (ADR-0044).
+TORNADO_LINES = (
+    tuple(l for l in OPERATING_CASH_INFLOW_CATEGORIES if l != "milk")
+    + OPERATING_COST_CATEGORIES
+    + ("household_drawings",)
+)
+
+
+def _point(outcome: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "surplus": outcome["surplus"],
+        "closing_cash": outcome["closing_cash"],
+        "lowest_cash": outcome["lowest_cash"]["amount"],
+        "dscr": outcome["dscr"],
+    }
+
+
+def risk_tornado(
+    *,
+    pl_months: list[dict[str, Any]],
+    cf_months: list[dict[str, Any]],
+    opening_cash: float,
+    loans: list[dict[str, Any]] | None = None,
+    shocks_from_year: int | None = None,
+    shocks_from_month: int | None = None,
+    step_pct: float = 10.0,
+    rate_step_pp: float = 1.0,
+    rank_by: str = "surplus",
+) -> dict[str, Any]:
+    """``risk.tornado``: move one driver at a time down / up and rank the swings."""
+    common = {
+        "pl_months": pl_months,
+        "cf_months": cf_months,
+        "opening_cash": opening_cash,
+        "loans": loans,
+        "shocks_from_year": shocks_from_year,
+        "shocks_from_month": shocks_from_month,
+    }
+    price_c = risk_sensitivity(scenarios=[], **common)["milk_price_c"]
+    drivers: list[tuple[str, str, dict[str, Any], dict[str, Any]]] = [
+        ("milk_price", "milk_price_c", {"milk_price_c": -price_c * step_pct / 100}, {"milk_price_c": price_c * step_pct / 100}),
+        ("milk_volume", "milk_volume_pct", {"milk_volume_pct": -step_pct}, {"milk_volume_pct": step_pct}),
+        ("herd_size", "herd_pct", {"herd_pct": -step_pct}, {"herd_pct": step_pct}),
+    ]
+    totals = {
+        line: sum_amounts(*(m.get(line, 0.0) for m in pl_months), *(m.get(line, 0.0) for m in cf_months))
+        for line in TORNADO_LINES
+    }
+    drivers += [
+        (line, "lines_pct", {"lines_pct": {line: -step_pct}}, {"lines_pct": {line: step_pct}})
+        for line in TORNADO_LINES
+        if totals[line]
+    ]
+    if rate_step_pp and any(l["variable"] for l in loans or []):
+        drivers.append(("interest_rate", "rate_shift_pp", {"rate_shift_pp": -rate_step_pp}, {"rate_shift_pp": rate_step_pp}))
+
+    scenarios = []
+    for name, _, low, high in drivers:
+        scenarios += [{**BASE, **low, "name": f"{name}:low"}, {**BASE, **high, "name": f"{name}:high"}]
+    outcomes = risk_sensitivity(scenarios=scenarios, **common)["scenarios"]
+    base, rest = outcomes[0], outcomes[1:]
+
+    rows = []
+    for i, (name, kind, low, high) in enumerate(drivers):
+        lo, hi = _point(rest[2 * i]), _point(rest[2 * i + 1])
+        rows.append(
+            {
+                "driver": name,
+                "shock": kind,
+                "low_change": next(iter(low.values())) if kind != "lines_pct" else -step_pct,
+                "high_change": next(iter(high.values())) if kind != "lines_pct" else step_pct,
+                "low": lo,
+                "high": hi,
+                "swing": {
+                    k: round_money(abs(hi[k] - lo[k]))
+                    for k in ("surplus", "closing_cash", "lowest_cash")
+                },
+            }
+        )
+    rows.sort(key=lambda r: r["swing"][rank_by], reverse=True)
+    for row in rows:
+        if row["shock"] == "milk_price_c":
+            row["low_change"], row["high_change"] = round_money(row["low_change"]), round_money(row["high_change"])
+    return {
+        "currency": "EUR",
+        "step_pct": step_pct,
+        "rate_step_pp": rate_step_pp,
+        "rank_by": rank_by,
+        "base": _point(base),
+        "drivers": rows,
     }

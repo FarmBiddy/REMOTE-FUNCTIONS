@@ -61,6 +61,7 @@ def test_discovery_lists_core_functions_only():
         "loan.schedule",
         "kpi.summary",
         "risk.sensitivity",
+        "risk.tornado",
         "pl.compare",
         "cf.compare",
         "debt.capacity",

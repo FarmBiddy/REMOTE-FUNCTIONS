@@ -514,8 +514,8 @@ class SensitivityScenarioInput(_StrictModel):
         return self
 
 
-class RiskSensitivityInput(_StrictModel):
-    """HTTP / runner input for ``risk.sensitivity`` (ADR-0029).
+class _RiskBaseInput(_StrictModel):
+    """Months, cash, loans and shock start shared by the risk IDs.
 
     ``pl_months`` drive surplus / DSCR / milk price; ``cf_months`` (consecutive)
     and ``opening_cash`` drive the cash balance. Both actual + projected.
@@ -524,17 +524,26 @@ class RiskSensitivityInput(_StrictModel):
     pl_months: list[PlMonthItemInput] = Field(..., min_length=1)
     cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
     opening_cash: SignedNumber
-    scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
-    # Loans behind the months' loan lines; variable ones follow rate_shift_pp (ADR-0043).
+    # Loans behind the months' loan lines; variable ones follow rate shocks (ADR-0043).
     loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
     # Optional: shocks apply from this month on; earlier months are history (ADR-0040).
     shocks_from_year: CalendarYear | None = None
     shocks_from_month: CalendarMonth | None = None
 
     @model_validator(mode="after")
-    def _investments_inside_cash_months(self) -> "RiskSensitivityInput":
+    def _shock_start_pair(self) -> "_RiskBaseInput":
         if (self.shocks_from_year is None) != (self.shocks_from_month is None):
             raise ValueError("shocks_from_year and shocks_from_month must be sent together")
+        return self
+
+
+class RiskSensitivityInput(_RiskBaseInput):
+    """HTTP / runner input for ``risk.sensitivity`` (ADR-0029)."""
+
+    scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def _investments_inside_cash_months(self) -> "RiskSensitivityInput":
         months = {(m.year, m.month) for m in self.cf_months}
         for scenario in self.scenarios:
             for inv in scenario.investments:
@@ -543,6 +552,22 @@ class RiskSensitivityInput(_StrictModel):
                         f"investment month year={inv.year} month={inv.month} is outside cf_months"
                     )
         return self
+
+
+def _parse_step_pct(value: Any) -> float:
+    """Tornado step: a % above 0 and at most 100."""
+    number = _parse_finite_number(value)
+    if not 0 < number <= 100:
+        raise ValueError("must be above 0 and at most 100")
+    return number
+
+
+class RiskTornadoInput(_RiskBaseInput):
+    """HTTP / runner input for ``risk.tornado`` (ADR-0044)."""
+
+    step_pct: Annotated[float, BeforeValidator(_parse_step_pct)] = 10.0
+    rate_step_pp: Annotated[float, BeforeValidator(_parse_non_negative_number)] = 1.0
+    rank_by: Literal["surplus", "closing_cash", "lowest_cash"] = "surplus"
 
 
 class NewLoanTermsInput(_StrictModel):

@@ -226,6 +226,8 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_REPORT
     if key == "plan.projection":
         return SAMPLE_PROJECTION
+    if key == "risk.tornado":
+        return {k: SAMPLE_SENSITIVITY[k] for k in ("pl_months", "cf_months", "opening_cash")}
     if key == "cf.compare":
         return SAMPLE_CF_COMPARE
     if key == "cf.forecast":
@@ -279,6 +281,14 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "risk.tornado":
+        return {
+            "pl_months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}],
+            "cf_months": [{"year": 1, "month": 1}],
+            "opening_cash": 0,
+            "loans": [],
+            "rate_step_pp": 0,
+        }
     if key == "plan.projection":
         return {
             "base_pl_months": [
@@ -437,6 +447,10 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "risk.tornado":
+        drivers = {d["driver"]: d["swing"]["surplus"] for d in result["result"]["drivers"]}
+        assert drivers["milk_price"] == 800  # ±10% of 4,000 milk revenue
+        assert drivers["feed"] == 600
     elif key == "plan.projection":
         years = result["result"]["years"]
         assert [y["pl"]["operating_surplus"] for y in years] == [36_000, 36_000]
@@ -590,6 +604,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "risk.tornado":
+        assert result["result"]["base"]["surplus"] == 0
     elif key == "plan.projection":
         year = result["result"]["years"][0]
         assert year["cash"]["closing"] == 0 and year["kpis"]["surplus_per_cow"] is None

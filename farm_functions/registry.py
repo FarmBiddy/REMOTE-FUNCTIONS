@@ -24,6 +24,7 @@ from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
+from farm_functions.projections import plan_projection
 from farm_functions.reports import report_accountant, report_advisor, report_bank
 from farm_functions.sensitivity import risk_sensitivity
 from farm_functions.domain import (
@@ -57,6 +58,7 @@ from farm_functions.schemas import (
     OtherRevenueInput,
     PlMonthlyInput,
     PlCompareInput,
+    PlanProjectionInput,
     PlForecastInput,
     PlNetInput,
     PlMonthsInput,
@@ -445,6 +447,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=FarmReportInput,
         handler=report_accountant,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="plan.projection",
+        description=(
+            "Multi-year annual projection (1–10 years) from the last 12 actual months "
+            "and optional per-year assumptions: P&L, net profit, cash rolled forward, "
+            "debt and DSCR, simplified balance sheet, KPIs and flags per year."
+        ),
+        input_model=PlanProjectionInput,
+        handler=plan_projection,
         supports_provenance=False,
     ),
     CalculationDefinition(

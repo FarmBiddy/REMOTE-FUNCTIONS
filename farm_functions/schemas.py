@@ -596,6 +596,101 @@ class FarmReportInput(_StrictModel):
         return self
 
 
+def _parse_projection_years(value: Any) -> int:
+    """Projection horizon: whole number of years, 1–10."""
+    number = _parse_finite_number(value)
+    if not number.is_integer() or not 1 <= number <= 10:
+        raise ValueError("must be a whole number between 1 and 10")
+    return int(number)
+
+
+ProjectionYears = Annotated[int, BeforeValidator(_parse_projection_years)]
+# P&L lines a projection may set by amount (milk has price / herd / yield drivers).
+PROJECTION_AMOUNT_LINES = tuple(
+    line
+    for line in MonthlyDairyFinancialInput.model_fields
+    if line not in ("milk_litres", "milk_price", "loan_repayments")
+)
+
+
+class ProjectionAssumptionsInput(_StrictModel):
+    """Per-year assumption lists (index 0 = year 1); all optional (ADR-0042)."""
+
+    milk_price: list[NonNegativeNumber] = Field(default_factory=list)
+    herd_pct: list[PctChange] = Field(default_factory=list)
+    yield_pct: list[PctChange] = Field(default_factory=list)
+    cost_inflation_pct: list[PctChange] = Field(default_factory=list)
+    lines_inflation_pct: dict[str, list[PctChange]] = Field(default_factory=dict)
+    lines_amount: dict[str, list[NonNegativeNumber]] = Field(default_factory=dict)
+    drawings: list[NonNegativeNumber] = Field(default_factory=list)
+    tax: list[NonNegativeNumber] = Field(default_factory=list)
+    off_farm_income: list[NonNegativeNumber] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _known_lines(self) -> "ProjectionAssumptionsInput":
+        unknown = sorted(
+            (set(self.lines_inflation_pct) - set(OPERATING_CASH_OUTFLOW_CATEGORIES))
+            | (set(self.lines_amount) - set(PROJECTION_AMOUNT_LINES))
+        )
+        if unknown:
+            raise ValueError(f"assumptions have unknown lines: {', '.join(unknown)}")
+        return self
+
+    def lists(self) -> list[list[float]]:
+        return [
+            self.milk_price, self.herd_pct, self.yield_pct, self.cost_inflation_pct,
+            self.drawings, self.tax, self.off_farm_income,
+            *self.lines_inflation_pct.values(), *self.lines_amount.values(),
+        ]
+
+
+class ProjectionInvestmentInput(_StrictModel):
+    """Capital purchase in the first month of projection ``year`` (ADR-0042)."""
+
+    year: ProjectionYears
+    amount: NonNegativeNumber
+    life_months: Annotated[int, BeforeValidator(_parse_loan_months)]
+    category: Literal["machinery", "buildings", "other"] = "machinery"
+    loan: InvestmentLoanInput | None = None
+    annual_effects: dict[str, SignedNumber] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _known_effect_lines(self) -> "ProjectionInvestmentInput":
+        unknown = sorted(set(self.annual_effects) - set(EFFECT_LINES))
+        if unknown:
+            raise ValueError(f"annual_effects has lines that cannot be changed: {', '.join(unknown)}")
+        return self
+
+
+class PlanProjectionInput(_StrictModel):
+    """HTTP / runner input for ``plan.projection`` (ADR-0042)."""
+
+    base_pl_months: list[PlMonthItemInput] = Field(..., min_length=12, max_length=12)
+    opening_cash: SignedNumber
+    milking_cows: NonNegativeNumber
+    years: ProjectionYears = 5
+    assumptions: ProjectionAssumptionsInput = Field(default_factory=ProjectionAssumptionsInput)
+    loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
+    assets: list[AssetInput] = Field(default_factory=list, max_length=200)
+    investments: list[ProjectionInvestmentInput] = Field(default_factory=list, max_length=10)
+    land: NonNegativeNumber = 0.0
+    livestock: NonNegativeNumber = 0.0
+    min_cover: Annotated[float, BeforeValidator(_parse_cover)] | None = None
+
+    @model_validator(mode="after")
+    def _consistent(self) -> "PlanProjectionInput":
+        _reject_duplicate_months(self.base_pl_months)
+        keys = sorted((m.year, m.month) for m in self.base_pl_months)
+        first = keys[0][0] * 12 + keys[0][1]
+        if keys[-1][0] * 12 + keys[-1][1] - first != 11:
+            raise ValueError("base_pl_months must be 12 consecutive months")
+        if any(len(values) > self.years for values in self.assumptions.lists()):
+            raise ValueError("assumption lists must not be longer than years")
+        if any(inv.year > self.years for inv in self.investments):
+            raise ValueError("investment year must be within years")
+        return self
+
+
 # ---------------------------------------------------------------------------
 # Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
 # item shape). ``forecast`` items carry period identity plus optional known

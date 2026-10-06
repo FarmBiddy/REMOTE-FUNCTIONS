@@ -126,6 +126,16 @@ SAMPLE_REPORT = {
     "milking_cows": 10,
 }
 REPORT_KEYS = ("report.bank", "report.advisor", "report.accountant")
+# Projection: 12 months of 10,000 L at 0.40 − 1,000 feed → surplus 36,000 a year.
+SAMPLE_PROJECTION = {
+    "base_pl_months": [
+        {"year": 2025, "month": m, "milk_litres": 10_000, "milk_price": 0.40, "feed": 1_000}
+        for m in range(1, 13)
+    ],
+    "opening_cash": 0,
+    "milking_cows": 10,
+    "years": 2,
+}
 # Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
 # lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
 SAMPLE_PL_FORECAST = {
@@ -214,6 +224,8 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_BS
     if key in REPORT_KEYS:
         return SAMPLE_REPORT
+    if key == "plan.projection":
+        return SAMPLE_PROJECTION
     if key == "cf.compare":
         return SAMPLE_CF_COMPARE
     if key == "cf.forecast":
@@ -267,6 +279,17 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "plan.projection":
+        return {
+            "base_pl_months": [
+                {"year": 1, "month": m, "milk_litres": 0, "milk_price": 0} for m in range(1, 13)
+            ],
+            "opening_cash": 0,
+            "milking_cows": 0,
+            "years": 1,
+            "land": 0,
+            "livestock": 0,
+        }
     if key in REPORT_KEYS:
         return {
             "pl_months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}],
@@ -414,6 +437,10 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "plan.projection":
+        years = result["result"]["years"]
+        assert [y["pl"]["operating_surplus"] for y in years] == [36_000, 36_000]
+        assert years[1]["cash"]["closing"] == 72_000
     elif key in REPORT_KEYS:
         body = result["result"]
         assert body["report"] == key.split(".")[1]
@@ -563,6 +590,9 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "plan.projection":
+        year = result["result"]["years"][0]
+        assert year["cash"]["closing"] == 0 and year["kpis"]["surplus_per_cow"] is None
     elif key in REPORT_KEYS:
         assert result["result"]["period"]["month_count"] == 1
     elif key == "bs.summary":

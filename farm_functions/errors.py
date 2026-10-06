@@ -333,6 +333,25 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(issue(INVALID_TYPE, text, field="cf_months", details={"reason": "periods_misaligned"}))
         elif text == "projected months must be after the reporting period":
             issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "projection_overlaps_period"}))
+        elif text == "must be a whole number between 1 and 10":
+            issues.append(
+                issue(
+                    INVALID_TYPE,
+                    f"{field} {text}" if field else text,
+                    field=field,
+                    value=safe_value,
+                    include_value=True,
+                    details={"minimum": 1, "maximum": 10},
+                )
+            )
+        elif text.startswith(("assumptions have unknown lines", "annual_effects has lines")):
+            issues.append(issue(UNKNOWN_FIELD, text, field=field))
+        elif text == "base_pl_months must be 12 consecutive months":
+            issues.append(issue(INVALID_TYPE, text, field="base_pl_months", details={"reason": "base_not_12_consecutive"}))
+        elif text == "assumption lists must not be longer than years":
+            issues.append(issue(INVALID_TYPE, text, field="assumptions", details={"reason": "assumption_longer_than_years"}))
+        elif text == "investment year must be within years":
+            issues.append(issue(INVALID_TYPE, text, field="investments", details={"reason": "investment_outside_years"}))
         elif text == "period end must not be before period start":
             issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "period_reversed"}))
         elif text == "must be 1 or greater":

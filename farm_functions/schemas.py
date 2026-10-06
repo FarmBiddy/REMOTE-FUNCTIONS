@@ -230,6 +230,8 @@ class LoanItemInput(_StrictModel):
     year: CalendarYear
     month: CalendarMonth
     original_principal: NonNegativeNumber | None = None
+    # Variable-rate loans follow interest-rate shocks (ADR-0043); fixed ones do not.
+    variable: bool = False
 
     @model_validator(mode="after")
     def _principal_covers_balance(self) -> "LoanItemInput":
@@ -499,6 +501,8 @@ class SensitivityScenarioInput(_StrictModel):
     milk_price_c: SignedNumber = 0.0
     milk_volume_pct: PctChange = 0.0
     herd_pct: PctChange = 0.0
+    # Percentage points added to variable-rate loans in ``loans`` (ADR-0043).
+    rate_shift_pp: SignedNumber = 0.0
     lines_pct: dict[str, PctChange] = Field(default_factory=dict)
     investments: list[InvestmentInput] = Field(default_factory=list, max_length=5)
 
@@ -521,6 +525,8 @@ class RiskSensitivityInput(_StrictModel):
     cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
     opening_cash: SignedNumber
     scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+    # Loans behind the months' loan lines; variable ones follow rate_shift_pp (ADR-0043).
+    loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
     # Optional: shocks apply from this month on; earlier months are history (ADR-0040).
     shocks_from_year: CalendarYear | None = None
     shocks_from_month: CalendarMonth | None = None
@@ -625,6 +631,8 @@ class ProjectionAssumptionsInput(_StrictModel):
     drawings: list[NonNegativeNumber] = Field(default_factory=list)
     tax: list[NonNegativeNumber] = Field(default_factory=list)
     off_farm_income: list[NonNegativeNumber] = Field(default_factory=list)
+    # Percentage points on variable-rate loans vs today, per year; carried (ADR-0043).
+    interest_rate_shift_pp: list[SignedNumber] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _known_lines(self) -> "ProjectionAssumptionsInput":
@@ -639,7 +647,7 @@ class ProjectionAssumptionsInput(_StrictModel):
     def lists(self) -> list[list[float]]:
         return [
             self.milk_price, self.herd_pct, self.yield_pct, self.cost_inflation_pct,
-            self.drawings, self.tax, self.off_farm_income,
+            self.drawings, self.tax, self.off_farm_income, self.interest_rate_shift_pp,
             *self.lines_inflation_pct.values(), *self.lines_amount.values(),
         ]
 

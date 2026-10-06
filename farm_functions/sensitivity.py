@@ -11,7 +11,7 @@ from itertools import accumulate
 from typing import Any
 
 from farm_functions.core.aggregate import sum_amounts
-from farm_functions.core.loans import amortisation_schedule
+from farm_functions.core.loans import amortisation_schedule, repricing_schedule
 from farm_functions.core.ratios import coverage_ratio, per_unit
 from farm_functions.core.rounding import round_money
 from farm_functions.core.sensitivity import break_even_shift, min_shift_all_non_negative
@@ -34,6 +34,7 @@ BASE = {
     "milk_price_c": 0.0,
     "milk_volume_pct": 0.0,
     "herd_pct": 0.0,
+    "rate_shift_pp": 0.0,
     "lines_pct": {},
     "investments": [],
 }
@@ -150,6 +151,32 @@ def _live(period: dict[str, Any], start: tuple[int, int] | None) -> bool:
     return start is None or _key(period) >= start
 
 
+def _rate_deltas(
+    loans: list[dict[str, Any]], shift_pp: float, start: tuple[int, int] | None
+) -> dict[tuple[int, int], dict[str, float]]:
+    """Change in payment / interest / principal per month when variable loans reprice
+    by ``shift_pp`` from ``start`` (or their next instalment) on (ADR-0043)."""
+    deltas: dict[tuple[int, int], dict[str, float]] = {}
+    for loan in loans:
+        if not (loan["variable"] and shift_pp):
+            continue
+        first = (loan["year"], loan["month"])
+        months = loan["remaining_months"]
+        offset = 0 if start is None else max(0, (start[0] - first[0]) * 12 + start[1] - first[1])
+        if offset >= months:
+            continue
+        rate = loan["annual_rate"]
+        base = amortisation_schedule(loan["balance"], rate, months)
+        new = repricing_schedule(
+            loan["balance"], months, [(0, rate), (offset, max(0.0, rate + shift_pp / 100))]
+        )
+        for i, (b, n) in enumerate(zip(base, new)):
+            d = deltas.setdefault(_shift(first, i), {"payment": 0.0, "interest": 0.0, "principal": 0.0})
+            for name in d:
+                d[name] += n[name] - b[name]
+    return deltas
+
+
 def _price_c(avg_price: float, shift: float | None) -> float | None:
     """Break-even price in c/L; floored at 0 (0 = covered even at a zero price)."""
     return None if shift is None else round_money(max(0.0, avg_price + shift) * 100)
@@ -190,10 +217,31 @@ def _outcome(
     opening_cash: float,
     base_price: float,
     start: tuple[int, int] | None,
+    loans: list[dict[str, Any]],
 ) -> dict[str, Any]:
     pl_months, cf_months, investments = _apply_investments(
         pl_months, cf_months, scenario["investments"]
     )
+    deltas = _rate_deltas(loans, scenario["rate_shift_pp"], start)
+    if deltas:
+        pl_months = [
+            {**m, "loan_repayments": max(0.0, m["loan_repayments"] + deltas[_key(m)]["payment"])}
+            if _key(m) in deltas
+            else m
+            for m in pl_months
+        ]
+        cf_months = [
+            {
+                **m,
+                "interest_paid": max(0.0, m["interest_paid"] + deltas[_key(m)]["interest"]),
+                "loan_principal_repayments": max(
+                    0.0, m["loan_principal_repayments"] + deltas[_key(m)]["principal"]
+                ),
+            }
+            if _key(m) in deltas
+            else m
+            for m in cf_months
+        ]
     herd = 1 + scenario["herd_pct"] / 100
     # Litres move with herd size and with yield per cow (milk_volume_pct).
     volume = herd * (1 + scenario["milk_volume_pct"] / 100)
@@ -229,7 +277,8 @@ def _outcome(
     return {
         "name": scenario["name"],
         "shocks": {
-            k: scenario[k] for k in ("milk_price_c", "milk_volume_pct", "herd_pct", "lines_pct")
+            k: scenario[k]
+            for k in ("milk_price_c", "milk_volume_pct", "herd_pct", "rate_shift_pp", "lines_pct")
         },
         "investments": investments,
         "surplus": round_money(surplus),
@@ -250,6 +299,7 @@ def risk_sensitivity(
     scenarios: list[dict[str, Any]],
     shocks_from_year: int | None = None,
     shocks_from_month: int | None = None,
+    loans: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """``risk.sensitivity``: base + scenarios, each with its milk-price break-evens."""
     start = None if shocks_from_year is None else (shocks_from_year, shocks_from_month)
@@ -262,6 +312,7 @@ def risk_sensitivity(
         "shocks_from": None if start is None else {"kind": "month", "year": start[0], "month": start[1]},
         "milk_price_c": round_money(base_price * 100),
         "scenarios": [
-            _outcome(s, pl_months, cf_months, opening_cash, base_price, start) for s in [BASE, *named]
+            _outcome(s, pl_months, cf_months, opening_cash, base_price, start, loans or [])
+            for s in [BASE, *named]
         ],
     }

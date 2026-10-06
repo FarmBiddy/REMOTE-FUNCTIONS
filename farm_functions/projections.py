@@ -12,7 +12,7 @@ from typing import Any
 from farm_functions.assets import assets_schedule, month_index
 from farm_functions.core.aggregate import sum_amounts
 from farm_functions.core.growth import carry_forward, compound_indexes
-from farm_functions.core.loans import amortisation_schedule
+from farm_functions.core.loans import amortisation_schedule, repricing_schedule
 from farm_functions.core.ratios import coverage_ratio, per_unit
 from farm_functions.core.rounding import round_money
 from farm_functions.dairy.costs import HERD_LINKED_INCOME, OPERATING_COST_CATEGORIES, VARIABLE_COST_CATEGORIES
@@ -93,6 +93,18 @@ def plan_projection(
     drawings = carry_forward(a.get("drawings", []), years, 0.0)
     tax = carry_forward(a.get("tax", []), years, 0.0)
     off_farm = carry_forward(a.get("off_farm_income", []), years, 0.0)
+    rate_shift = carry_forward(a.get("interest_rate_shift_pp", []), years, 0.0)
+
+    def existing_rows(loan: dict[str, Any]) -> list[dict[str, float]]:
+        """Variable loans reprice at the start of each projection year (ADR-0043)."""
+        if not loan["variable"]:
+            return amortisation_schedule(loan["balance"], loan["annual_rate"], loan["remaining_months"])
+        first = month_index(loan["year"], loan["month"])
+        steps = [(0, loan["annual_rate"])] + [
+            (max(0, start - first), max(0.0, loan["annual_rate"] + shift / 100))
+            for (start, _), shift in zip(windows, rate_shift)
+        ]
+        return repricing_schedule(loan["balance"], loan["remaining_months"], steps)
 
     # Debt: existing loans + investment loans (first instalment the month after purchase).
     # Existing loans are already drawn: they owe their balance from the start.
@@ -100,7 +112,7 @@ def plan_projection(
         (
             windows[0][0] - 1,
             month_index(l["year"], l["month"]),
-            amortisation_schedule(l["balance"], l["annual_rate"], l["remaining_months"]),
+            existing_rows(l),
             l["balance"],
         )
         for l in loans
@@ -180,6 +192,7 @@ def plan_projection(
                     "drawings": drawings[y],
                     "tax": tax[y],
                     "off_farm_income": off_farm[y],
+                    "interest_rate_shift_pp": rate_shift[y],
                 },
                 "pl": {
                     "milk_litres": round_money(drivers["milk_litres"]),

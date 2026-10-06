@@ -25,6 +25,7 @@ def _one_loan(
     year: int,
     month: int,
     original_principal: float | None = None,
+    variable: bool = False,
 ) -> dict[str, Any]:
     """One loan: attach calendar periods to Core amortisation rows (ADR-0025)."""
     rows = amortisation_schedule(balance, annual_rate, remaining_months)
@@ -45,6 +46,7 @@ def _one_loan(
         "total_interest": round_money(sum(r["interest"] for r in rows)),
         "total_payments": round_money(sum(r["payment"] for r in rows)),
         "repaid_pct": repaid_pct,
+        "variable": variable,
         "months": months,
     }
 

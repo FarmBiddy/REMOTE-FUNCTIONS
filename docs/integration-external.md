@@ -366,6 +366,11 @@ Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
 interest) and the livestock / stock valuations at start and end.
 
+Reports (ADR-0041): build one farm file and call `report.bank`,
+`report.advisor` or `report.accountant`. Each returns structured sections
+(outputs of the matching IDs) for the Platform to render as a PDF or screen.
+`drawings` / `tax` / `off_farm_income` are totals for the reporting period.
+
 Balance sheet (ADR-0039): call `bs.summary` for a month end with the bank
 balance (`cash`, negative = overdraft), debtors, stock, livestock and land values,
 creditors (supplier debt card), the same `loans[]` as `loan.schedule` and the

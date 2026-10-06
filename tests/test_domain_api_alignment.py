@@ -33,7 +33,7 @@ def test_public_ids_match_discovery_and_openapi_routes() -> None:
     discovery_ids = {item["key"] for item in list_functions()}
     openapi_ids = _openapi_run_ids(client.get("/openapi.json").json()["paths"])
     assert catalogue_ids == discovery_ids == openapi_ids
-    assert len(catalogue_ids) == 26
+    assert len(catalogue_ids) == 27
 
 
 def test_discovery_fields_match_catalogue() -> None:

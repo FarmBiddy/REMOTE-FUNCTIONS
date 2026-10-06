@@ -45,6 +45,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0039](0039-balance-sheet.md) | Balance sheet and ratios (`bs.summary`) |
 | [0040](0040-sensitivity-from-month.md) | Sensitivity from a month on (`shocks_from_*`) |
 | [0041](0041-report-bundles.md) | Report bundles for bank, advisor and accountant from one farm file |
+| [0042](0042-multi-year-projection.md) | Multi-year annual projection (`plan.projection`) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

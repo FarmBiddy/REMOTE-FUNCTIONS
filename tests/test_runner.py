@@ -70,6 +70,7 @@ def test_discovery_lists_core_functions_only():
         "report.bank",
         "report.advisor",
         "report.accountant",
+        "plan.projection",
         "pl.forecast",
         "cf.forecast",
         "costs.total",

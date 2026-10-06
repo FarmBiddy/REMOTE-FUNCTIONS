@@ -366,6 +366,14 @@ Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
 interest) and the livestock / stock valuations at start and end.
 
+Multi-year plan (ADR-0042): call `plan.projection` with the last 12 actual
+months, the current bank balance, cows, loans, the asset register and any
+investment. Assumptions are per-year lists the Platform prefills from market
+data or the advisor (presets: cautious / base / optimistic) and the user edits;
+send nothing for "everything stays as this year". Show `assumptions_used`
+next to the figures, and `flags` for years with negative cash or DSCR below the
+lender's `min_cover`.
+
 Reports (ADR-0041): build one farm file and call `report.bank`,
 `report.advisor` or `report.accountant`. Each returns structured sections
 (outputs of the matching IDs) for the Platform to render as a PDF or screen.

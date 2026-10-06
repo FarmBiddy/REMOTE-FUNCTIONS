@@ -397,6 +397,12 @@ Platform presentation.
 Send `shocks_from_year` / `shocks_from_month` = the first projected month so
 scenarios mean "from now on" and past months stay as they happened (ADR-0040).
 
+Interest rates and stress tests (ADR-0043): mark variable-rate loans with
+`variable: true`. Send the same `loans` to `risk.sensitivity` and use
+`rate_shift_pp` per scenario, or `interest_rate_shift_pp` per year in
+`plan.projection`. Stress tests are your named presets of combined shocks
+(e.g. "2016": milk_price_c −9, lines_pct.feed +20, rate_shift_pp +2).
+
 What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
 the cash months, `opening_cash` and the scenarios the farmer picks (e.g.
 `{"name": "milk -5c", "milk_price_c": -5}`). Show each scenario's

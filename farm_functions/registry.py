@@ -18,7 +18,7 @@ from farm_functions.core.surplus import net_profit, profit_margin, profit_margin
 from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
-from farm_functions.accounts import pl_net
+from farm_functions.accounts import bs_summary, pl_net
 from farm_functions.assets import assets_schedule
 from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.forecast import forecast_cf, forecast_pl
@@ -40,6 +40,7 @@ from farm_functions.domain import (
 )
 from farm_functions.schemas import (
     AssetsScheduleInput,
+    BsSummaryInput,
     CfMonthlyInput,
     CfCompareInput,
     CfForecastInput,
@@ -368,6 +369,18 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=PlNetInput,
         handler=pl_net,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="bs.summary",
+        description=(
+            "Balance sheet at month end: current and non-current assets (fixed asset "
+            "NBV from the register) and liabilities (loans split into due within / "
+            "after 12 months), net worth, equity %, debt-to-assets %, current ratio, "
+            "working capital."
+        ),
+        input_model=BsSummaryInput,
+        handler=bs_summary,
         supports_provenance=False,
     ),
     CalculationDefinition(

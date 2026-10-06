@@ -16,25 +16,25 @@ CATEGORIES = ("machinery", "buildings", "other")
 _FIELDS = ("opening_nbv", "additions", "depreciation", "closing_nbv")
 
 
-def _index(year: int, month: int) -> int:
+def month_index(year: int, month: int) -> int:
     return year * 12 + month - 1
 
 
-def _nbv(asset: dict[str, Any], end_index: int) -> float:
+def nbv_at(asset: dict[str, Any], end_index: int) -> float:
     """NBV at the end of month ``end_index`` (cost before any month is depreciated)."""
-    held = end_index - _index(asset["year"], asset["month"]) + 1
+    held = end_index - month_index(asset["year"], asset["month"]) + 1
     if asset["method"] == "straight_line":
         return straight_line_nbv(asset["cost"], asset["residual_value"], asset["life_months"], held)
     return reducing_balance_nbv(asset["cost"], asset["annual_rate"], held)
 
 
 def _note(asset: dict[str, Any], start: int, end: int) -> dict[str, float]:
-    acquired = _index(asset["year"], asset["month"])
+    acquired = month_index(asset["year"], asset["month"])
     if acquired > end:  # bought after the period: not held yet
         return dict.fromkeys(_FIELDS, 0.0)
-    opening = round_money(_nbv(asset, start - 1)) if acquired < start else 0.0
+    opening = round_money(nbv_at(asset, start - 1)) if acquired < start else 0.0
     additions = round_money(asset["cost"]) if acquired >= start else 0.0
-    closing = round_money(_nbv(asset, end))
+    closing = round_money(nbv_at(asset, end))
     # Derived from published figures so the note reconciles to the cent.
     depreciation = round_money(opening + additions - closing)
     return {"opening_nbv": opening, "additions": additions, "depreciation": depreciation, "closing_nbv": closing}
@@ -53,7 +53,7 @@ def assets_schedule(
     to_month: int,
 ) -> dict[str, Any]:
     """``assets.schedule``: fixed asset note per asset (input order), category and total."""
-    start, end = _index(from_year, from_month), _index(to_year, to_month)
+    start, end = month_index(from_year, from_month), month_index(to_year, to_month)
     notes = [_note(asset, start, end) for asset in assets]
     return {
         "currency": "EUR",

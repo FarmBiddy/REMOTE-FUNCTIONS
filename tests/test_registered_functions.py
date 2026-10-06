@@ -108,6 +108,16 @@ SAMPLE_PL_NET = {
     "livestock_opening_value": 100_000,
     "livestock_closing_value": 100_500,
 }
+# Balance sheet: land 100,000 + cash 10,000 vs creditors 5,000 + loan 20,000
+# (0%, 20 months from Jan 2027 → 12,000 due within 12 months) → net worth 85,000.
+SAMPLE_BS = {
+    "year": 2026,
+    "month": 12,
+    "cash": 10_000,
+    "land": 100_000,
+    "creditors": 5_000,
+    "loans": [{"balance": 20_000, "annual_rate": 0, "remaining_months": 20, "year": 2027, "month": 1}],
+}
 # Forecast: no overlapping year-on-year months → run-rate 1, so Oct-2026 = Oct-2025
 # lines, milk at the latest actual price (Sep-2026 €0.45): 40,000 × 0.45 − 5,000.
 SAMPLE_PL_FORECAST = {
@@ -192,6 +202,8 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_ASSETS
     if key == "pl.net":
         return SAMPLE_PL_NET
+    if key == "bs.summary":
+        return SAMPLE_BS
     if key == "cf.compare":
         return SAMPLE_CF_COMPARE
     if key == "cf.forecast":
@@ -245,6 +257,11 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "bs.summary":
+        return {
+            "year": 1, "month": 1, "cash": 0, "debtors": 0, "stock": 0, "livestock": 0, "land": 0,
+            "creditors": 0, "other_long_term_liabilities": 0, "loans": [], "assets": [],
+        }
     if key == "pl.net":
         return {
             "months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}],
@@ -380,6 +397,11 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "bs.summary":
+        body = result["result"]
+        assert body["liabilities"]["current"]["loans_due_within_12_months"] == 12_000
+        assert body["net_worth"] == 85_000
+        assert body["ratios"]["current_ratio"] == 0.59
     elif key == "pl.net":
         body = result["result"]
         assert (body["adjusted_surplus"], body["ebit"], body["net_profit_before_tax"]) == (3_500, 2_500, 2_300)
@@ -518,6 +540,10 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "bs.summary":
+        body = result["result"]
+        assert body["net_worth"] == 0
+        assert body["ratios"]["equity_pct"] is None and body["ratios"]["current_ratio"] is None
     elif key == "pl.net":
         assert result["result"]["net_profit_before_tax"] == 0
         assert result["result"]["net_margin_pct"] is None

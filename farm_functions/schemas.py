@@ -387,6 +387,25 @@ class AssetInput(_StrictModel):
         return self
 
 
+class BsSummaryInput(_StrictModel):
+    """HTTP / runner input for ``bs.summary`` (ADR-0039): balance sheet at the end
+    of ``year`` / ``month``. Loans and the asset register use the
+    ``loan.schedule`` / ``assets.schedule`` item shapes; other values are
+    Platform valuations / balances at that date."""
+
+    year: CalendarYear
+    month: CalendarMonth
+    cash: SignedNumber = 0.0
+    debtors: NonNegativeNumber = 0.0
+    stock: NonNegativeNumber = 0.0
+    livestock: NonNegativeNumber = 0.0
+    land: NonNegativeNumber = 0.0
+    creditors: NonNegativeNumber = 0.0
+    other_long_term_liabilities: NonNegativeNumber = 0.0
+    loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
+    assets: list[AssetInput] = Field(default_factory=list, max_length=200)
+
+
 class AssetsScheduleInput(_StrictModel):
     """HTTP / runner input for ``assets.schedule`` (ADR-0037): register + period."""
 

@@ -158,3 +158,32 @@ def test_http_matches_runner():
     payload = {"pl_months": PL, "cf_months": CF, "opening_cash": 0, "scenarios": [{"milk_price_c": -5}]}
     body = client.post("/v1/functions/risk.sensitivity/run", json=payload).json()
     assert body == run_function("risk.sensitivity", payload)
+
+
+def test_shocks_from_leave_history_untouched():
+    """ADR-0040: from March only. Jan−Feb (−500, 0) are history; March alone moves.
+    Milk −5c on March's 40,000 L → surplus 6,000 − 2,000 = 4,000.
+    Break-evens use March only: surplus 6,000 / 40,000 L → 25 c/L;
+    cash March 500 / 40,000 L → 38.75 c/L. Lowest / overdraft look from March."""
+    body = run_function(
+        "risk.sensitivity",
+        {
+            "pl_months": PL, "cf_months": CF, "opening_cash": -1_000,
+            "scenarios": [{"milk_price_c": -5}],
+            "shocks_from_year": 2026, "shocks_from_month": 3,
+        },
+    )["result"]
+    base, shocked = body["scenarios"]
+    assert body["shocks_from"] == {"kind": "month", "year": 2026, "month": 3}
+    assert base["lowest_cash"]["amount"] == 500 and base["overdraft_months"] == 0
+    assert base["break_even"] == {"surplus_milk_price_c": 25, "cash_milk_price_c": 38.75}
+    assert shocked["surplus"] == 4_000
+    assert shocked["closing_cash"] == 500 - 2_000
+
+
+def test_shocks_from_needs_both_fields():
+    result = run_function(
+        "risk.sensitivity",
+        {"pl_months": PL, "cf_months": CF, "opening_cash": 0, "shocks_from_year": 2026},
+    )
+    assert result["error"]["details"]["reason"] == "incomplete_period"

@@ -521,9 +521,14 @@ class RiskSensitivityInput(_StrictModel):
     cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
     opening_cash: SignedNumber
     scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+    # Optional: shocks apply from this month on; earlier months are history (ADR-0040).
+    shocks_from_year: CalendarYear | None = None
+    shocks_from_month: CalendarMonth | None = None
 
     @model_validator(mode="after")
     def _investments_inside_cash_months(self) -> "RiskSensitivityInput":
+        if (self.shocks_from_year is None) != (self.shocks_from_month is None):
+            raise ValueError("shocks_from_year and shocks_from_month must be sent together")
         months = {(m.year, m.month) for m in self.cf_months}
         for scenario in self.scenarios:
             for inv in scenario.investments:

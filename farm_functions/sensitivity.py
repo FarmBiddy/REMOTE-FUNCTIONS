@@ -145,26 +145,36 @@ def _apply_investments(
     return list(pl.values()), list(cf.values()), summaries
 
 
+def _live(period: dict[str, Any], start: tuple[int, int] | None) -> bool:
+    """Shocks and break-evens apply from ``start`` on (ADR-0040); earlier months are history."""
+    return start is None or _key(period) >= start
+
+
 def _price_c(avg_price: float, shift: float | None) -> float | None:
     """Break-even price in c/L; floored at 0 (0 = covered even at a zero price)."""
     return None if shift is None else round_money(max(0.0, avg_price + shift) * 100)
 
 
 def _break_even(
-    pl_months: list[dict[str, Any]], statements: list[dict[str, Any]], cash_months: list[dict[str, Any]]
+    pl_months: list[dict[str, Any]],
+    statements: list[dict[str, Any]],
+    cash_months: list[dict[str, Any]],
+    start: tuple[int, int] | None,
 ) -> tuple[float, dict[str, float | None]]:
-    """Average milk price and the exact milk prices where surplus / lowest cash reach 0."""
-    litres = sum_amounts(*(item["milk_litres"] for item in pl_months))
-    milk_revenue = sum_amounts(*(s["revenue"]["milk"] for s in statements))
+    """Average milk price of the live months and the exact prices where surplus /
+    lowest live month-end cash reach 0 when only live months' price moves."""
+    litres = sum_amounts(*(i["milk_litres"] for i in pl_months if _live(i, start)))
+    milk_revenue = sum_amounts(*(s["revenue"]["milk"] for s in statements if _live(s["period"], start)))
     avg_price = per_unit(milk_revenue, litres) or 0.0
     surplus = sum_amounts(*(s["profit"]["net"] for s in statements))
-    cumulative_milk = list(accumulate(m["operating"]["inflows"]["lines"]["milk"] for m in cash_months))
+    live_cash = [m for m in cash_months if _live(m["period"], start)]
+    cumulative_milk = list(accumulate(m["operating"]["inflows"]["lines"]["milk"] for m in live_cash))
     cash_shift = (
         min_shift_all_non_negative(
-            [m["closing_cash"] for m in cash_months],
+            [m["closing_cash"] for m in live_cash],
             [cum / avg_price for cum in cumulative_milk],
         )
-        if avg_price
+        if avg_price and live_cash
         else None
     )
     return avg_price, {
@@ -179,6 +189,7 @@ def _outcome(
     cf_months: list[dict[str, Any]],
     opening_cash: float,
     base_price: float,
+    start: tuple[int, int] | None,
 ) -> dict[str, Any]:
     pl_months, cf_months, investments = _apply_investments(
         pl_months, cf_months, scenario["investments"]
@@ -192,12 +203,17 @@ def _outcome(
 
     shocked_pl = []
     for item in pl_months:
+        if not _live(item, start):
+            shocked_pl.append(item)
+            continue
         lines = _scale_lines(item, scenario["lines_pct"], herd)
         lines["milk_price"] = max(0.0, item["milk_price"] + price_shift)
         lines["milk_litres"] = item["milk_litres"] * volume
         shocked_pl.append(lines)
     shocked_cf = [
         {**_scale_lines(item, scenario["lines_pct"], herd), "milk": item["milk"] * cash_milk}
+        if _live(item, start)
+        else item
         for item in cf_months
     ]
 
@@ -206,8 +222,10 @@ def _outcome(
     repayments = sum_amounts(*(s["finance"]["loan_repayments"] for s in statements))
     dscr = coverage_ratio(surplus, repayments)
     cash = _cash(shocked_cf, opening_cash)
-    lowest = min(cash["months"], key=lambda m: m["closing_cash"])
-    _, break_even = _break_even(shocked_pl, statements, cash["months"])
+    # Lowest cash / overdraft months look forward from ``start`` (history is fixed).
+    live_cash = [m for m in cash["months"] if _live(m["period"], start)] or cash["months"]
+    lowest = min(live_cash, key=lambda m: m["closing_cash"])
+    _, break_even = _break_even(shocked_pl, statements, cash["months"], start)
     return {
         "name": scenario["name"],
         "shocks": {
@@ -219,7 +237,7 @@ def _outcome(
         "dscr": None if dscr is None else round_money(dscr),
         "closing_cash": cash["closing_cash"],
         "lowest_cash": {"period": lowest["period"], "amount": lowest["closing_cash"]},
-        "overdraft_months": sum(1 for m in cash["months"] if m["closing_cash"] < 0),
+        "overdraft_months": sum(1 for m in live_cash if m["closing_cash"] < 0),
         "break_even": break_even,
     }
 
@@ -230,14 +248,20 @@ def risk_sensitivity(
     cf_months: list[dict[str, Any]],
     opening_cash: float,
     scenarios: list[dict[str, Any]],
+    shocks_from_year: int | None = None,
+    shocks_from_month: int | None = None,
 ) -> dict[str, Any]:
     """``risk.sensitivity``: base + scenarios, each with its milk-price break-evens."""
-    base_price, _ = _break_even(pl_months, _statements(pl_months), _cash(cf_months, opening_cash)["months"])
+    start = None if shocks_from_year is None else (shocks_from_year, shocks_from_month)
+    base_price, _ = _break_even(
+        pl_months, _statements(pl_months), _cash(cf_months, opening_cash)["months"], start
+    )
     named = [{**s, "name": s["name"] or f"scenario {i}"} for i, s in enumerate(scenarios, 1)]
     return {
         "currency": "EUR",
+        "shocks_from": None if start is None else {"kind": "month", "year": start[0], "month": start[1]},
         "milk_price_c": round_money(base_price * 100),
         "scenarios": [
-            _outcome(s, pl_months, cf_months, opening_cash, base_price) for s in [BASE, *named]
+            _outcome(s, pl_months, cf_months, opening_cash, base_price, start) for s in [BASE, *named]
         ],
     }

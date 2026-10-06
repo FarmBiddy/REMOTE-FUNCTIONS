@@ -381,6 +381,9 @@ Variance (ADR-0035): "vs last year" / "vs budget" columns call `pl.compare` or
 `milk.price_effect` to explain a milk income change. Colour (cost up = bad) is
 Platform presentation.
 
+Send `shocks_from_year` / `shocks_from_month` = the first projected month so
+scenarios mean "from now on" and past months stay as they happened (ADR-0040).
+
 What-if panel (ADR-0029): call `risk.sensitivity` with the chart's P&L months,
 the cash months, `opening_cash` and the scenarios the farmer picks (e.g.
 `{"name": "milk -5c", "milk_price_c": -5}`). Show each scenario's

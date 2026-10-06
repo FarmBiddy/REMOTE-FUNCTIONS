@@ -401,6 +401,11 @@ scenarios mean "from now on" and past months stay as they happened (ADR-0040).
 farmer's or advisor's labelled annual amounts (rent land, contract rearing, buy
 vs grow feed). Labels are yours and come back unchanged.
 
+"Is it a good investment over its life?" (ADR-0046): `decision.investment`
+with the outlay, the yearly benefit (or year-by-year cash flows), any resale
+value and the discount rate the user or lender chooses. Show NPV and IRR with
+the discounted payback; pair with `risk.sensitivity` for affordability.
+
 "What affects me most?" (ADR-0044): call `risk.tornado` with the same months
 as the what-if panel and draw `drivers` as a tornado chart (bars from `low` to
 `high`, already sorted). `rank_by: closing_cash` for a cash view.

@@ -31,6 +31,7 @@ _APPLICATION_MODULES = (
     FARM / "compare.py",
     FARM / "assets.py",
     FARM / "accounts.py",
+    FARM / "reports.py",
     FARM / "errors.py",
     FARM / "schemas.py",
     FARM / "loaders" / "json_loader.py",

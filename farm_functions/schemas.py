@@ -539,6 +539,63 @@ class RiskSensitivityInput(_StrictModel):
         return self
 
 
+class NewLoanTermsInput(_StrictModel):
+    """Terms of the loan being applied for (``debt.capacity`` in the bank report)."""
+
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    term_months: Annotated[int, BeforeValidator(_parse_loan_months)]
+    min_cover: Annotated[float, BeforeValidator(_parse_cover)] = 1.0
+
+
+class FarmReportInput(_StrictModel):
+    """Farm file shared by ``report.bank`` / ``report.advisor`` / ``report.accountant``
+    (ADR-0041). Reporting period = ``pl_months``; report date = its last month.
+
+    Item shapes reuse the other IDs: ``pl.months``, ``cf.months``,
+    ``loan.schedule`` (loans as at the report date), ``assets.schedule``.
+    Balances / valuations are at the report date; opening valuations default to
+    the closing ones (no change).
+    """
+
+    pl_months: list[PlMonthItemInput] = Field(..., min_length=1)
+    cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
+    opening_cash: SignedNumber
+    milking_cows: NonNegativeNumber
+    hectares: NonNegativeNumber | None = None
+    milk_solids_kg: NonNegativeNumber | None = None
+    prior_pl_months: list[PlMonthItemInput] = Field(default_factory=list)
+    projected_pl_months: list[PlMonthItemInput] = Field(default_factory=list)
+    projected_cf_months: list[CfMonthItemInput] = Field(default_factory=list)
+    loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
+    assets: list[AssetInput] = Field(default_factory=list, max_length=200)
+    debtors: NonNegativeNumber = 0.0
+    stock: NonNegativeNumber = 0.0
+    livestock: NonNegativeNumber = 0.0
+    land: NonNegativeNumber = 0.0
+    creditors: NonNegativeNumber = 0.0
+    other_long_term_liabilities: NonNegativeNumber = 0.0
+    livestock_opening_value: NonNegativeNumber | None = None
+    stock_opening_value: NonNegativeNumber | None = None
+    drawings: NonNegativeNumber = 0.0
+    tax: NonNegativeNumber = 0.0
+    off_farm_income: NonNegativeNumber = 0.0
+    new_loan: NewLoanTermsInput | None = None
+    scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
+
+    @model_validator(mode="after")
+    def _aligned(self) -> "FarmReportInput":
+        for items in (self.pl_months, self.prior_pl_months, self.projected_pl_months):
+            _reject_duplicate_months(items)
+        last_pl = max((m.year, m.month) for m in self.pl_months)
+        last_cf = max((m.year, m.month) for m in self.cf_months)
+        if last_pl != last_cf:
+            raise ValueError("cf_months must end in the same month as pl_months")
+        for items in (self.projected_pl_months, self.projected_cf_months):
+            if items and min((m.year, m.month) for m in items) <= last_pl:
+                raise ValueError("projected months must be after the reporting period")
+        return self
+
+
 # ---------------------------------------------------------------------------
 # Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
 # item shape). ``forecast`` items carry period identity plus optional known

@@ -40,6 +40,9 @@ EXPECTED_PUBLIC_IDS = (
     "pl.compare",
     "cf.compare",
     "risk.sensitivity",
+    "report.bank",
+    "report.advisor",
+    "report.accountant",
     "pl.forecast",
     "cf.forecast",
 )
@@ -117,6 +120,13 @@ def _happy_payload(calculation_id: str) -> dict:
         return {"months": [dict(MONTHLY_REFERENCE)], "annual_rate": 0.05, "term_months": 120}
     if calculation_id == "pl.net":
         return {"months": [dict(MONTHLY_REFERENCE)], "depreciation": 100, "interest": 50}
+    if calculation_id.startswith("report."):
+        return {
+            "pl_months": [dict(MONTHLY_REFERENCE)],
+            "cf_months": [{"year": 2026, "month": 3, "milk": 1}],
+            "opening_cash": 0,
+            "milking_cows": 100,
+        }
     if calculation_id == "bs.summary":
         return {"year": 2026, "month": 12, "cash": 1_000, "land": 10_000}
     if calculation_id == "pl.compare":
@@ -139,10 +149,10 @@ def _happy_payload(calculation_id: str) -> dict:
     raise AssertionError(f"No happy payload for {calculation_id}")
 
 
-def test_exactly_twenty_three_unique_public_calculation_ids() -> None:
+def test_exactly_twenty_six_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 23
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 23
+    assert len(PUBLIC_CALCULATION_IDS) == 26
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 26
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

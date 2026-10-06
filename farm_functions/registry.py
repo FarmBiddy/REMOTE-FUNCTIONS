@@ -24,6 +24,7 @@ from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
+from farm_functions.reports import report_accountant, report_advisor, report_bank
 from farm_functions.sensitivity import risk_sensitivity
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
@@ -45,6 +46,7 @@ from farm_functions.schemas import (
     CfCompareInput,
     CfForecastInput,
     CfMonthsInput,
+    FarmReportInput,
     DebtCapacityInput,
     KpiSummaryInput,
     RiskSensitivityInput,
@@ -413,6 +415,36 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=RiskSensitivityInput,
         handler=risk_sensitivity,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="report.bank",
+        description=(
+            "Bank report bundle from the farm file: net profit, KPIs incl. DSCR, loans, "
+            "repayment / borrowing capacity, balance sheet, actual and projected cash."
+        ),
+        input_model=FarmReportInput,
+        handler=report_bank,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="report.advisor",
+        description=(
+            "Advisor report bundle from the farm file: KPIs, net profit, variance vs "
+            "prior year, what-if scenarios (from the first projected month when sent)."
+        ),
+        input_model=FarmReportInput,
+        handler=report_advisor,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="report.accountant",
+        description=(
+            "Accountant report bundle from the farm file: P&L by line, net profit before "
+            "tax, fixed asset note, balance sheet, cash flow by line with balances."
+        ),
+        input_model=FarmReportInput,
+        handler=report_accountant,
         supports_provenance=False,
     ),
     CalculationDefinition(

@@ -21,7 +21,7 @@ from farm_functions.dairy.statement import pl_summary
 from farm_functions.accounts import bs_summary, pl_net
 from farm_functions.assets import assets_schedule
 from farm_functions.compare import compare_cf, compare_pl
-from farm_functions.decisions import partial_budget
+from farm_functions.decisions import investment_appraisal, partial_budget
 from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
@@ -60,6 +60,7 @@ from farm_functions.schemas import (
     OtherRevenueInput,
     PlMonthlyInput,
     PlCompareInput,
+    InvestmentAppraisalInput,
     PartialBudgetInput,
     PlanProjectionInput,
     PlForecastInput,
@@ -442,6 +443,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=PartialBudgetInput,
         handler=partial_budget,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="decision.investment",
+        description=(
+            "Investment appraisal over the asset's life: NPV at a discount rate, IRR, "
+            "simple and discounted payback, profitability index and the discounted "
+            "year-by-year schedule. Constant or explicit annual cash flows."
+        ),
+        input_model=InvestmentAppraisalInput,
+        handler=investment_appraisal,
         supports_provenance=False,
     ),
     CalculationDefinition(

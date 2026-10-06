@@ -63,6 +63,7 @@ def test_discovery_lists_core_functions_only():
         "risk.sensitivity",
         "risk.tornado",
         "decision.partial_budget",
+        "decision.investment",
         "pl.compare",
         "cf.compare",
         "debt.capacity",

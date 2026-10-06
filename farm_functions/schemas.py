@@ -603,6 +603,38 @@ class PartialBudgetInput(_StrictModel):
     capital: CapitalInput | None = None
 
 
+def _parse_life_years_whole(value: Any) -> int:
+    """Investment life: whole number of years, 1–40."""
+    number = _parse_finite_number(value)
+    if not number.is_integer() or not 1 <= number <= 40:
+        raise ValueError("must be a whole number between 1 and 40")
+    return int(number)
+
+
+class InvestmentAppraisalInput(_StrictModel):
+    """HTTP / runner input for ``decision.investment`` (ADR-0046).
+
+    Benefits either as a constant ``annual_benefit`` over ``life_years`` or as
+    explicit year-by-year ``cash_flows`` (year 1 first; may be negative).
+    """
+
+    amount: NonNegativeNumber
+    discount_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
+    annual_benefit: SignedNumber | None = None
+    life_years: Annotated[int, BeforeValidator(_parse_life_years_whole)] | None = None
+    cash_flows: list[SignedNumber] = Field(default_factory=list, max_length=40)
+    residual_value: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _one_benefit_form(self) -> "InvestmentAppraisalInput":
+        simple = self.annual_benefit is not None or self.life_years is not None
+        if simple == bool(self.cash_flows):
+            raise ValueError("send either annual_benefit with life_years, or cash_flows")
+        if simple and (self.annual_benefit is None or self.life_years is None):
+            raise ValueError("send either annual_benefit with life_years, or cash_flows")
+        return self
+
+
 class NewLoanTermsInput(_StrictModel):
     """Terms of the loan being applied for (``debt.capacity`` in the bank report)."""
 

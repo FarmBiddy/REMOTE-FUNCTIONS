@@ -228,6 +228,9 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_PROJECTION
     if key == "risk.tornado":
         return {k: SAMPLE_SENSITIVITY[k] for k in ("pl_months", "cf_months", "opening_cash")}
+    if key == "decision.investment":
+        # 1,000 outlay, 0% discount, 2 years of 600 → NPV 200, simple payback 1.67 years.
+        return {"amount": 1_000, "discount_rate": 0, "annual_benefit": 600, "life_years": 2}
     if key == "decision.partial_budget":
         # 5,000 gained − 3,000 lost − capital (10,000 / 10 + 10,000 / 2 × 4%) = 800.
         return {
@@ -263,6 +266,8 @@ def _required_only_payload(key: str) -> dict:
         return {"months": months}
     if key == "cf.months":
         return {"opening_cash": 20_000, "months": [{"year": 2026, "month": 3}]}
+    if key == "decision.investment":
+        return full  # needs one benefit form besides the required fields
     return {name: full[name] for name in required}
 
 
@@ -288,6 +293,8 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "decision.investment":
+        return {"amount": 0, "discount_rate": 0, "cash_flows": [0], "residual_value": 0}
     if key == "decision.partial_budget":
         zero = [{"label": "x", "amount": 0}]
         return {
@@ -460,6 +467,9 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "decision.investment":
+        body = result["result"]
+        assert (body["npv"], body["simple_payback_years"]) == (200, 1.67)
     elif key == "decision.partial_budget":
         body = result["result"]
         assert (body["operating_change"], body["capital"]["annual_charge"], body["net_change"]) == (2_000, 1_200, 800)
@@ -621,6 +631,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "decision.investment":
+        assert result["result"]["npv"] == 0 and result["result"]["profitability_index"] is None
     elif key == "decision.partial_budget":
         assert result["result"]["net_change"] == 0 and result["result"]["worthwhile"] is False
     elif key == "risk.tornado":

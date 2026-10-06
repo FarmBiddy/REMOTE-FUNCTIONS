@@ -1,8 +1,8 @@
-"""Farm decision tools, independent of the enterprise (ADR-0045).
+"""Farm decision tools, independent of the enterprise (ADR-0045, ADR-0046).
 
 Application layer: partial budget for a change to the farm (rent land, contract
-rearing, buy vs grow feed …). Items are free-form labelled annual amounts, so
-the same tool serves dairy, sheep or any enterprise.
+rearing, buy vs grow feed …) and investment appraisal (NPV, IRR, discounted
+payback). Inputs are plain amounts, so the tools serve any enterprise.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from farm_functions.core.aggregate import sum_amounts
-from farm_functions.core.investment import annual_capital_charge
+from farm_functions.core.investment import annual_capital_charge, discounted_payback, irr, npv
 from farm_functions.core.ratios import per_unit
 from farm_functions.core.rounding import round_margin_pct, round_money
 
@@ -77,4 +77,52 @@ def partial_budget(
         "capital": capital_out,
         "net_change": round_money(net),
         "worthwhile": net > 0,
+    }
+
+
+def investment_appraisal(
+    *,
+    amount: float,
+    discount_rate: float,
+    annual_benefit: float | None = None,
+    life_years: int | None = None,
+    cash_flows: list[float] | None = None,
+    residual_value: float = 0.0,
+) -> dict[str, Any]:
+    """``decision.investment``: NPV, IRR, paybacks and the discounted schedule."""
+    benefits = list(cash_flows) if cash_flows else [annual_benefit] * life_years
+    benefits[-1] += residual_value
+    flows = [-amount, *benefits]
+    value = npv(discount_rate, flows)
+    rate = irr(flows)
+    payback = discounted_payback(discount_rate, flows)
+    simple = discounted_payback(0.0, flows)
+    present_benefits = value + amount
+    schedule, cumulative = [], -amount
+    for year, flow in enumerate(benefits, 1):
+        factor = 1 / (1 + discount_rate) ** year
+        cumulative += flow * factor
+        schedule.append(
+            {
+                "year": year,
+                "cash_flow": round_money(flow),
+                "discount_factor": round(factor, 6),
+                "present_value": round_money(flow * factor),
+                "cumulative_present_value": round_money(cumulative),
+            }
+        )
+    index = per_unit(present_benefits, amount)
+    return {
+        "currency": "EUR",
+        "amount": round_money(amount),
+        "discount_rate": discount_rate,
+        "life_years": len(benefits),
+        "residual_value": round_money(residual_value),
+        "npv": round_money(value),
+        "irr_pct": None if rate is None else round_margin_pct(rate * 100),
+        "simple_payback_years": None if simple is None else round_money(simple),
+        "discounted_payback_years": None if payback is None else round_money(payback),
+        "profitability_index": None if index is None else round(index, 4),
+        "worthwhile": value > 0,
+        "years": schedule,
     }

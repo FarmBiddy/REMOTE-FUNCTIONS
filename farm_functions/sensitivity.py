@@ -83,7 +83,7 @@ def _statements(pl_months: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return result.model_dump()["months"]
 
 
-def _cash(cf_months: list[dict[str, Any]], opening_cash: float) -> dict[str, Any]:
+def cash_roll(cf_months: list[dict[str, Any]], opening_cash: float) -> dict[str, Any]:
     envelopes = []
     for item in cf_months:
         period, lines = _split(item)
@@ -221,7 +221,7 @@ def _outcome(
     surplus = sum_amounts(*(s["profit"]["net"] for s in statements))
     repayments = sum_amounts(*(s["finance"]["loan_repayments"] for s in statements))
     dscr = coverage_ratio(surplus, repayments)
-    cash = _cash(shocked_cf, opening_cash)
+    cash = cash_roll(shocked_cf, opening_cash)
     # Lowest cash / overdraft months look forward from ``start`` (history is fixed).
     live_cash = [m for m in cash["months"] if _live(m["period"], start)] or cash["months"]
     lowest = min(live_cash, key=lambda m: m["closing_cash"])
@@ -254,7 +254,7 @@ def risk_sensitivity(
     """``risk.sensitivity``: base + scenarios, each with its milk-price break-evens."""
     start = None if shocks_from_year is None else (shocks_from_year, shocks_from_month)
     base_price, _ = _break_even(
-        pl_months, _statements(pl_months), _cash(cf_months, opening_cash)["months"], start
+        pl_months, _statements(pl_months), cash_roll(cf_months, opening_cash)["months"], start
     )
     named = [{**s, "name": s["name"] or f"scenario {i}"} for i, s in enumerate(scenarios, 1)]
     return {

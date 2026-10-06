@@ -32,14 +32,14 @@ def _split(item: dict[str, Any]) -> tuple[MonthlyPeriodIdentity, dict[str, float
     return MonthlyPeriodIdentity(year=item["year"], month=item["month"]), lines
 
 
-def _sum_trees(trees: list[dict[str, Any]]) -> dict[str, Any]:
+def sum_statements(trees: list[dict[str, Any]]) -> dict[str, Any]:
     """Sum every money leaf across statements with the same shape."""
     out: dict[str, Any] = {}
     for key, value in trees[0].items():
         if key in _SKIP:
             continue
         if isinstance(value, dict):
-            out[key] = _sum_trees([t[key] for t in trees])
+            out[key] = sum_statements([t[key] for t in trees])
         else:
             out[key] = sum_amounts(*(t[key] for t in trees))
     return out
@@ -78,7 +78,7 @@ def pl_statements(months: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def _cf_statements(months: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def cf_statements(months: list[dict[str, Any]]) -> list[dict[str, Any]]:
     out = []
     for item in months:
         period, lines = _split(item)
@@ -92,7 +92,7 @@ def _cf_statements(months: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def compare_pl(*, actual: list[dict[str, Any]], comparison: list[dict[str, Any]]) -> dict[str, Any]:
     """``pl.compare``: line-by-line P&L variance plus milk price / volume effects."""
     a_stmts, c_stmts = pl_statements(actual), pl_statements(comparison)
-    a_tot, c_tot = _sum_trees(a_stmts), _sum_trees(c_stmts)
+    a_tot, c_tot = sum_statements(a_stmts), sum_statements(c_stmts)
 
     a_litres = sum_amounts(*(m["milk_litres"] for m in actual))
     c_litres = sum_amounts(*(m["milk_litres"] for m in comparison))
@@ -130,10 +130,10 @@ def compare_pl(*, actual: list[dict[str, Any]], comparison: list[dict[str, Any]]
 
 def compare_cf(*, actual: list[dict[str, Any]], comparison: list[dict[str, Any]]) -> dict[str, Any]:
     """``cf.compare``: line-by-line cash flow variance (movements only, no balances)."""
-    a_stmts, c_stmts = _cf_statements(actual), _cf_statements(comparison)
+    a_stmts, c_stmts = cf_statements(actual), cf_statements(comparison)
     return {
         "currency": "EUR",
         "actual": _span(a_stmts),
         "comparison": _span(c_stmts),
-        **_variance_tree(_sum_trees(a_stmts), _sum_trees(c_stmts)),
+        **_variance_tree(sum_statements(a_stmts), sum_statements(c_stmts)),
     }

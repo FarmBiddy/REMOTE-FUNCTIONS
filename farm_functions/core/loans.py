@@ -58,4 +58,30 @@ def amortisation_schedule(
     return rows
 
 
-__all__ = ["AmortisationRow", "amortisation_schedule", "annuity_payment", "annuity_principal"]
+def repricing_schedule(
+    balance: float, months: int, rate_steps: list[tuple[int, float]]
+) -> list[AmortisationRow]:
+    """Variable-rate schedule (ADR-0043): at each ``(offset, annual_rate)`` step the
+    remaining balance is re-amortised over the remaining months at the new rate.
+
+    ``rate_steps`` must start at offset 0; later steps at the same offset win.
+    """
+    steps = dict(sorted(rate_steps))
+    offsets = sorted(o for o in steps if o < months)
+    rows: list[AmortisationRow] = []
+    remaining = balance
+    for i, offset in enumerate(offsets):
+        until = offsets[i + 1] if i + 1 < len(offsets) else months
+        segment = amortisation_schedule(remaining, steps[offset], months - offset)
+        rows.extend(segment[: until - offset])
+        remaining = rows[-1]["closing_balance"]
+    return rows
+
+
+__all__ = [
+    "AmortisationRow",
+    "amortisation_schedule",
+    "annuity_payment",
+    "annuity_principal",
+    "repricing_schedule",
+]

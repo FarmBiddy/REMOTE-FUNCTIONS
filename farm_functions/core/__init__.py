@@ -25,6 +25,7 @@ from farm_functions.core.loans import (
     amortisation_schedule,
     annuity_payment,
     annuity_principal,
+    repricing_schedule,
 )
 from farm_functions.core.ratios import coverage_ratio, per_unit
 from farm_functions.core.rounding import (
@@ -59,6 +60,7 @@ __all__ = [
     "price_volume_effects",
     "profit_margin_pct",
     "reducing_balance_nbv",
+    "repricing_schedule",
     "round_margin_pct",
     "round_margin_ratio",
     "round_money",

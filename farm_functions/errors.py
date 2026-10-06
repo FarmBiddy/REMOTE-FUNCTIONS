@@ -251,6 +251,7 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             "list_type",
             "dict_type",
             "string_type",
+            "string_too_short",
             "string_too_long",
             "literal_error",
         ):

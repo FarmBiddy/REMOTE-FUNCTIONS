@@ -20,6 +20,7 @@ from farm_functions.core.forecast import (
     seasonal_projection,
 )
 from farm_functions.core.growth import carry_forward, compound_indexes
+from farm_functions.core.investment import annual_capital_charge
 from farm_functions.core.loans import (
     AmortisationRow,
     amortisation_schedule,
@@ -42,6 +43,7 @@ __all__ = [
     "CashActivity",
     "CashDirection",
     "amortisation_schedule",
+    "annual_capital_charge",
     "break_even_shift",
     "carry_forward",
     "annuity_payment",

@@ -228,6 +228,13 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_PROJECTION
     if key == "risk.tornado":
         return {k: SAMPLE_SENSITIVITY[k] for k in ("pl_months", "cf_months", "opening_cash")}
+    if key == "decision.partial_budget":
+        # 5,000 gained − 3,000 lost − capital (10,000 / 10 + 10,000 / 2 × 4%) = 800.
+        return {
+            "added_income": [{"label": "extra sales", "amount": 5_000}],
+            "added_costs": [{"label": "extra costs", "amount": 3_000}],
+            "capital": {"amount": 10_000, "life_years": 10, "annual_rate": 0.04},
+        }
     if key == "cf.compare":
         return SAMPLE_CF_COMPARE
     if key == "cf.forecast":
@@ -281,6 +288,12 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "kpi.summary":
         return {"months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}], "milking_cows": 0}
+    if key == "decision.partial_budget":
+        zero = [{"label": "x", "amount": 0}]
+        return {
+            "added_income": zero, "reduced_costs": zero, "added_costs": zero, "reduced_income": zero,
+            "capital": {"amount": 0, "life_years": 1, "annual_rate": 0},
+        }
     if key == "risk.tornado":
         return {
             "pl_months": [{"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}],
@@ -447,6 +460,10 @@ def test_happy_path(key: str) -> None:
         assert body["total_interest"] == 0
         assert body["repaid_pct"] == 50
         assert body["months"][-1]["period"] == {"kind": "month", "year": 2027, "month": 9}
+    elif key == "decision.partial_budget":
+        body = result["result"]
+        assert (body["operating_change"], body["capital"]["annual_charge"], body["net_change"]) == (2_000, 1_200, 800)
+        assert body["worthwhile"] is True
     elif key == "risk.tornado":
         drivers = {d["driver"]: d["swing"]["surplus"] for d in result["result"]["drivers"]}
         assert drivers["milk_price"] == 800  # ±10% of 4,000 milk revenue
@@ -604,6 +621,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "loan.schedule":
         assert result["result"]["total_monthly_payment"] == 0
         assert result["result"]["loans"][0]["repaid_pct"] is None
+    elif key == "decision.partial_budget":
+        assert result["result"]["net_change"] == 0 and result["result"]["worthwhile"] is False
     elif key == "risk.tornado":
         assert result["result"]["base"]["surplus"] == 0
     elif key == "plan.projection":
@@ -726,6 +745,9 @@ def test_empty_body(key: str) -> None:
         assert result["status"] == "needs_input"
         assert result["missing"] == [missing_field_entry(f) for f in required]
         assert result["provided"] == []
+    elif key == "decision.partial_budget":
+        assert result["status"] == "ok"
+        assert result["result"]["net_change"] == 0
     else:
         assert result["status"] == "ok"
         _assert_ok_money(result, 0)

@@ -62,6 +62,7 @@ def test_discovery_lists_core_functions_only():
         "kpi.summary",
         "risk.sensitivity",
         "risk.tornado",
+        "decision.partial_budget",
         "pl.compare",
         "cf.compare",
         "debt.capacity",

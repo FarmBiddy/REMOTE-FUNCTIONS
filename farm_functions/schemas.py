@@ -570,6 +570,39 @@ class RiskTornadoInput(_RiskBaseInput):
     rank_by: Literal["surplus", "closing_cash", "lowest_cash"] = "surplus"
 
 
+def _parse_life_years(value: Any) -> float:
+    """Asset life in years: above 0, at most 100."""
+    number = _parse_finite_number(value)
+    if not 0 < number <= 100:
+        raise ValueError("must be above 0 and at most 100")
+    return number
+
+
+class BudgetItemInput(_StrictModel):
+    """One labelled annual amount in a partial budget (ADR-0045)."""
+
+    label: str = Field(..., min_length=1, max_length=60)
+    amount: NonNegativeNumber
+
+
+class CapitalInput(_StrictModel):
+    """Capital tied up by the change: charged as depreciation + interest on half."""
+
+    amount: NonNegativeNumber
+    life_years: Annotated[float, BeforeValidator(_parse_life_years)]
+    annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)] = 0.0
+
+
+class PartialBudgetInput(_StrictModel):
+    """HTTP / runner input for ``decision.partial_budget`` (ADR-0045)."""
+
+    added_income: list[BudgetItemInput] = Field(default_factory=list, max_length=30)
+    reduced_costs: list[BudgetItemInput] = Field(default_factory=list, max_length=30)
+    added_costs: list[BudgetItemInput] = Field(default_factory=list, max_length=30)
+    reduced_income: list[BudgetItemInput] = Field(default_factory=list, max_length=30)
+    capital: CapitalInput | None = None
+
+
 class NewLoanTermsInput(_StrictModel):
     """Terms of the loan being applied for (``debt.capacity`` in the bank report)."""
 

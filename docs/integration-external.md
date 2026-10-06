@@ -366,6 +366,11 @@ Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
 interest) and the livestock / stock valuations at start and end.
 
+Balance sheet (ADR-0039): call `bs.summary` for a month end with the bank
+balance (`cash`, negative = overdraft), debtors, stock, livestock and land values,
+creditors (supplier debt card), the same `loans[]` as `loan.schedule` and the
+same register as `assets.schedule`. The Engine splits loans and values assets.
+
 "How much can I borrow?" (ADR-0036): call `debt.capacity` with 12 months
 (actual or projected), the household `drawings`, `tax`, `off_farm_income`, and
 the loan's `annual_rate`, `term_months` and the lender's `min_cover` (e.g. 1.25).

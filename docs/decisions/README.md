@@ -49,6 +49,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0043](0043-interest-rate-shocks.md) | Interest-rate shocks on variable-rate loans; stress tests as Platform presets |
 | [0044](0044-tornado-driver-ranking.md) | Driver ranking (`risk.tornado`) |
 | [0045](0045-partial-budget.md) | Partial budget (`decision.partial_budget`) |
+| [0046](0046-investment-appraisal.md) | Investment appraisal: NPV, IRR, discounted payback (`decision.investment`) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

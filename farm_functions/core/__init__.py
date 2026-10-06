@@ -20,7 +20,7 @@ from farm_functions.core.forecast import (
     seasonal_projection,
 )
 from farm_functions.core.growth import carry_forward, compound_indexes
-from farm_functions.core.investment import annual_capital_charge
+from farm_functions.core.investment import annual_capital_charge, discounted_payback, irr, npv
 from farm_functions.core.loans import (
     AmortisationRow,
     amortisation_schedule,
@@ -52,11 +52,14 @@ __all__ = [
     "change_pct",
     "closing_cash",
     "compound_indexes",
+    "discounted_payback",
     "coverage_ratio",
+    "irr",
     "latest_non_zero",
     "min_shift_all_non_negative",
     "net_cash_flow",
     "net_profit",
+    "npv",
     "profit_margin",
     "per_unit",
     "price_volume_effects",

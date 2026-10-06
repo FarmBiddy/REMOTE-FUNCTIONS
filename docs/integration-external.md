@@ -397,6 +397,10 @@ Platform presentation.
 Send `shocks_from_year` / `shocks_from_month` = the first projected month so
 scenarios mean "from now on" and past months stay as they happened (ADR-0040).
 
+"Is this change worth it?" (ADR-0045): `decision.partial_budget` with the
+farmer's or advisor's labelled annual amounts (rent land, contract rearing, buy
+vs grow feed). Labels are yours and come back unchanged.
+
 "What affects me most?" (ADR-0044): call `risk.tornado` with the same months
 as the what-if panel and draw `drivers` as a tornado chart (bars from `low` to
 `high`, already sorted). `rank_by: closing_cash` for a cash view.

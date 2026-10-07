@@ -100,3 +100,11 @@ def test_openapi_exposes_typed_function_inputs():
         "litres_per_cow",
         "milk_price",
     }
+
+
+def test_malformed_json_is_an_error_not_a_crash():
+    response = client.post(
+        "/v1/functions/revenue.milk/run", content="{", headers={"content-type": "application/json"}
+    )
+    assert response.status_code == 200
+    assert response.json()["error"]["code"] == "invalid_json"

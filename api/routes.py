@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from farm_functions.errors import unknown_calculation_envelope
+from farm_functions.errors import invalid_json_envelope, unknown_calculation_envelope
 from farm_functions.loaders.json_loader import load_sample_inputs
 from farm_functions.registry import CALCULATION_CATALOGUE, describe_function, list_functions
 from farm_functions.runner import run_function
@@ -63,12 +63,18 @@ def _example_for_model(model: type[BaseModel]) -> dict[str, float]:
     }
 
 
-async def _read_payload(request: Request) -> dict[str, Any]:
+_INVALID_JSON = object()
+
+
+async def _read_payload(request: Request) -> Any:
     """Parse JSON body without FastAPI required-field validation (needs_input stays in runner)."""
     body = await request.body()
     if not body:
         return {}
-    data = await request.json()
+    try:
+        data = await request.json()
+    except ValueError:  # JSONDecodeError / bad encoding
+        return _INVALID_JSON
     if data is None:
         return {}
     if not isinstance(data, dict):
@@ -87,6 +93,8 @@ def _register_function_routes() -> None:
         def make_handler(function_key: str, description: str):
             async def endpoint(request: Request) -> dict[str, Any]:
                 payload = await _read_payload(request)
+                if payload is _INVALID_JSON:
+                    return invalid_json_envelope(function_key)
                 return run_function(function_key, payload)
 
             endpoint.__name__ = f"run_{function_key.replace('.', '_')}"

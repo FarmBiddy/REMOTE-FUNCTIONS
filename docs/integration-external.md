@@ -447,4 +447,8 @@ moves litres, variable costs and cattle sales; fixed costs stay.
 choices) so forms and Biddy questions can be generated instead of hand-coded.
 The same units appear on `needs_input.missing[].unit` (ADR-0048).
 
+Every response carries `meta.engine_version`; month lists are capped at 120 items.
+The Operating Surplus is `operating_surplus` in all post-Phase-1 outputs
+(`profit.net` in `pl.*`). See "Conventions" in the API contract.
+
 Full public contract: [`api-contract.md`](api-contract.md).

@@ -53,6 +53,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0047](0047-multi-enterprise-rules.md) | Multi-enterprise farms: per-enterprise vs farm analysis rules |
 | [0048](0048-catalogue-discovery.md) | Per-ID catalogue discovery with input schema and units |
 | [0049](0049-service-token.md) | Service-to-service bearer token, readiness and safe binding |
+| [0050](0050-contract-hardening.md) | Contract hardening: limits, version meta, examples, naming |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

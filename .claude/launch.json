@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "engine",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-m", "uvicorn", "--app-dir", "../engine-main", "api.app:app", "--host", "127.0.0.1", "--port", "8000"],
+      "port": 8000
+    },
+    {
+      "name": "mock-platform",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "../mock-platform", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}

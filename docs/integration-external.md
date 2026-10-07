@@ -451,4 +451,8 @@ Every response carries `meta.engine_version`; month lists are capped at 120 item
 The Operating Surplus is `operating_surplus` in all post-Phase-1 outputs
 (`profit.net` in `pl.*`). See "Conventions" in the API contract.
 
+Generate client types from the engine instead of writing them by hand (ADR-0051):
+`npx openapi-typescript http://127.0.0.1:8000/openapi.json -o lib/financial-engine/engine.d.ts`.
+Each run route's response is `<Id>Response` (`<Id>Ok` | `NeedsInputEnvelope` | `ErrorEnvelope`).
+
 Full public contract: [`api-contract.md`](api-contract.md).

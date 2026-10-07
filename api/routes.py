@@ -123,6 +123,20 @@ def health() -> dict[str, bool]:
     return {"ok": True}
 
 
+_READY = {"ready": False}
+
+
+def set_ready(value: bool) -> None:
+    """Flipped by the app lifespan: ready only after startup, not during shutdown."""
+    _READY["ready"] = value
+
+
+@router.get("/readyz")
+def readyz() -> JSONResponse:
+    """Readiness for deploy health checks: 200 once started, 503 otherwise."""
+    return JSONResponse(status_code=200 if _READY["ready"] else 503, content=_READY)
+
+
 @router.get("/v1/functions")
 def functions() -> dict[str, Any]:
     return {"functions": list_functions()}

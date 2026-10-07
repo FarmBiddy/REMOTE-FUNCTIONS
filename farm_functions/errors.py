@@ -19,6 +19,7 @@ NEGATIVE_VALUE = "negative_value"
 INVALID_TYPE = "invalid_type"
 NON_FINITE_VALUE = "non_finite_value"
 UNKNOWN_CALCULATION = "unknown_calculation"
+UNAUTHORIZED = "unauthorized"
 
 ERROR_CODES = (
     MISSING_REQUIRED,
@@ -28,6 +29,7 @@ ERROR_CODES = (
     INVALID_TYPE,
     NON_FINITE_VALUE,
     UNKNOWN_CALCULATION,
+    UNAUTHORIZED,
 )
 
 _MSG_MUST_BE_NUMBER = "must be a number"

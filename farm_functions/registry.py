@@ -27,6 +27,7 @@ from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.reports import report_accountant, report_advisor, report_bank
+from farm_functions.responses import OUTPUT_MODELS
 from farm_functions.sensitivity import risk_sensitivity, risk_tornado
 from farm_functions.domain import (
     MonthlyDairyCashFlowModel,
@@ -573,6 +574,7 @@ def describe_function(key: str) -> dict[str, Any] | None:
         return None
     schema = spec.input_model.model_json_schema()
     return {
+        "output_schema": OUTPUT_MODELS[spec.id].model_json_schema(by_alias=True),
         "key": spec.id,
         "description": spec.description,
         "required": list(spec.required),

@@ -39,7 +39,7 @@ report audit trails.
 
 - `surplus` → `operating_surplus` is a breaking rename for the Platform
   (announced with this change).
-- Typed response schemas in OpenAPI remain future work.
+- Typed response schemas: ADR-0051.
 
 ## Related
 

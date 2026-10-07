@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from farm_functions.errors import invalid_json_envelope, unknown_calculation_envelope
 from farm_functions.loaders.json_loader import load_sample_inputs
 from farm_functions.registry import CALCULATION_CATALOGUE, describe_function, list_functions
+from farm_functions.responses import envelope_model
 from farm_functions.runner import run_function, with_meta
 
 router = APIRouter()
@@ -68,6 +69,9 @@ def _register_function_routes() -> None:
             methods=["POST"],
             name=f"run_{key.replace('.', '_')}",
             summary=spec.description,
+            # Documentation only: handlers return plain dicts (ADR-0051).
+            response_model=None,
+            responses={200: {"model": envelope_model(key), "description": "ok | needs_input | error"}},
             openapi_extra={
                 "requestBody": {
                     "required": False,

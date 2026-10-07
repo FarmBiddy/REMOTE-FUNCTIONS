@@ -32,6 +32,8 @@ Annual P&L provenance (`explain_annual_pnl`) is in-process only. It is not inclu
 `unauthorized` (service token, ADR-0049), 404 unknown ID on
 `GET /v1/functions/{id}`. Malformed JSON → `error` with `invalid_json`.
 
+**Typed responses.** OpenAPI documents each run route's 200 body as `<Id>Response` = `<Id>Ok` | `NeedsInputEnvelope` | `ErrorEnvelope`, with a typed `result` (ADR-0051).
+
 **Meta.** Every run envelope carries `meta.engine_version` (e.g. `"1.0.0"`);
 quote it in reports.
 
@@ -70,7 +72,7 @@ as documented per ID (loans ≤ 50, assets ≤ 200, scenarios ≤ 20 …).
 |-------|----------------|
 | HTTP / runner | Flat per-calculation field dict; **exception** `pl.months` nested `months[]` + optional `ytd` (ADR-0021; P2.4) |
 | Domain | Annual envelope; monthly / multi-month / YTD envelopes in-process (P2.1–P2.2) |
-| Discovery | `GET /v1/functions`: `key`, `description`, `required`, `optional`; `GET /v1/functions/{id}`: plus `units` for every field and the JSON `input_schema` incl. nested items (ADR-0048) |
+| Discovery | `GET /v1/functions`: `key`, `description`, `required`, `optional`; `GET /v1/functions/{id}`: plus `units` for every field, the JSON `input_schema` incl. nested items (ADR-0048) and the typed `output_schema` (ADR-0051) |
 | Provenance | Unrounded formula values via `explain_annual_pnl`; not on HTTP; `pl.summary` explained by components + `finance` (ADR-0010) |
 | What-if scenarios | HTTP `risk.sensitivity` (ADR-0029); in-process B7/B8 removed (ADR-0034) |
 

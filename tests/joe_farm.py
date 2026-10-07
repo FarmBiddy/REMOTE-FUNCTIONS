@@ -42,10 +42,12 @@ def pl_month(month: int, start_year: int, price_uplift: float = 0.0) -> dict:
         "insurance": 400,
         "fuel": 700,
         "electricity": 900,
+        "water": 120,
         "repairs_maintenance": 600,
         "rent_lease": 1_000,
         "professional_fees": 2_400 if month == 12 else 0,
         "levies": 150,
+        "other_operating_costs": 250,
         "loan_repayments": 1_525,
     }
 
@@ -54,7 +56,8 @@ PRIOR = [pl_month(m, 2024, price_uplift=0.03) for m in MONTHS]  # Oct 2024 – S
 ACTUAL = [pl_month(m, 2025) for m in MONTHS]  # Oct 2025 – Sep 2026
 
 _COST_LINES = ("feed", "fertiliser", "vet", "contractor", "labour", "insurance", "fuel",
-               "electricity", "repairs_maintenance", "rent_lease", "professional_fees", "levies")
+               "electricity", "water", "repairs_maintenance", "rent_lease", "professional_fees",
+               "levies", "other_operating_costs")
 
 
 def cash_month(pl: dict, previous_pl: dict) -> dict:

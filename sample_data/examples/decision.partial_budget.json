@@ -1,0 +1,13 @@
+{
+  "added_income": [
+    {
+      "label": "labour saved",
+      "amount": 12000
+    }
+  ],
+  "capital": {
+    "amount": 120000,
+    "life_years": 20,
+    "annual_rate": 0.05
+  }
+}

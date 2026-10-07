@@ -30,7 +30,7 @@ def test_nested_fields_are_described():
 
 def test_choices_are_listed_in_the_schema():
     schema = describe_function("risk.tornado")["input_schema"]
-    assert schema["properties"]["rank_by"]["enum"] == ["surplus", "closing_cash", "lowest_cash"]
+    assert schema["properties"]["rank_by"]["enum"] == ["operating_surplus", "closing_cash", "lowest_cash"]
 
 
 def test_needs_input_units_match_discovery():
@@ -45,3 +45,28 @@ def test_http_detail_and_unknown_id():
     missing = client.get("/v1/functions/not.a.function")
     assert missing.status_code == 404
     assert missing.json()["error"]["code"] == "unknown_calculation"
+
+
+def _arrays(node):
+    """Every array schema inside a JSON Schema node (properties, anyOf, dict values)."""
+    if isinstance(node, dict):
+        if node.get("type") == "array":
+            yield node
+        for value in node.values():
+            yield from _arrays(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _arrays(value)
+
+
+@pytest.mark.parametrize("key", PUBLIC_CALCULATION_IDS)
+def test_every_list_is_bounded(key):
+    """ADR-0050: no unbounded list in any input, so one request cannot grow without limit."""
+    schema = describe_function(key)["input_schema"]
+    assert all("maxItems" in array for array in _arrays(schema)), key
+
+
+def test_too_many_months_is_an_error():
+    months = [{"year": 2000 + i // 12, "month": i % 12 + 1, "milk_litres": 1, "milk_price": 1} for i in range(121)]
+    result = run_function("pl.months", {"months": months})
+    assert result["status"] == "error"

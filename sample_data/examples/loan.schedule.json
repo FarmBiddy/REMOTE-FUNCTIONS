@@ -1,0 +1,21 @@
+{
+  "loans": [
+    {
+      "balance": 68400,
+      "annual_rate": 0.042,
+      "remaining_months": 63,
+      "year": 2026,
+      "month": 10,
+      "original_principal": 120000,
+      "variable": true
+    },
+    {
+      "balance": 18400,
+      "annual_rate": 0.051,
+      "remaining_months": 29,
+      "year": 2026,
+      "month": 10,
+      "original_principal": 38000
+    }
+  ]
+}

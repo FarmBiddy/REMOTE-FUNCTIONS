@@ -1,66 +1,27 @@
 """HTTP routes for discovery, probes, demo, and per-function calculation runs."""
 
+import json
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
 from farm_functions.errors import invalid_json_envelope, unknown_calculation_envelope
 from farm_functions.loaders.json_loader import load_sample_inputs
 from farm_functions.registry import CALCULATION_CATALOGUE, describe_function, list_functions
-from farm_functions.runner import run_function
+from farm_functions.runner import run_function, with_meta
 
 router = APIRouter()
 
-# Sample-farm-style defaults for Swagger Try it out examples.
-_EXAMPLE_VALUES: dict[str, float] = {
-    "milking_cows": 100,
-    "litres_per_cow": 5000,
-    "milk_price": 0.40,
-    "biss": 20000,
-    "acres": 5000,
-    "other_grants": 0,
-    "cattle_sales": 15000,
-    "land_leasing_income": 0,
-    "other": 0,
-    "feed": 80000,
-    "fertiliser": 15000,
-    "vet": 5000,
-    "contractor": 10000,
-    "labour": 40000,
-    "insurance": 4000,
-    "loan_repayments": 12000,
-    "fuel": 6000,
-    "electricity": 3000,
-    "water": 0,
-    "repairs_maintenance": 0,
-    "rent_lease": 0,
-    "professional_fees": 0,
-    "levies": 0,
-    "other_operating_costs": 0,
-    "revenue": 240000,
-    "costs": 163000,
-    # Monthly reference (pl.monthly) — OpenAPI examples use field intersection.
-    "year": 2026,
-    "month": 3,
-    "milk_litres": 40000,
-    # Monthly cash reference (cf.monthly).
-    "milk": 16000,
-    "machinery_equipment_payments": 6000,
-    "loan_proceeds": 10000,
-    "loan_principal_repayments": 3000,
-    "interest_paid": 500,
-    "opening_cash": 20000,
-}
+# Swagger "Try it out" examples: one real payload per ID (Joe Bloggs' farm),
+# kept valid by tests/test_examples.py (ADR-0050).
+EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "sample_data" / "examples"
 
 
-def _example_for_model(model: type[BaseModel]) -> dict[str, float]:
-    return {
-        name: _EXAMPLE_VALUES[name]
-        for name in model.model_fields
-        if name in _EXAMPLE_VALUES
-    }
+def load_example(key: str) -> dict[str, Any]:
+    path = EXAMPLES_DIR / f"{key}.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
 _INVALID_JSON = object()
@@ -87,14 +48,14 @@ def _register_function_routes() -> None:
     for spec in CALCULATION_CATALOGUE:
         key = spec.id
         model = spec.input_model
-        example = _example_for_model(model)
+        example = load_example(key)
         schema = model.model_json_schema()
 
         def make_handler(function_key: str, description: str):
             async def endpoint(request: Request) -> dict[str, Any]:
                 payload = await _read_payload(request)
                 if payload is _INVALID_JSON:
-                    return invalid_json_envelope(function_key)
+                    return with_meta(invalid_json_envelope(function_key))
                 return run_function(function_key, payload)
 
             endpoint.__name__ = f"run_{function_key.replace('.', '_')}"

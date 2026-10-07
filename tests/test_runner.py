@@ -1,6 +1,7 @@
 from farm_functions.loaders.json_loader import load_sample_inputs
 from farm_functions.registry import list_functions
 from farm_functions.runner import run_function
+from farm_functions.version import ENGINE_VERSION
 
 
 def test_needs_input_when_milk_price_missing():
@@ -29,6 +30,7 @@ def test_milk_revenue_ok():
         "status": "ok",
         "function": "revenue.milk",
         "result": {"amount": 200000.0, "currency": "EUR"},
+        "meta": {"engine_version": ENGINE_VERSION},
     }
 
 

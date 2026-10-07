@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 from api.routes import router, set_ready
 from farm_functions.errors import UNAUTHORIZED
+from farm_functions.version import ENGINE_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(
     title="Farm cost and revenue functions",
-    version="0.1.0",
+    version=ENGINE_VERSION,
     description="Pure P&L calculations with an explicit missing-input contract.",
     lifespan=lifespan,
 )

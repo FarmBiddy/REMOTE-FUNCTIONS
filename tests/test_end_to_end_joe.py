@@ -37,8 +37,8 @@ ANNUAL = {  # pl.summary inputs equivalent to the reporting year
     "milk_price": YEAR_MILK / YEAR_LITRES,
     **{k: sum(m[k] for m in joe.ACTUAL) for k in (
         "biss", "acres", "cattle_sales", "feed", "fertiliser", "vet", "contractor", "labour",
-        "insurance", "fuel", "electricity", "repairs_maintenance", "rent_lease",
-        "professional_fees", "levies", "loan_repayments")},
+        "insurance", "fuel", "electricity", "water", "repairs_maintenance", "rent_lease",
+        "professional_fees", "levies", "other_operating_costs", "loan_repayments")},
 }
 SCHEMES = {k: ANNUAL[k] for k in ("biss", "acres")}
 COSTS = {k: v for k, v in ANNUAL.items() if k not in ("milking_cows", "litres_per_cow", "milk_price", "biss", "acres", "cattle_sales", "loan_repayments")}
@@ -111,7 +111,7 @@ def _year_pl(results):
         "milk": sum(m["revenue"]["milk"] for m in months),
         "revenue": sum(m["revenue"]["total"] for m in months),
         "costs": sum(m["costs"]["total"] for m in months),
-        "surplus": sum(m["profit"]["net"] for m in months),
+        "operating_surplus": sum(m["profit"]["net"] for m in months),
     }
 
 
@@ -120,7 +120,7 @@ def test_annual_and_monthly_agree(results):
     summary = results["pl.summary"]
     assert summary["revenue"]["milk"] == pytest.approx(year["milk"], abs=CENT)
     assert summary["revenue"]["total"] == pytest.approx(year["revenue"], abs=CENT)
-    assert summary["profit"]["net"] == pytest.approx(year["surplus"], abs=CENT)
+    assert summary["profit"]["net"] == pytest.approx(year["operating_surplus"], abs=CENT)
     assert results["revenue.total"]["amount"] == summary["revenue"]["total"]
     assert results["costs.total"]["amount"] == summary["costs"]["total"]
     assert results["revenue.schemes"]["amount"] == summary["revenue"]["schemes"]
@@ -132,12 +132,12 @@ def test_annual_and_monthly_agree(results):
 
 def test_surplus_is_the_same_everywhere(results):
     surplus = results["pl.summary"]["profit"]["net"]
-    assert results["kpi.summary"]["totals"]["surplus"] == pytest.approx(surplus, abs=CENT)
+    assert results["kpi.summary"]["totals"]["operating_surplus"] == pytest.approx(surplus, abs=CENT)
     assert results["pl.net"]["operating_surplus"] == pytest.approx(surplus, abs=CENT)
-    assert results["debt.capacity"]["surplus"] == pytest.approx(surplus, abs=CENT)
+    assert results["debt.capacity"]["operating_surplus"] == pytest.approx(surplus, abs=CENT)
     assert results["pl.compare"]["profit"]["net"]["actual"] == pytest.approx(surplus, abs=CENT)
-    assert results["risk.sensitivity"]["scenarios"][0]["surplus"] == pytest.approx(surplus, abs=CENT)
-    assert results["risk.tornado"]["base"]["surplus"] == results["risk.sensitivity"]["scenarios"][0]["surplus"]
+    assert results["risk.sensitivity"]["scenarios"][0]["operating_surplus"] == pytest.approx(surplus, abs=CENT)
+    assert results["risk.tornado"]["base"]["operating_surplus"] == results["risk.sensitivity"]["scenarios"][0]["operating_surplus"]
     assert results["plan.projection"]["years"][0]["pl"]["operating_surplus"] == pytest.approx(surplus, abs=CENT)
     for kind in ("bank", "accountant"):
         profit = results[f"report.{kind}"]["profit" if kind == "bank" else "net_profit"]
@@ -198,7 +198,7 @@ def test_decisions_agree_with_each_other(results):
 def test_seasonal_farm_story(results):
     """Sanity of the scenario itself: milk -5c hurts; rates only reprice future instalments."""
     base, milk, rates, parlour = results["risk.sensitivity"]["scenarios"]
-    assert milk["surplus"] == pytest.approx(base["surplus"] - 0.05 * YEAR_LITRES, abs=CENT)
+    assert milk["operating_surplus"] == pytest.approx(base["operating_surplus"] - 0.05 * YEAR_LITRES, abs=CENT)
     # Loans are as at 30 Sep 2026 (next instalment October): past months do not move.
     assert rates == {**base, "name": "rates +2", "shocks": rates["shocks"]}
     shifted = run_function(

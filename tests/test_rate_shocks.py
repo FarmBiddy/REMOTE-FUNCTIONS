@@ -37,7 +37,7 @@ def test_variable_loan_reprices_in_sensitivity():
     assert shocked["shocks"]["rate_shift_pp"] == 12
     assert shocked["loan_repayments"] == 3 * 1_066.19
     assert shocked["closing_cash"] == base["closing_cash"] - (3 * 1_066.19 - 3_000)
-    assert shocked["surplus"] == base["surplus"]  # interest is finance, not operating cost
+    assert shocked["operating_surplus"] == base["operating_surplus"]  # interest is finance, not operating cost
     assert shocked["dscr"] < base["dscr"]
 
 

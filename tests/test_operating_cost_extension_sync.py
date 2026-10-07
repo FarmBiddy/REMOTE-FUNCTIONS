@@ -10,7 +10,7 @@ import inspect
 import json
 from pathlib import Path
 
-from api.routes import _EXAMPLE_VALUES
+from api.routes import load_example
 from farm_functions.calcs.costs import OPERATING_COST_CATEGORIES, total_costs
 from farm_functions.calcs.summary import pl_summary
 from farm_functions.domain import CostLines
@@ -70,6 +70,7 @@ def test_golden_expected_cost_line_keys_match_operating_cost_catalogue() -> None
         assert list(lines) == CATALOGUE, f"golden case {case['name']!r} cost lines drift"
 
 
-def test_example_values_cover_every_operating_cost() -> None:
-    missing = [name for name in CATALOGUE if name not in _EXAMPLE_VALUES]
-    assert missing == []
+def test_examples_cover_every_operating_cost() -> None:
+    for key in ("pl.summary", "pl.monthly", "cf.monthly"):
+        missing = [name for name in CATALOGUE if name not in load_example(key)]
+        assert missing == [], key

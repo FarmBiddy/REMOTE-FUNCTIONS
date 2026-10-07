@@ -43,16 +43,16 @@ def test_reference_quarter():
         "milk_litres": 120_000,
         "revenue": 48_000,
         "costs": 25_000,
-        "surplus": 23_000,
+        "operating_surplus": 23_000,
         "loan_repayments": 4_500,
     }
     assert body["per_litre_c"]["revenue"] == 40
     assert body["per_litre_c"]["costs"] == 20.83
-    assert body["per_litre_c"]["surplus"] == 19.17
+    assert body["per_litre_c"]["operating_surplus"] == 19.17
     assert body["per_litre_c"]["cost_lines"]["feed"] == 13.33
     assert body["per_litre_c"]["cost_lines"]["vet"] == 0
     assert body["per_cow"] == {
-        "milk_litres": 1_200, "revenue": 480, "costs": 250, "gross_margin": 320, "surplus": 230
+        "milk_litres": 1_200, "revenue": 480, "costs": 250, "gross_margin": 320, "operating_surplus": 230
     }
     # Variable = feed 16,000 (labour is fixed) → 13.33 c/L; gross margin 32,000.
     assert body["per_litre_c"]["variable_costs"] == 13.33
@@ -64,12 +64,12 @@ def test_reference_quarter():
 def test_undefined_ratios_are_null():
     no_loans = [{**m, "loan_repayments": 0} for m in QUARTER]
     assert _kpis(no_loans)["result"]["dscr"] is None
-    assert _kpis(cows=0)["result"]["per_cow"]["surplus"] is None
+    assert _kpis(cows=0)["result"]["per_cow"]["operating_surplus"] is None
 
 
 def test_loss_gives_negative_surplus_and_dscr():
     body = _kpis([_month(1, 10_000, 9_000)])["result"]
-    assert body["totals"]["surplus"] == -8_000
+    assert body["totals"]["operating_surplus"] == -8_000
     assert body["dscr"] == round(-8_000 / 1_500, 2)
 
 
@@ -79,7 +79,7 @@ def test_projected_months_from_forecast_plug_in():
         "pl.forecast", {"history": history, "forecast": [{"year": 2026, "month": 10}]}
     )["result"]["months"][0]
     body = _kpis([{"year": 2026, "month": 10, **projected["inputs"]}])["result"]
-    assert body["totals"]["surplus"] == projected["statement"]["profit"]["net"]
+    assert body["totals"]["operating_surplus"] == projected["statement"]["profit"]["net"]
 
 
 def test_duplicate_month_is_rejected():
@@ -99,9 +99,9 @@ def test_optional_solids_hectare_and_debt_blocks():
         "kpi.summary",
         {"months": QUARTER, "milking_cows": 100, "milk_solids_kg": 10_000, "hectares": 40, "debt_balance": 86_800},
     )["result"]
-    assert body["per_kg_ms"] == {"revenue": 4.8, "costs": 2.5, "gross_margin": 3.2, "surplus": 2.3}
+    assert body["per_kg_ms"] == {"revenue": 4.8, "costs": 2.5, "gross_margin": 3.2, "operating_surplus": 2.3}
     assert body["per_hectare"] == {
-        "milk_litres": 3_000, "revenue": 1_200, "costs": 625, "gross_margin": 800, "surplus": 575
+        "milk_litres": 3_000, "revenue": 1_200, "costs": 625, "gross_margin": 800, "operating_surplus": 575
     }
     assert body["debt"] == {"balance": 86_800, "per_cow": 868, "per_hectare": 2_170}
 

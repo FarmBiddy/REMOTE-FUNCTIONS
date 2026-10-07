@@ -475,7 +475,7 @@ def test_happy_path(key: str) -> None:
         assert (body["operating_change"], body["capital"]["annual_charge"], body["net_change"]) == (2_000, 1_200, 800)
         assert body["worthwhile"] is True
     elif key == "risk.tornado":
-        drivers = {d["driver"]: d["swing"]["surplus"] for d in result["result"]["drivers"]}
+        drivers = {d["driver"]: d["swing"]["operating_surplus"] for d in result["result"]["drivers"]}
         assert drivers["milk_price"] == 800  # ±10% of 4,000 milk revenue
         assert drivers["feed"] == 600
     elif key == "plan.projection":
@@ -514,11 +514,11 @@ def test_happy_path(key: str) -> None:
     elif key == "risk.sensitivity":
         body = result["result"]
         assert body["scenarios"][0]["break_even"]["surplus_milk_price_c"] == 30
-        assert [s["surplus"] for s in body["scenarios"]] == [1_000, 500]
+        assert [s["operating_surplus"] for s in body["scenarios"]] == [1_000, 500]
     elif key == "kpi.summary":
         body = result["result"]
         assert body["per_litre_c"]["costs"] == 20
-        assert body["per_cow"]["surplus"] == 200
+        assert body["per_cow"]["operating_surplus"] == 200
         assert body["dscr"] == 4
     elif key == "pl.forecast":
         month = result["result"]["months"][0]
@@ -636,7 +636,7 @@ def test_explicit_zeros_are_ok(key: str) -> None:
     elif key == "decision.partial_budget":
         assert result["result"]["net_change"] == 0 and result["result"]["worthwhile"] is False
     elif key == "risk.tornado":
-        assert result["result"]["base"]["surplus"] == 0
+        assert result["result"]["base"]["operating_surplus"] == 0
     elif key == "plan.projection":
         year = result["result"]["years"][0]
         assert year["cash"]["closing"] == 0 and year["kpis"]["surplus_per_cow"] is None
@@ -663,7 +663,7 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert [s["name"] for s in result["result"]["scenarios"]] == ["base"]
     elif key == "kpi.summary":
         assert result["result"]["per_litre_c"]["costs"] is None
-        assert result["result"]["per_cow"]["surplus"] is None
+        assert result["result"]["per_cow"]["operating_surplus"] is None
         assert result["result"]["dscr"] is None
 
 

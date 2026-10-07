@@ -310,6 +310,13 @@ are documented here, not listed in discovery.
 
 `pl.summary` and `pl.monthly` remain unchanged.
 
+## Service token (ADR-0049)
+
+When the engine has `ENGINE_API_KEY` set, every `/v1/...` call sends
+`Authorization: Bearer <key>` (401 `unauthorized` otherwise). Call the engine
+from the Platform **backend** only, after checking the user's login; never put
+the key in browser code.
+
 ## CORS (local Next.js)
 
 Browser apps on another origin need CORS. Application layer only (`api/app.py`).
@@ -434,6 +441,14 @@ moves litres, variable costs and cattle sales; fixed costs stay.
 
 ## Discovery (optional)
 
-`GET /v1/functions` returns calculation `key`, `description`, `required`, `optional` **names** — not units. Units appear on `needs_input.missing[].unit`.
+`GET /v1/functions` returns calculation `key`, `description`, `required`, `optional` names.
+`GET /v1/functions/{id}` adds `units` (every field, nested ones included) and
+`input_schema` (JSON Schema: types, nested item shapes, required, defaults,
+choices) so forms and Biddy questions can be generated instead of hand-coded.
+The same units appear on `needs_input.missing[].unit` (ADR-0048).
+
+Every response carries `meta.engine_version`; month lists are capped at 120 items.
+The Operating Surplus is `operating_surplus` in all post-Phase-1 outputs
+(`profit.net` in `pl.*`). See "Conventions" in the API contract.
 
 Full public contract: [`api-contract.md`](api-contract.md).

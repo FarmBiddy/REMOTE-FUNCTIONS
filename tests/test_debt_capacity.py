@@ -28,7 +28,7 @@ def _run(**overrides):
 
 def test_reference_year():
     body = _run()["result"]
-    assert (body["surplus"], body["repayment_capacity"], body["debt_service"]) == (60_000, 30_000, 18_000)
+    assert (body["operating_surplus"], body["repayment_capacity"], body["debt_service"]) == (60_000, 30_000, 18_000)
     assert body["repayment_cover"] == 1.67
     assert body["new_loan"]["max_monthly_payment"] == 500
     assert body["new_loan"]["max_principal"] == 47_140.67

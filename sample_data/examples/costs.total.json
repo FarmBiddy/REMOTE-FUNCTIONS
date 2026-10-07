@@ -1,0 +1,16 @@
+{
+  "feed": 72500,
+  "fertiliser": 21500,
+  "vet": 10500,
+  "contractor": 17400,
+  "labour": 42000,
+  "insurance": 4800,
+  "fuel": 8400,
+  "electricity": 10800,
+  "water": 1440,
+  "repairs_maintenance": 7200,
+  "rent_lease": 12000,
+  "professional_fees": 2400,
+  "levies": 1800,
+  "other_operating_costs": 3000
+}

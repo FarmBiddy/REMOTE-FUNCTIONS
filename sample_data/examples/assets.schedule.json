@@ -1,0 +1,37 @@
+{
+  "assets": [
+    {
+      "category": "buildings",
+      "cost": 240000,
+      "year": 2015,
+      "month": 1,
+      "life_months": 300
+    },
+    {
+      "category": "buildings",
+      "cost": 120000,
+      "year": 2018,
+      "month": 3,
+      "life_months": 240
+    },
+    {
+      "category": "machinery",
+      "cost": 95000,
+      "year": 2024,
+      "month": 3,
+      "method": "reducing_balance",
+      "annual_rate": 0.15
+    },
+    {
+      "category": "machinery",
+      "cost": 6000,
+      "year": 2026,
+      "month": 7,
+      "life_months": 60
+    }
+  ],
+  "from_year": 2025,
+  "from_month": 10,
+  "to_year": 2026,
+  "to_month": 9
+}

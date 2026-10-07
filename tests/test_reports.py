@@ -89,7 +89,7 @@ def test_advisor_report_is_forward_looking_when_projected():
     sensitivity = body["sensitivity"]
     assert sensitivity["shocks_from"] == {"kind": "month", "year": 2026, "month": 10}
     base, milk = sensitivity["scenarios"]
-    assert milk["surplus"] == base["surplus"] - 0.05 * 3 * 38_000
+    assert milk["operating_surplus"] == base["operating_surplus"] - 0.05 * 3 * 38_000
 
 
 def test_advisor_report_without_projection_or_prior():

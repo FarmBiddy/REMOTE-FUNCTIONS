@@ -19,6 +19,8 @@ NEGATIVE_VALUE = "negative_value"
 INVALID_TYPE = "invalid_type"
 NON_FINITE_VALUE = "non_finite_value"
 UNKNOWN_CALCULATION = "unknown_calculation"
+UNAUTHORIZED = "unauthorized"
+INVALID_JSON = "invalid_json"
 
 ERROR_CODES = (
     MISSING_REQUIRED,
@@ -28,6 +30,8 @@ ERROR_CODES = (
     INVALID_TYPE,
     NON_FINITE_VALUE,
     UNKNOWN_CALCULATION,
+    UNAUTHORIZED,
+    INVALID_JSON,
 )
 
 _MSG_MUST_BE_NUMBER = "must be a number"
@@ -465,3 +469,12 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                 f"field={field!r} text={text!r} type={err_type!r}"
             )
     return issues
+
+
+def invalid_json_envelope(name: str) -> dict[str, Any]:
+    """Body is not parseable JSON (e.g. truncated); never a server error."""
+    message = "Request body is not valid JSON."
+    return attach_issues(
+        {"status": "error", "function": name, "message": message},
+        [issue(INVALID_JSON, message)],
+    )

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (trust model). Concrete s2s mechanism (API key, mTLS, etc.) is **not** decided yet.
+Accepted (trust model). Concrete s2s mechanism: shared bearer key, ADR-0049.
 
 ## Context
 

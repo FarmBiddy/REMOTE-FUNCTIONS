@@ -30,7 +30,7 @@ def _tornado(**extra):
     return run_function("risk.tornado", {**BASE, **extra})["result"]
 
 
-def _swings(body, key="surplus"):
+def _swings(body, key="operating_surplus"):
     return {d["driver"]: d["swing"][key] for d in body["drivers"]}
 
 
@@ -43,7 +43,7 @@ def test_ranked_by_surplus_swing():
     }
     price = body["drivers"][0]
     assert (price["low_change"], price["high_change"]) == (-4, 4)
-    assert price["low"]["surplus"] == body["base"]["surplus"] - 4_800
+    assert price["low"]["operating_surplus"] == body["base"]["operating_surplus"] - 4_800
 
 
 def test_rank_by_cash_moves_drawings_up():
@@ -65,7 +65,7 @@ def test_interest_rate_only_with_variable_loans():
     body = _tornado(loans=[{**loan, "variable": True}], rate_step_pp=2)
     rate = next(d for d in body["drivers"] if d["driver"] == "interest_rate")
     assert (rate["low_change"], rate["high_change"]) == (-2, 2)
-    assert rate["swing"]["surplus"] == 0 and rate["swing"]["closing_cash"] > 0
+    assert rate["swing"]["operating_surplus"] == 0 and rate["swing"]["closing_cash"] > 0
 
 
 def test_step_size():

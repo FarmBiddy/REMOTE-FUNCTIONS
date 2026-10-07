@@ -39,7 +39,7 @@ def test_base_and_break_evens():
     base = body["scenarios"][0]
     assert base["break_even"] == {"surplus_milk_price_c": 35, "cash_milk_price_c": 41.25}
     assert base["name"] == "base"
-    assert (base["surplus"], base["dscr"], base["closing_cash"]) == (6_000, 1.33, 500)
+    assert (base["operating_surplus"], base["dscr"], base["closing_cash"]) == (6_000, 1.33, 500)
     assert base["lowest_cash"] == {"period": {"kind": "month", "year": 2026, "month": 1}, "amount": -500}
     assert base["overdraft_months"] == 1
 
@@ -47,7 +47,7 @@ def test_base_and_break_evens():
 def test_break_evens_are_exact():
     """Running the scenario at each break-even lands on 0."""
     at_surplus = _run([{"milk_price_c": -5}])["result"]["scenarios"][1]
-    assert at_surplus["surplus"] == 0
+    assert at_surplus["operating_surplus"] == 0
     at_cash = _run([{"milk_price_c": 1.25}])["result"]["scenarios"][1]
     assert at_cash["lowest_cash"]["amount"] == 0
     assert at_cash["overdraft_months"] == 0
@@ -57,7 +57,7 @@ def test_milk_price_scales_cash_milk_cheques():
     scenario = _run([{"milk_price_c": -4}])["result"]["scenarios"][1]
     # −4 c/L on 40 c/L = −10% on each 16,000 cheque → −4,800 over the quarter.
     assert scenario["closing_cash"] == 500 - 4_800
-    assert scenario["surplus"] == 6_000 - 4_800
+    assert scenario["operating_surplus"] == 6_000 - 4_800
 
 
 def test_volume_and_line_shocks_hit_pl_and_cash():
@@ -65,7 +65,7 @@ def test_volume_and_line_shocks_hit_pl_and_cash():
     s = scenario["result"]["scenarios"][1]
     # milk −1,600/month, feed +1,000/month → −2,600/month on both statements.
     assert s["name"] == "dry summer"
-    assert s["surplus"] == 6_000 - 7_800
+    assert s["operating_surplus"] == 6_000 - 7_800
     assert s["closing_cash"] == 500 - 7_800
 
 
@@ -121,7 +121,7 @@ def test_financed_investment_with_labour_saving():
         }
     ]
     assert s["closing_cash"] == 500 + 500
-    assert s["surplus"] == 6_000 + 1_500
+    assert s["operating_surplus"] == 6_000 + 1_500
     assert s["loan_repayments"] == 4_500 + 1_000
     assert s["break_even"]["surplus_milk_price_c"] < 35
 
@@ -131,7 +131,7 @@ def test_unfinanced_investment_hits_cash_and_shows_overdraft():
     assert s["closing_cash"] == 500 - 10_000
     assert s["lowest_cash"]["amount"] == -10_000
     assert s["investments"][0]["simple_payback_months"] is None
-    assert s["surplus"] == 6_000  # capex is not an operating cost
+    assert s["operating_surplus"] == 6_000  # capex is not an operating cost
 
 
 def test_investment_errors():
@@ -148,10 +148,10 @@ def test_herd_cut_moves_variable_costs_but_not_fixed():
     Per month: milk 14,400 − feed 9,000 − labour 4,000 = 1,400 (was 2,000)."""
     herd, volume = _run([{"herd_pct": -10}, {"milk_volume_pct": -10}])["result"]["scenarios"][1:]
     assert herd["shocks"]["herd_pct"] == -10
-    assert herd["surplus"] == 3 * 1_400
+    assert herd["operating_surplus"] == 3 * 1_400
     assert herd["closing_cash"] == -1_000 + 3 * (1_400 - 1_500)
     # Same litres lost through yield alone keeps every cost: a worse result.
-    assert volume["surplus"] == 6_000 - 3 * 1_600
+    assert volume["operating_surplus"] == 6_000 - 3 * 1_600
 
 
 def test_http_matches_runner():
@@ -177,7 +177,7 @@ def test_shocks_from_leave_history_untouched():
     assert body["shocks_from"] == {"kind": "month", "year": 2026, "month": 3}
     assert base["lowest_cash"]["amount"] == 500 and base["overdraft_months"] == 0
     assert base["break_even"] == {"surplus_milk_price_c": 25, "cash_milk_price_c": 38.75}
-    assert shocked["surplus"] == 4_000
+    assert shocked["operating_surplus"] == 4_000
     assert shocked["closing_cash"] == 500 - 2_000
 
 

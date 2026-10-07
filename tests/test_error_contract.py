@@ -18,6 +18,7 @@ from farm_functions.errors import (
     UNKNOWN_FIELD,
 )
 from farm_functions.runner import run_function
+from farm_functions.version import ENGINE_VERSION
 
 client = TestClient(app)
 
@@ -34,6 +35,7 @@ def test_success_revenue_milk_shape_unchanged() -> None:
         "status": "ok",
         "function": "revenue.milk",
         "result": {"amount": 200000.0, "currency": "EUR"},
+        "meta": {"engine_version": ENGINE_VERSION},
     }
     assert "error" not in result
     assert "errors" not in result

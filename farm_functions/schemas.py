@@ -74,6 +74,10 @@ CalendarYear = Annotated[int, BeforeValidator(_parse_calendar_year)]
 CalendarMonth = Annotated[int, BeforeValidator(_parse_calendar_month)]
 
 
+# Request size limits (ADR-0050): month lists cover at most 10 years.
+MAX_MONTHS = 120
+
+
 class _StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -198,7 +202,7 @@ class CfMonthsInput(_StrictModel):
     """
 
     opening_cash: SignedNumber
-    months: list[CfMonthItemInput] = Field(..., min_length=1)
+    months: list[CfMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
 
 
 def _parse_rate_ratio(value: Any) -> float:
@@ -276,7 +280,7 @@ class PlMonthsInput(_StrictModel):
     requests Domain YTD aggregation; omit or JSON ``null`` for months-only.
     """
 
-    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
     ytd: PlMonthsYtdInput | None = None
 
 
@@ -293,8 +297,8 @@ class PlCompareInput(_StrictModel):
     """HTTP / runner input for ``pl.compare`` (ADR-0035): actual vs comparison
     months (prior year or budget), each in pl.months item shape."""
 
-    actual: list[PlMonthItemInput] = Field(..., min_length=1)
-    comparison: list[PlMonthItemInput] = Field(..., min_length=1)
+    actual: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    comparison: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
 
     @model_validator(mode="after")
     def _unique(self) -> "PlCompareInput":
@@ -306,8 +310,8 @@ class PlCompareInput(_StrictModel):
 class CfCompareInput(_StrictModel):
     """HTTP / runner input for ``cf.compare`` (ADR-0035); cf.months item shape."""
 
-    actual: list[CfMonthItemInput] = Field(..., min_length=1)
-    comparison: list[CfMonthItemInput] = Field(..., min_length=1)
+    actual: list[CfMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    comparison: list[CfMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
 
     @model_validator(mode="after")
     def _unique(self) -> "CfCompareInput":
@@ -331,7 +335,7 @@ class DebtCapacityInput(_StrictModel):
     ``drawings`` / ``tax`` / ``off_farm_income``: totals for the same period.
     """
 
-    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
     annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
     term_months: Annotated[int, BeforeValidator(_parse_loan_months)]
     drawings: NonNegativeNumber = 0.0
@@ -352,7 +356,7 @@ class PlNetInput(_StrictModel):
     rows; livestock / stock values are Platform valuations at period start / end.
     """
 
-    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
     depreciation: NonNegativeNumber = 0.0
     interest: NonNegativeNumber = 0.0
     livestock_opening_value: NonNegativeNumber = 0.0
@@ -428,7 +432,7 @@ class KpiSummaryInput(_StrictModel):
     """HTTP / runner input for ``kpi.summary`` (ADR-0028): the pl.months items
     for the period plus the average milking herd over it."""
 
-    months: list[PlMonthItemInput] = Field(..., min_length=1)
+    months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
     milking_cows: NonNegativeNumber
     # Optional period totals (ADR-0032).
     milk_solids_kg: NonNegativeNumber | None = None
@@ -521,8 +525,8 @@ class _RiskBaseInput(_StrictModel):
     and ``opening_cash`` drive the cash balance. Both actual + projected.
     """
 
-    pl_months: list[PlMonthItemInput] = Field(..., min_length=1)
-    cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
+    pl_months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    cf_months: list[CfMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
     opening_cash: SignedNumber
     # Loans behind the months' loan lines; variable ones follow rate shocks (ADR-0043).
     loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
@@ -567,7 +571,7 @@ class RiskTornadoInput(_RiskBaseInput):
 
     step_pct: Annotated[float, BeforeValidator(_parse_step_pct)] = 10.0
     rate_step_pp: Annotated[float, BeforeValidator(_parse_non_negative_number)] = 1.0
-    rank_by: Literal["surplus", "closing_cash", "lowest_cash"] = "surplus"
+    rank_by: Literal["operating_surplus", "closing_cash", "lowest_cash"] = "operating_surplus"
 
 
 def _parse_life_years(value: Any) -> float:
@@ -653,15 +657,15 @@ class FarmReportInput(_StrictModel):
     the closing ones (no change).
     """
 
-    pl_months: list[PlMonthItemInput] = Field(..., min_length=1)
-    cf_months: list[CfMonthItemInput] = Field(..., min_length=1)
+    pl_months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    cf_months: list[CfMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
     opening_cash: SignedNumber
     milking_cows: NonNegativeNumber
     hectares: NonNegativeNumber | None = None
     milk_solids_kg: NonNegativeNumber | None = None
-    prior_pl_months: list[PlMonthItemInput] = Field(default_factory=list)
-    projected_pl_months: list[PlMonthItemInput] = Field(default_factory=list)
-    projected_cf_months: list[CfMonthItemInput] = Field(default_factory=list)
+    prior_pl_months: list[PlMonthItemInput] = Field(default_factory=list, max_length=MAX_MONTHS)
+    projected_pl_months: list[PlMonthItemInput] = Field(default_factory=list, max_length=MAX_MONTHS)
+    projected_cf_months: list[CfMonthItemInput] = Field(default_factory=list, max_length=MAX_MONTHS)
     loans: list[LoanItemInput] = Field(default_factory=list, max_length=50)
     assets: list[AssetInput] = Field(default_factory=list, max_length=200)
     debtors: NonNegativeNumber = 0.0
@@ -712,17 +716,17 @@ PROJECTION_AMOUNT_LINES = tuple(
 class ProjectionAssumptionsInput(_StrictModel):
     """Per-year assumption lists (index 0 = year 1); all optional (ADR-0042)."""
 
-    milk_price: list[NonNegativeNumber] = Field(default_factory=list)
-    herd_pct: list[PctChange] = Field(default_factory=list)
-    yield_pct: list[PctChange] = Field(default_factory=list)
-    cost_inflation_pct: list[PctChange] = Field(default_factory=list)
-    lines_inflation_pct: dict[str, list[PctChange]] = Field(default_factory=dict)
-    lines_amount: dict[str, list[NonNegativeNumber]] = Field(default_factory=dict)
-    drawings: list[NonNegativeNumber] = Field(default_factory=list)
-    tax: list[NonNegativeNumber] = Field(default_factory=list)
-    off_farm_income: list[NonNegativeNumber] = Field(default_factory=list)
+    milk_price: list[NonNegativeNumber] = Field(default_factory=list, max_length=10)
+    herd_pct: list[PctChange] = Field(default_factory=list, max_length=10)
+    yield_pct: list[PctChange] = Field(default_factory=list, max_length=10)
+    cost_inflation_pct: list[PctChange] = Field(default_factory=list, max_length=10)
+    lines_inflation_pct: dict[str, Annotated[list[PctChange], Field(max_length=10)]] = Field(default_factory=dict)
+    lines_amount: dict[str, Annotated[list[NonNegativeNumber], Field(max_length=10)]] = Field(default_factory=dict)
+    drawings: list[NonNegativeNumber] = Field(default_factory=list, max_length=10)
+    tax: list[NonNegativeNumber] = Field(default_factory=list, max_length=10)
+    off_farm_income: list[NonNegativeNumber] = Field(default_factory=list, max_length=10)
     # Percentage points on variable-rate loans vs today, per year; carried (ADR-0043).
-    interest_rate_shift_pp: list[SignedNumber] = Field(default_factory=list)
+    interest_rate_shift_pp: list[SignedNumber] = Field(default_factory=list, max_length=10)
 
     @model_validator(mode="after")
     def _known_lines(self) -> "ProjectionAssumptionsInput":
@@ -837,8 +841,8 @@ PlForecastItemInput = _forecast_item_model(
 class PlForecastInput(_StrictModel):
     """HTTP / runner input for ``pl.forecast`` (ADR-0026)."""
 
-    history: list[PlMonthItemInput] = Field(..., min_length=1)
-    forecast: list[PlForecastItemInput] = Field(..., min_length=1)  # type: ignore[valid-type]
+    history: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    forecast: list[PlForecastItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)  # type: ignore[valid-type]
 
     @model_validator(mode="after")
     def _periods(self) -> "PlForecastInput":
@@ -852,8 +856,8 @@ CfForecastItemInput = _forecast_item_model("CfForecastItemInput", CASH_FLOW_LINE
 class CfForecastInput(_StrictModel):
     """HTTP / runner input for ``cf.forecast`` (ADR-0026)."""
 
-    history: list[CfMonthItemInput] = Field(..., min_length=1)
-    forecast: list[CfForecastItemInput] = Field(..., min_length=1)  # type: ignore[valid-type]
+    history: list[CfMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    forecast: list[CfForecastItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)  # type: ignore[valid-type]
 
     @model_validator(mode="after")
     def _periods(self) -> "CfForecastInput":
@@ -1219,17 +1223,73 @@ LOAN_FIELD_UNITS: dict[str, str] = {
 }
 
 
-def missing_field_entry(field: str) -> dict[str, str]:
-    """Canonical needs_input.missing item: {field, unit}."""
-    unit = (
+# Units for every other input field (ADR-0048). Structural fields say what they
+# hold ("list", "object", "text", "choice", "boolean"), so no field is "unknown".
+_EUR = "EUR"
+OTHER_FIELD_UNITS: dict[str, str] = {
+    **{line: _EUR for line in CASH_FLOW_LINES},
+    **dict.fromkeys(
+        (
+            "amount", "annual_benefit", "cash", "cost", "creditors", "debt_balance", "debtors",
+            "depreciation", "drawings", "interest", "land", "livestock", "livestock_closing_value",
+            "livestock_opening_value", "off_farm_income", "other_long_term_liabilities",
+            "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax",
+        ),
+        _EUR,
+    ),
+    **dict.fromkeys(
+        ("cost_inflation_pct", "herd_pct", "milk_volume_pct", "step_pct", "yield_pct"), "%"
+    ),
+    **dict.fromkeys(("rate_shift_pp", "rate_step_pp", "interest_rate_shift_pp"), "percentage points"),
+    "discount_rate": "ratio/year",
+    "min_cover": "times",
+    "milk_price_c": "c/L",
+    "milk_solids_kg": "kg",
+    "hectares": "ha",
+    "life_months": "months",
+    "life_years": "years",
+    "years": "years",
+    "as_of_month": "month",
+    "shocks_from_year": "year",
+    "shocks_from_month": "month",
+    **dict.fromkeys(
+        (
+            "actual", "added_costs", "added_income", "assets", "base_pl_months", "cash_flows",
+            "cf_months", "comparison", "forecast", "history", "investments", "loans", "months",
+            "pl_months", "prior_pl_months", "projected_cf_months", "projected_pl_months",
+            "reduced_costs", "reduced_income", "scenarios",
+        ),
+        "list",
+    ),
+    **dict.fromkeys(
+        (
+            "annual_effects", "assumptions", "capital", "lines_amount", "lines_inflation_pct",
+            "lines_pct", "loan", "monthly_effects", "new_loan", "ytd",
+        ),
+        "object",
+    ),
+    **dict.fromkeys(("label", "name"), "text"),
+    **dict.fromkeys(("cash_line", "category", "method", "rank_by"), "choice"),
+    "variable": "boolean",
+}
+
+
+def field_unit(field: str) -> str:
+    """Unit of an input field by name (single lookup for needs_input and discovery)."""
+    return (
         FIELD_UNITS.get(field)
         or PERIOD_IDENTITY_FIELD_UNITS.get(field)
         or CASH_POSITION_FIELD_UNITS.get(field)
         or LOAN_FIELD_UNITS.get(field)
         or MONTHLY_FIELD_UNITS.get(field)
+        or OTHER_FIELD_UNITS.get(field)
         or "unknown"
     )
-    return {"field": field, "unit": unit}
+
+
+def missing_field_entry(field: str) -> dict[str, str]:
+    """Canonical needs_input.missing item: {field, unit}."""
+    return {"field": field, "unit": field_unit(field)}
 
 
 # Monthly Dairy statement financial-driver metadata (ADR-0018). Separate from

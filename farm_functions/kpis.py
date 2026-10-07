@@ -50,7 +50,7 @@ def kpi_summary(
         "milk_litres": sum_amounts(*(item["milk_litres"] for item in months)),
         "revenue": total(lambda s: s["revenue"]["total"]),
         "costs": total(lambda s: s["costs"]["total"]),
-        "surplus": total(lambda s: s["profit"]["net"]),
+        "operating_surplus": total(lambda s: s["profit"]["net"]),
         "loan_repayments": total(lambda s: s["finance"]["loan_repayments"]),
     }
     cost_lines = {

@@ -50,9 +50,12 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0044](0044-tornado-driver-ranking.md) | Driver ranking (`risk.tornado`) |
 | [0045](0045-partial-budget.md) | Partial budget (`decision.partial_budget`) |
 | [0046](0046-investment-appraisal.md) | Investment appraisal: NPV, IRR, discounted payback (`decision.investment`) |
+| [0047](0047-multi-enterprise-rules.md) | Multi-enterprise farms: per-enterprise vs farm analysis rules |
+| [0048](0048-catalogue-discovery.md) | Per-ID catalogue discovery with input schema and units |
+| [0049](0049-service-token.md) | Service-to-service bearer token, readiness and safe binding |
+| [0050](0050-contract-hardening.md) | Contract hardening: limits, version meta, examples, naming |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 
-- Concrete service-to-service auth mechanism (API key, mTLS, signed tokens, etc.)
 - Calculation / API versioning strategy beyond the existing `/v1` prefix
 - Whether typed `FinancialInput` / `FinancialResult` become the **sole HTTP** surface (in-process types exist in `farm_functions/domain.py`; HTTP remains named functions + flat JSON; `pl.months` uses nested `months[]` per ADR-0021)

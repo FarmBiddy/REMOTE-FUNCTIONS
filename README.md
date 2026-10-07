@@ -53,7 +53,7 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | `bs.summary` | `year`, `month` (+ balances, `loans[]`, `assets[]`) | Balance sheet at month end: loans split within / after 12 months, fixed assets at NBV, net worth, equity %, debt-to-assets %, current ratio, working capital (ADR-0039) |
 | `pl.compare` | `actual[]`, `comparison[]` | P&L variance vs prior year or budget: every line with change and %, margin change in points, milk change split into volume and price effects (ADR-0035) |
 | `cf.compare` | `actual[]`, `comparison[]` | Cash flow variance vs prior year or budget: every line, section and total (movements only) (ADR-0035) |
-| `risk.sensitivity` | `pl_months[]`, `cf_months[]`, `opening_cash` (+ `scenarios[]`) | What-if scenarios (milk c/L, volume %, herd size %, % per line): surplus, DSCR, closing / lowest cash, overdraft months; investments with optional loan and monthly effects ("Can I afford it?", payback); exact milk-price break-evens per scenario (ADR-0029, ADR-0031) |
+| `risk.sensitivity` | `pl_months[]`, `cf_months[]`, `opening_cash` (+ `scenarios[]`) | What-if scenarios (milk c/L, volume %, herd size %, % per line): operating surplus, DSCR, closing / lowest cash, overdraft months; investments with optional loan and monthly effects ("Can I afford it?", payback); exact milk-price break-evens per scenario (ADR-0029, ADR-0031) |
 | `risk.tornado` | `pl_months[]`, `cf_months[]`, `opening_cash` (+ `loans`, `step_pct`, `rank_by`) | Driver ranking: milk price, volume, herd, each line with an amount and variable interest rates moved one at a time ±step, sorted by swing (ADR-0044) |
 | `decision.partial_budget` | labelled annual `added_income`, `reduced_costs`, `added_costs`, `reduced_income` (+ optional `capital`) | Partial budget for a farm change: net annual effect, capital charge, payback and ROI; enterprise-independent (ADR-0045) |
 | `decision.investment` | `amount`, `discount_rate`, `annual_benefit` + `life_years` or `cash_flows[]` (+ `residual_value`) | Investment appraisal: NPV, IRR, simple and discounted payback, profitability index, discounted schedule (ADR-0046) |
@@ -115,11 +115,15 @@ python -m pytest
 - Non-reload (process entry): `python run_server.py`
 - Local reload: `python -m uvicorn api.app:app --reload` (or `start.bat` on Windows)
 
+**Service token (ADR-0049):** set `ENGINE_API_KEY` in `.env` (git-ignored) to require `Authorization: Bearer <key>` on `/v1/...`. Without it the engine is open, for local development only; `run_server.py` refuses a non-localhost `ENGINE_HOST` without a key.
+
 On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on PATH). Keep that terminal open, then call the API from another terminal or open http://127.0.0.1:8000/docs.
 
 - `GET /livez` — liveness
 - `GET /health` — liveness alias
+- `GET /readyz` — readiness (200 once started, 503 otherwise)
 - `GET /v1/functions` — discovery
+- `GET /v1/functions/<key>` — input schema and units for one ID
 - `POST /v1/functions/<key>/run` — one typed route per function (e.g. `revenue.milk`); body is a JSON object of numbers; OpenAPI shows the real field names
 - `POST /v1/demo/pl-summary` — runs `pl.summary` on the sample farm
 - OpenAPI: `http://127.0.0.1:8000/docs`

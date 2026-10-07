@@ -27,20 +27,20 @@ def dairy_kpis(
     milking_cows: float,
     revenue: float,
     costs: float,
-    surplus: float,
+    operating_surplus: float,
     loan_repayments: float,
     cost_lines: dict[str, float],
     milk_solids_kg: float | None = None,
     hectares: float | None = None,
     debt_balance: float | None = None,
 ) -> dict:
-    dscr = coverage_ratio(surplus, loan_repayments)
+    dscr = coverage_ratio(operating_surplus, loan_repayments)
     variable = sum_amounts(*(cost_lines[c] for c in VARIABLE_COST_CATEGORIES))
     # Gross margin = revenue − variable costs (ADR-0033, Teagasc convention).
     gross_margin = revenue - variable
 
     def money_per(units: float) -> dict:
-        amounts = {"revenue": revenue, "costs": costs, "gross_margin": gross_margin, "surplus": surplus}
+        amounts = {"revenue": revenue, "costs": costs, "gross_margin": gross_margin, "operating_surplus": operating_surplus}
         return {name: _per(value, units) for name, value in amounts.items()}
 
     return {
@@ -50,7 +50,7 @@ def dairy_kpis(
             "variable_costs": _cents_per_litre(variable, milk_litres),
             "fixed_costs": _cents_per_litre(costs - variable, milk_litres),
             "gross_margin": _cents_per_litre(gross_margin, milk_litres),
-            "surplus": _cents_per_litre(surplus, milk_litres),
+            "operating_surplus": _cents_per_litre(operating_surplus, milk_litres),
             "cost_lines": {
                 name: _cents_per_litre(amount, milk_litres) for name, amount in cost_lines.items()
             },

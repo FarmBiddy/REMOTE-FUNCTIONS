@@ -21,6 +21,7 @@ from farm_functions.errors import (
 )
 from farm_functions.registry import INPUT_MODELS, get_function
 from farm_functions.schemas import missing_field_entry
+from farm_functions.version import ENGINE_VERSION
 
 
 def _present_keys(inputs: dict[str, Any], spec_keys: tuple[str, ...]) -> list[str]:
@@ -83,6 +84,15 @@ def _nested_needs_input(
 
 
 def run_function(name: str, inputs: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Run one calculation; every envelope carries ``meta.engine_version`` (ADR-0050)."""
+    return with_meta(_run(name, inputs))
+
+
+def with_meta(envelope: dict[str, Any]) -> dict[str, Any]:
+    return {**envelope, "meta": {"engine_version": ENGINE_VERSION}}
+
+
+def _run(name: str, inputs: dict[str, Any] | None = None) -> dict[str, Any]:
     spec = get_function(name)
     if spec is None:
         return unknown_calculation_envelope(name)

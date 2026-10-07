@@ -285,7 +285,7 @@ def _outcome(
             for k in ("milk_price_c", "milk_volume_pct", "herd_pct", "rate_shift_pp", "lines_pct")
         },
         "investments": investments,
-        "surplus": round_money(surplus),
+        "operating_surplus": round_money(surplus),
         "loan_repayments": round_money(repayments),
         "dscr": None if dscr is None else round_money(dscr),
         "closing_cash": cash["closing_cash"],
@@ -333,7 +333,7 @@ TORNADO_LINES = (
 
 def _point(outcome: dict[str, Any]) -> dict[str, Any]:
     return {
-        "surplus": outcome["surplus"],
+        "operating_surplus": outcome["operating_surplus"],
         "closing_cash": outcome["closing_cash"],
         "lowest_cash": outcome["lowest_cash"]["amount"],
         "dscr": outcome["dscr"],
@@ -350,7 +350,7 @@ def risk_tornado(
     shocks_from_month: int | None = None,
     step_pct: float = 10.0,
     rate_step_pp: float = 1.0,
-    rank_by: str = "surplus",
+    rank_by: str = "operating_surplus",
 ) -> dict[str, Any]:
     """``risk.tornado``: move one driver at a time down / up and rank the swings."""
     common = {
@@ -398,7 +398,7 @@ def risk_tornado(
                 "high": hi,
                 "swing": {
                     k: round_money(abs(hi[k] - lo[k]))
-                    for k in ("surplus", "closing_cash", "lowest_cash")
+                    for k in ("operating_surplus", "closing_cash", "lowest_cash")
                 },
             }
         )

@@ -104,7 +104,7 @@ def debt_capacity(
         "from": {"kind": "month", "year": periods[0][0], "month": periods[0][1]},
         "to": {"kind": "month", "year": periods[-1][0], "month": periods[-1][1]},
         "month_count": len(statements),
-        "surplus": round_money(surplus),
+        "operating_surplus": round_money(surplus),
         "off_farm_income": round_money(off_farm_income),
         "drawings": round_money(drawings),
         "tax": round_money(tax),

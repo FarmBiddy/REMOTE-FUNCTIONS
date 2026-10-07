@@ -115,10 +115,13 @@ python -m pytest
 - Non-reload (process entry): `python run_server.py`
 - Local reload: `python -m uvicorn api.app:app --reload` (or `start.bat` on Windows)
 
+**Service token (ADR-0049):** set `ENGINE_API_KEY` in `.env` (git-ignored) to require `Authorization: Bearer <key>` on `/v1/...`. Without it the engine is open, for local development only; `run_server.py` refuses a non-localhost `ENGINE_HOST` without a key.
+
 On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on PATH). Keep that terminal open, then call the API from another terminal or open http://127.0.0.1:8000/docs.
 
 - `GET /livez` — liveness
 - `GET /health` — liveness alias
+- `GET /readyz` — readiness (200 once started, 503 otherwise)
 - `GET /v1/functions` — discovery
 - `GET /v1/functions/<key>` — input schema and units for one ID
 - `POST /v1/functions/<key>/run` — one typed route per function (e.g. `revenue.milk`); body is a JSON object of numbers; OpenAPI shows the real field names

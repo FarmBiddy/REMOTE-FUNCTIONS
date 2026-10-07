@@ -4,7 +4,7 @@ Bring FarmBiddy FastAPI **process principles** into this service. Do **not** cop
 
 Principles source: sibling `rag-agent` (`.cursor/rules/07-fastapi-delivery.md`, `run_server.py`, lifespan, named venv). Domain source of truth remains this repo (`docs/architecture.md`, ADRs 0001–0002).
 
-**Status:** Now list implemented in this repo (`api/` composition root, `run_server.py`, `/livez`, named-venv docs). Later items (Docker, `/readyz`, s2s auth) remain open. Do not land these files in `rag-agent`.
+**Status:** Now list implemented in this repo (`api/` composition root, `run_server.py`, `/livez`, named-venv docs). `/readyz` and s2s auth landed (ADR-0049); Docker remains open until a host is chosen. Do not land these files in `rag-agent`.
 
 ---
 

@@ -155,6 +155,7 @@ Each calculation has a **stable public ID** (example: `revenue.milk`). These IDs
 |--------|------|---------|
 | `GET` | `/livez` | Liveness (process up; cheap) |
 | `GET` | `/health` | Liveness alias (same body as `/livez`) |
+| `GET` | `/readyz` | Readiness: 200 after startup, 503 otherwise |
 | `GET` | `/v1/functions` | Discovery (keys, descriptions, required/optional fields) |
 | `GET` | `/v1/functions/<calculation_id>` | Input schema + units for one ID (ADR-0048) |
 | `POST` | `/v1/functions/<calculation_id>/run` | Run that calculation (one concrete route per ID) |

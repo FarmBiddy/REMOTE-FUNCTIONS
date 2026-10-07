@@ -310,6 +310,13 @@ are documented here, not listed in discovery.
 
 `pl.summary` and `pl.monthly` remain unchanged.
 
+## Service token (ADR-0049)
+
+When the engine has `ENGINE_API_KEY` set, every `/v1/...` call sends
+`Authorization: Bearer <key>` (401 `unauthorized` otherwise). Call the engine
+from the Platform **backend** only, after checking the user's login; never put
+the key in browser code.
+
 ## CORS (local Next.js)
 
 Browser apps on another origin need CORS. Application layer only (`api/app.py`).

@@ -24,6 +24,10 @@ EU_LIMITS: dict[str, tuple[float, int]] = {"scc_k": (400.0, 3), "tbc_k": (100.0,
 
 MILK_DENSITY_KG_PER_L = 1.03
 
+# "About average" band per metric (ADR-0052): differences inside it are within
+# normal month-to-month noise of statements and benchmark sources.
+AVERAGE_TOLERANCE: dict[str, float] = {"scc_k": 10.0, "tbc_k": 2.0, "fat_pct": 0.05, "protein_pct": 0.05}
+
 
 def component_kg(milk_litres: float, pct: float) -> float:
     """kg of a component (fat or protein) in the milk."""
@@ -44,6 +48,7 @@ def band_adjustment_c(value_k: float, bands: list[dict]) -> float:
 
 
 __all__ = [
+    "AVERAGE_TOLERANCE",
     "EU_LIMITS",
     "MILK_DENSITY_KG_PER_L",
     "QUALITY_METRICS",

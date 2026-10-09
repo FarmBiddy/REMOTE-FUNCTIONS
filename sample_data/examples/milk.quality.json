@@ -113,19 +113,16 @@
   "hectares": 60,
   "benchmarks": {
     "scc_k": {
-      "top10": 90,
-      "average": 170
+      "average": 170,
+      "best20": 110
     },
     "tbc_k": {
-      "top10": 8,
       "average": 15
     },
     "fat_pct": {
-      "top10": 4.7,
       "average": 4.4
     },
     "protein_pct": {
-      "top10": 3.75,
       "average": 3.55
     }
   },

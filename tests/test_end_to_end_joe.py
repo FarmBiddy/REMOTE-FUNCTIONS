@@ -66,8 +66,9 @@ PAYLOADS = {
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "milk.quality": {
         "months": joe.STATEMENTS, "milking_cows": joe.COWS, "hectares": joe.HECTARES,
-        "benchmarks": {"scc_k": {"top10": 90, "average": 170}, "tbc_k": {"top10": 8, "average": 15},
-                       "fat_pct": {"top10": 4.7, "average": 4.4}, "protein_pct": {"top10": 3.75, "average": 3.55}},
+        # Platform-style: ICBF / CSO averages, plus ICBF best 20% for SCC; no top 10%.
+        "benchmarks": {"scc_k": {"average": 170, "best20": 110}, "tbc_k": {"average": 15},
+                       "fat_pct": {"average": 4.4}, "protein_pct": {"average": 3.55}},
         "pricing": {"fat_eur_per_kg": 4.8, "protein_eur_per_kg": 7.3, "volume_charge_c_per_l": 3.2,
                     "scc_bands": [{"max_k": 100, "adjustment_c": 0.4}, {"max_k": 200, "adjustment_c": 0.2},
                                   {"max_k": 400, "adjustment_c": 0}, {"adjustment_c": -1}],
@@ -227,4 +228,5 @@ def test_milk_quality_feeds_the_kpis(results):
     kpis = run_function("kpi.summary", {**PAYLOADS["kpi.summary"], "milk_solids_kg": quality["period"]["milk_solids_kg"]})["result"]
     assert kpis["per_kg_ms"]["revenue"] == pytest.approx(kpis["totals"]["revenue"] / quality["period"]["milk_solids_kg"], abs=0.01)
     assert quality["compliance"]["scc_breach_months"] == []  # late-lactation peak stays under the EU limit
-    assert quality["value"]["gain_to_top10_eur"] > 0
+    assert quality["value"]["gain_to_average_eur"] > 0  # fat below average
+    assert quality["vs_benchmarks"]["protein_pct"]["position"] == "about"

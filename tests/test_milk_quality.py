@@ -71,12 +71,46 @@ def test_rolling_window_follows_the_calendar():
 
 def test_benchmark_gaps():
     gaps = _quality()["result"]["vs_benchmarks"]
-    assert gaps["scc_k"] == {"farm": 345, "top10": 90, "average": 170, "gap_to_top10": 255, "better_than_top10": False}
+    assert gaps["scc_k"] == {
+        "farm": 345, "average": 170, "gap_to_average": 175, "position": "above", "better_than_average": False,
+        "best20": None, "gap_to_best20": None, "better_than_best20": None,
+        "top10": 90, "gap_to_top10": 255, "better_than_top10": False,
+    }
     assert gaps["fat_pct"]["gap_to_top10"] == -0.54
     assert gaps["protein_pct"]["average"] is None
     assert "tbc_k" not in gaps
     good = _quality(benchmarks={"scc_k": {"top10": 400}})["result"]["vs_benchmarks"]["scc_k"]
     assert good["better_than_top10"] is True
+
+
+def test_average_position_uses_the_about_band():
+    """Tolerances: fat / protein ±0.05 pp, SCC ±10k, TBC ±2k (Dairy policy, ADR-0052).
+    Farm: fat 4.06, protein 3.43, SCC 345, TBC 9.8."""
+    benchmarks = {
+        "fat_pct": {"average": 4.10},      # −0.04 → about
+        "protein_pct": {"average": 3.30},  # +0.13 → above, better (higher pays more)
+        "scc_k": {"average": 360},         # −15 → below, better (lower is better)
+        "tbc_k": {"average": 7.8},         # +2.0 → about (edge of the band is inclusive)
+    }
+    gaps = _quality(benchmarks=benchmarks)["result"]["vs_benchmarks"]
+    assert (gaps["fat_pct"]["position"], gaps["fat_pct"]["better_than_average"]) == ("about", None)
+    assert (gaps["protein_pct"]["position"], gaps["protein_pct"]["better_than_average"]) == ("above", True)
+    assert (gaps["scc_k"]["position"], gaps["scc_k"]["better_than_average"]) == ("below", True)
+    assert (gaps["tbc_k"]["gap_to_average"], gaps["tbc_k"]["position"]) == (2.0, "about")
+    assert gaps["fat_pct"]["top10"] is None and gaps["fat_pct"]["gap_to_top10"] is None
+
+
+def test_best20_comparison():
+    gaps = _quality(benchmarks={"scc_k": {"average": 170, "best20": 110}})["result"]["vs_benchmarks"]["scc_k"]
+    assert (gaps["best20"], gaps["gap_to_best20"], gaps["better_than_best20"]) == (110, 235, False)
+
+
+def test_gain_to_average():
+    """Average fat 4.20 (+0.14), protein 3.40 (farm 3.43 already above → 0):
+    100,000 × 1.03 × 0.14% = 144.2 kg × €6 = 865.20."""
+    value = _quality(benchmarks={"fat_pct": {"average": 4.20}, "protein_pct": {"average": 3.40}})["result"]["value"]
+    assert value["gain_to_average_eur"] == 865.2
+    assert value["gain_to_top10_eur"] is None and value["gain_to_best20_eur"] is None
 
 
 def test_component_value_bands_and_gains():

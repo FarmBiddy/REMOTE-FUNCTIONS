@@ -806,10 +806,11 @@ class MilkQualityMonthInput(_StrictModel):
 
 
 class BenchmarkInput(_StrictModel):
-    """Reference values for one metric (e.g. ICBF top 10% and national average)."""
+    """Reference values for one metric: average (ICBF / CSO), best 20% (ICBF), top 10%."""
 
-    top10: NonNegativeNumber | None = None
     average: NonNegativeNumber | None = None
+    best20: NonNegativeNumber | None = None
+    top10: NonNegativeNumber | None = None
 
 
 class QualityBenchmarksInput(_StrictModel):
@@ -1324,6 +1325,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     "fat_eur_per_kg": "EUR/kg",
     "protein_eur_per_kg": "EUR/kg",
     "top10": "metric unit",
+    "best20": "metric unit",
     "average": "metric unit",
     "benchmarks": "object",
     "pricing": "object",

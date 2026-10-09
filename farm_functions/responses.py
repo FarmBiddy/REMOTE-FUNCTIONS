@@ -658,8 +658,14 @@ class QualityCompliance(_Out):
 
 class BenchmarkComparison(_Out):
     farm: float
-    top10: float | None
     average: float | None
+    gap_to_average: float | None
+    position: Literal["above", "below", "about"] | None
+    better_than_average: bool | None
+    best20: float | None
+    gap_to_best20: float | None
+    better_than_best20: bool | None
+    top10: float | None
     gap_to_top10: float | None
     better_than_top10: bool | None
 
@@ -682,6 +688,8 @@ class QualityValue(_Out):
     tbc_adjustment_eur: float
     total_eur: float
     price_c_per_l: QualityPriceBreakdown
+    gain_to_average_eur: float | None
+    gain_to_best20_eur: float | None
     gain_to_top10_eur: float | None
     gain_at_best_band_eur: float
 

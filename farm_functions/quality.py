@@ -14,6 +14,7 @@ from farm_functions.core.ratios import per_unit
 from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.core.statistics import geometric_mean, weighted_mean
 from farm_functions.dairy.quality import (
+    AVERAGE_TOLERANCE,
     EU_LIMITS,
     QUALITY_METRICS,
     band_adjustment_c,
@@ -54,14 +55,38 @@ def _benchmarks(period: dict[str, float], benchmarks: dict[str, Any] | None) -> 
         ref = benchmarks.get(metric)
         if not ref:
             continue
-        farm, top10 = period[metric], ref["top10"]
+        farm = period[metric]
         lower_is_better = QUALITY_METRICS[metric]["better"] == "lower"
+
+        def better(reference: float | None) -> bool | None:
+            if reference is None:
+                return None
+            return farm <= reference if lower_is_better else farm >= reference
+
+        def gap(reference: float | None) -> float | None:
+            return None if reference is None else round_money(farm - reference)
+
+        average = ref["average"]
+        to_average = gap(average)
+        if to_average is None:
+            position = None
+        elif abs(to_average) <= AVERAGE_TOLERANCE[metric]:
+            position = "about"
+        else:
+            position = "above" if to_average > 0 else "below"
         out[metric] = {
             "farm": farm,
-            "top10": top10,
-            "average": ref["average"],
-            "gap_to_top10": None if top10 is None else round_money(farm - top10),
-            "better_than_top10": None if top10 is None else (farm <= top10 if lower_is_better else farm >= top10),
+            "average": average,
+            "gap_to_average": to_average,
+            # "above" / "below" are numeric; better_than_average says which is good.
+            "position": position,
+            "better_than_average": None if position in (None, "about") else better(average),
+            "best20": ref["best20"],
+            "gap_to_best20": gap(ref["best20"]),
+            "better_than_best20": better(ref["best20"]),
+            "top10": ref["top10"],
+            "gap_to_top10": gap(ref["top10"]),
+            "better_than_top10": better(ref["top10"]),
         }
     return out
 
@@ -83,13 +108,16 @@ def _value(months: list[dict[str, Any]], pricing: dict[str, Any], period: dict[s
             best_band_gain += m["milk_litres"] * (max(b["adjustment_c"] for b in bands) - actual) / 100
     total = sum_amounts(*eur.values())
 
-    gain = None
-    for metric, price_key in (("fat_pct", "fat_eur_per_kg"), ("protein_pct", "protein_eur_per_kg")):
-        top10 = ((benchmarks or {}).get(metric) or {}).get("top10")
-        if top10 is not None and period[metric] is not None:
-            # Linear in %: Σ months (top10 − pct_m) × litres_m = (top10 − weighted pct) × litres.
-            shortfall = max(0.0, top10 - period[metric])
-            gain = (gain or 0.0) + component_kg(litres, shortfall) * pricing[price_key]
+    def gain_to(level: str) -> float | None:
+        """Extra fat / protein value if the farm matched ``level`` composition (0 if at or above)."""
+        gain = None
+        for metric, price_key in (("fat_pct", "fat_eur_per_kg"), ("protein_pct", "protein_eur_per_kg")):
+            target = ((benchmarks or {}).get(metric) or {}).get(level)
+            if target is not None and period[metric] is not None:
+                # Linear in %: Σ months (target − pct_m) × litres_m = (target − weighted pct) × litres.
+                shortfall = max(0.0, target - period[metric])
+                gain = (gain or 0.0) + component_kg(litres, shortfall) * pricing[price_key]
+        return _round(gain)
 
     def c_per_litre(amount: float) -> float | None:
         value = per_unit(amount, litres)
@@ -99,7 +127,9 @@ def _value(months: list[dict[str, Any]], pricing: dict[str, Any], period: dict[s
         **{f"{k}_eur": round_money(v) for k, v in eur.items()},
         "total_eur": round_money(total),
         "price_c_per_l": {**{k: c_per_litre(v) for k, v in eur.items()}, "total": c_per_litre(total)},
-        "gain_to_top10_eur": _round(gain),
+        "gain_to_average_eur": gain_to("average"),
+        "gain_to_best20_eur": gain_to("best20"),
+        "gain_to_top10_eur": gain_to("top10"),
         "gain_at_best_band_eur": round_money(best_band_gain),
     }
 

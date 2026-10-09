@@ -30,8 +30,16 @@ averages. The figures come from the co-op's monthly milk statements.
    flag; the period lists breach months.
 4. **Milk solids** = litres × 1.03 kg/L × (fat% + protein%) / 100, with per cow
    and per hectare when those are sent. Feeds `kpi.summary.milk_solids_kg`.
-5. **Benchmarks are inputs** `{metric: {average?, best20?, top10?}}`, never
-   stored in the Engine. Output per metric: `farm`; against the **average**
+5. **Benchmarks are inputs** `{metric: {average? | monthly_average?, best20?,
+   top10?}}`, never stored in the Engine.
+   **Seasonal averages:** fat, protein and SCC move strongly through the year,
+   so one month's average is not comparable with a 12-month farm figure.
+   `monthly_average: [{year, month, value}]` (CSO AKM01 monthly; ICBF weekly
+   mapped to months) is weighted by the **farm's own monthly litres** to give a
+   like-for-like period average (`average_basis: litre_weighted_monthly`; a
+   single `average` is `fixed`). The series must cover every month the farm
+   shipped milk (`benchmark_months_missing`); sending both forms is
+   `average_conflict`. Output per metric: `farm`; against the **average**
    `gap_to_average` (farm − average, metric unit), `position`
    (`above` | `below` | `about`, numeric) and `better_than_average` (lower is
    better for SCC / TBC, higher for fat / protein; `null` when `about`); and

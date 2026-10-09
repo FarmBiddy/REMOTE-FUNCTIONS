@@ -372,8 +372,12 @@ in input order). Land is not depreciated.
 Milk quality (ADR-0052): send the co-op's monthly statement figures to
 `milk.quality` (SCC / TBC in thousands per ml). The four cards read
 `period.scc_k`, `period.tbc_k`, `period.fat_pct`, `period.protein_pct` and compare
-with the **average** you supply in `benchmarks.<metric>.average` (SCC: ICBF weekly
-milk recording by province; fat / protein: CSO national monthly). Show
+with the **average** you supply (SCC: ICBF weekly milk recording by province; fat /
+protein: CSO national monthly, AKM01). Because these are seasonal, prefer
+`benchmarks.<metric>.monthly_average: [{year, month, value}]` covering every
+statement month: the engine weights it by the farm's own litres for a
+like-for-like average (`average_basis: litre_weighted_monthly`). A single
+`average` still works (`fixed`). Show
 `vs_benchmarks.<metric>.position` (above / below / about) and
 `better_than_average` (null when about) — no maths in the UI. `best20` (ICBF best
 20%) and `top10` are optional extra references. The engine stays offline and

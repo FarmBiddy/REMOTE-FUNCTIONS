@@ -371,11 +371,15 @@ in input order). Land is not depreciated.
 
 Milk quality (ADR-0052): send the co-op's monthly statement figures to
 `milk.quality` (SCC / TBC in thousands per ml). The four cards read
-`period.scc_k`, `period.tbc_k`, `period.fat_pct`, `period.protein_pct`; "Top Irish
-herds" reads `vs_benchmarks.<metric>.top10`, which you supply (ICBF / Teagasc /
-co-op data, refreshed yearly). Send the co-op price schedule as `pricing` to show
-the milk-price breakdown and `value.gain_to_top10_eur` ("€ a year if your solids
-matched the top 10%"). Pass `period.milk_solids_kg` to `kpi.summary` for the
+`period.scc_k`, `period.tbc_k`, `period.fat_pct`, `period.protein_pct` and compare
+with the **average** you supply in `benchmarks.<metric>.average` (SCC: ICBF weekly
+milk recording by province; fat / protein: CSO national monthly). Show
+`vs_benchmarks.<metric>.position` (above / below / about) and
+`better_than_average` (null when about) — no maths in the UI. `best20` (ICBF best
+20%) and `top10` are optional extra references. The engine stays offline and
+stores no benchmarks. Send the co-op price schedule as `pricing` to show the
+milk-price breakdown and `value.gain_to_average_eur` ("€ a year if your fat and
+protein reached the average"). Pass `period.milk_solids_kg` to `kpi.summary` for the
 kg MS KPIs.
 
 Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`

@@ -55,6 +55,7 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0049](0049-service-token.md) | Service-to-service bearer token, readiness and safe binding |
 | [0050](0050-contract-hardening.md) | Contract hardening: limits, version meta, examples, naming |
 | [0051](0051-typed-response-schemas.md) | Typed response schemas in OpenAPI and discovery |
+| [0052](0052-milk-quality.md) | Milk quality and its value (`milk.quality`) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

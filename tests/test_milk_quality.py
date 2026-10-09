@@ -72,7 +72,8 @@ def test_rolling_window_follows_the_calendar():
 def test_benchmark_gaps():
     gaps = _quality()["result"]["vs_benchmarks"]
     assert gaps["scc_k"] == {
-        "farm": 345, "average": 170, "gap_to_average": 175, "position": "above", "better_than_average": False,
+        "farm": 345, "average": 170, "average_basis": "fixed", "gap_to_average": 175, "position": "above",
+        "better_than_average": False,
         "best20": None, "gap_to_best20": None, "better_than_best20": None,
         "top10": 90, "gap_to_top10": 255, "better_than_top10": False,
     }
@@ -149,3 +150,38 @@ def test_helpers_and_validation():
 def test_http_matches_runner():
     body = client.post("/v1/functions/milk.quality/run", json=FULL).json()
     assert body == run_function("milk.quality", FULL)
+
+
+SERIES = [
+    {"year": 2026, "month": 1, "value": 4.6},
+    {"year": 2026, "month": 2, "value": 4.1},
+    {"year": 2026, "month": 3, "value": 3.9},
+]
+
+
+def test_monthly_average_is_weighted_by_the_farms_litres():
+    """(4.6 × 10,000 + 4.1 × 30,000 + 3.9 × 60,000) / 100,000 = 4.03 → farm 4.06 is "about".
+    A simple mean of the series (4.20) would wrongly say "below"."""
+    gaps = _quality(benchmarks={"fat_pct": {"monthly_average": SERIES}})["result"]["vs_benchmarks"]["fat_pct"]
+    assert (gaps["average"], gaps["average_basis"], gaps["gap_to_average"], gaps["position"]) == (
+        4.03, "litre_weighted_monthly", 0.03, "about"
+    )
+    fixed = _quality(benchmarks={"fat_pct": {"average": 4.03}})["result"]["vs_benchmarks"]["fat_pct"]
+    assert fixed["average_basis"] == "fixed"
+
+
+def test_monthly_average_drives_the_value_gain():
+    """Series +0.3 every month → weighted 4.33; shortfall 0.27 × 100,000 × 1.03 / 100 = 278.1 kg × €6."""
+    higher = [{**b, "value": b["value"] + 0.3} for b in SERIES]
+    value = _quality(benchmarks={"fat_pct": {"monthly_average": higher}})["result"]["value"]
+    assert value["gain_to_average_eur"] == 1_668.6
+
+
+def test_monthly_average_must_cover_every_shipped_month():
+    missing = _quality(benchmarks={"fat_pct": {"monthly_average": SERIES[:2]}})
+    assert missing["error"]["details"]["reason"] == "benchmark_months_missing"
+    assert "2026-03" in missing["error"]["message"]
+    dry = [{**QUARTER[0]}, {**QUARTER[1], "milk_litres": 0}, {**QUARTER[2]}]  # January dry: not needed
+    assert _quality(months=dry, benchmarks={"fat_pct": {"monthly_average": SERIES[1:]}})["status"] == "ok"
+    both = _quality(benchmarks={"fat_pct": {"average": 4.0, "monthly_average": SERIES}})
+    assert both["error"]["details"]["reason"] == "average_conflict"

@@ -805,12 +805,29 @@ class MilkQualityMonthInput(_StrictModel):
     tbc_k: NonNegativeNumber
 
 
+class BenchmarkMonthInput(_StrictModel):
+    """One month of a seasonal benchmark series (e.g. CSO AKM01, ICBF mapped to months)."""
+
+    year: CalendarYear
+    month: CalendarMonth
+    value: NonNegativeNumber
+
+
 class BenchmarkInput(_StrictModel):
-    """Reference values for one metric: average (ICBF / CSO), best 20% (ICBF), top 10%."""
+    """Reference values for one metric: average (fixed or a monthly series), best 20%, top 10%."""
 
     average: NonNegativeNumber | None = None
+    # Seasonal average: weighted by the farm's monthly litres for a like-for-like period average.
+    monthly_average: list[BenchmarkMonthInput] = Field(default_factory=list, max_length=MAX_MONTHS)
     best20: NonNegativeNumber | None = None
     top10: NonNegativeNumber | None = None
+
+    @model_validator(mode="after")
+    def _one_average(self) -> "BenchmarkInput":
+        if self.average is not None and self.monthly_average:
+            raise ValueError("send average or monthly_average, not both")
+        _reject_duplicate_months(self.monthly_average)
+        return self
 
 
 class QualityBenchmarksInput(_StrictModel):
@@ -863,6 +880,15 @@ class MilkQualityInput(_StrictModel):
     @model_validator(mode="after")
     def _unique(self) -> "MilkQualityInput":
         _reject_duplicate_months(self.months)
+        # A monthly benchmark must cover every month with milk, or it is not like-for-like.
+        shipped = [(m.year, m.month) for m in self.months if m.milk_litres > 0]
+        for metric, bench in (self.benchmarks or QualityBenchmarksInput()):
+            if bench is None or not bench.monthly_average:
+                continue
+            covered = {(b.year, b.month) for b in bench.monthly_average}
+            missing = [f"{y}-{m:02d}" for y, m in shipped if (y, m) not in covered]
+            if missing:
+                raise ValueError(f"{metric} monthly_average has no value for {', '.join(missing)}")
         return self
 
 
@@ -1326,6 +1352,8 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     "protein_eur_per_kg": "EUR/kg",
     "top10": "metric unit",
     "best20": "metric unit",
+    "monthly_average": "list",
+    "value": "metric unit",
     "average": "metric unit",
     "benchmarks": "object",
     "pricing": "object",

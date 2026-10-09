@@ -111,3 +111,8 @@ STATEMENTS = [
      **dict(zip(("fat_pct", "protein_pct", "scc_k", "tbc_k"), QUALITY[m["month"]]))}
     for m in ACTUAL
 ]
+
+
+def benchmark_series(metric: str, offset: float) -> list[dict]:
+    """National monthly averages for the statement months: Joe's seasonal figure + an offset."""
+    return [{"year": m["year"], "month": m["month"], "value": round(m[metric] + offset, 2)} for m in STATEMENTS]

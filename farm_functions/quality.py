@@ -47,6 +47,31 @@ def _rolling(months: list[dict[str, Any]], metric: str) -> list[float]:
     ]
 
 
+def _resolve_averages(months: list[dict[str, Any]], benchmarks: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Turn a monthly benchmark series into a period average weighted by the farm's litres.
+
+    Each metric gets ``average`` (effective) and ``average_basis``: ``fixed``,
+    ``litre_weighted_monthly`` or ``None`` when no average was sent.
+    """
+    if not benchmarks:
+        return benchmarks
+    resolved = {}
+    for metric, ref in benchmarks.items():
+        if not ref:
+            resolved[metric] = ref
+            continue
+        if ref.get("monthly_average"):
+            series = {(b["year"], b["month"]): b["value"] for b in ref["monthly_average"]}
+            shipped = [m for m in months if m["milk_litres"] > 0]
+            average = weighted_mean([series[(m["year"], m["month"])] for m in shipped], [m["milk_litres"] for m in shipped])
+            basis = "litre_weighted_monthly"
+        else:
+            average = ref["average"]
+            basis = None if average is None else "fixed"
+        resolved[metric] = {**ref, "average": average, "average_basis": basis}
+    return resolved
+
+
 def _benchmarks(period: dict[str, float], benchmarks: dict[str, Any] | None) -> dict[str, Any] | None:
     if not benchmarks:
         return None
@@ -66,7 +91,7 @@ def _benchmarks(period: dict[str, float], benchmarks: dict[str, Any] | None) -> 
         def gap(reference: float | None) -> float | None:
             return None if reference is None else round_money(farm - reference)
 
-        average = ref["average"]
+        average = None if ref["average"] is None else round_money(ref["average"])
         to_average = gap(average)
         if to_average is None:
             position = None
@@ -77,6 +102,7 @@ def _benchmarks(period: dict[str, float], benchmarks: dict[str, Any] | None) -> 
         out[metric] = {
             "farm": farm,
             "average": average,
+            "average_basis": ref["average_basis"],
             "gap_to_average": to_average,
             # "above" / "below" are numeric; better_than_average says which is good.
             "position": position,
@@ -174,6 +200,7 @@ def milk_quality(
         month_rows.append(row)
 
     comparable = {k: v for k, v in rounded.items() if v is not None}
+    benchmarks = _resolve_averages(months, benchmarks)
     return {
         "from": _period(months[0]),
         "to": _period(months[-1]),

@@ -357,6 +357,12 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(issue(INVALID_TYPE, text, field="assumptions", details={"reason": "assumption_longer_than_years"}))
         elif text == "investment year must be within years":
             issues.append(issue(INVALID_TYPE, text, field="investments", details={"reason": "investment_outside_years"}))
+        elif text == "send average or monthly_average, not both":
+            issues.append(issue(INVALID_TYPE, text, field="monthly_average", details={"reason": "average_conflict"}))
+        elif "monthly_average has no value for" in text:
+            issues.append(
+                issue(INVALID_TYPE, text, field="monthly_average", details={"reason": "benchmark_months_missing"})
+            )
         elif text == "bands must ascend by max_k and end with one open-ended band":
             issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "bands_invalid"}))
         elif text == "period end must not be before period start":

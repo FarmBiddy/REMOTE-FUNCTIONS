@@ -659,6 +659,7 @@ class QualityCompliance(_Out):
 class BenchmarkComparison(_Out):
     farm: float
     average: float | None
+    average_basis: Literal["fixed", "litre_weighted_monthly"] | None
     gap_to_average: float | None
     position: Literal["above", "below", "about"] | None
     better_than_average: bool | None

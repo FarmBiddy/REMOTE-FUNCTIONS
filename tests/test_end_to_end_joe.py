@@ -66,9 +66,14 @@ PAYLOADS = {
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "milk.quality": {
         "months": joe.STATEMENTS, "milking_cows": joe.COWS, "hectares": joe.HECTARES,
-        # Platform-style: ICBF / CSO averages, plus ICBF best 20% for SCC; no top 10%.
-        "benchmarks": {"scc_k": {"average": 170, "best20": 110}, "tbc_k": {"average": 15},
-                       "fat_pct": {"average": 4.4}, "protein_pct": {"average": 3.55}},
+        # Platform-style: seasonal monthly averages (CSO fat / protein, ICBF SCC), fixed TBC,
+        # plus ICBF best 20% for SCC; no top 10%.
+        "benchmarks": {
+            "scc_k": {"monthly_average": joe.benchmark_series("scc_k", +25), "best20": 110},
+            "tbc_k": {"average": 15},
+            "fat_pct": {"monthly_average": joe.benchmark_series("fat_pct", +0.08)},
+            "protein_pct": {"monthly_average": joe.benchmark_series("protein_pct", +0.02)},
+        },
         "pricing": {"fat_eur_per_kg": 4.8, "protein_eur_per_kg": 7.3, "volume_charge_c_per_l": 3.2,
                     "scc_bands": [{"max_k": 100, "adjustment_c": 0.4}, {"max_k": 200, "adjustment_c": 0.2},
                                   {"max_k": 400, "adjustment_c": 0}, {"adjustment_c": -1}],

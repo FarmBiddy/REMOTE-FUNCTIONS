@@ -113,17 +113,200 @@
   "hectares": 60,
   "benchmarks": {
     "scc_k": {
-      "average": 170,
+      "monthly_average": [
+        {
+          "year": 2025,
+          "month": 10,
+          "value": 235
+        },
+        {
+          "year": 2025,
+          "month": 11,
+          "value": 285
+        },
+        {
+          "year": 2025,
+          "month": 12,
+          "value": 335
+        },
+        {
+          "year": 2026,
+          "month": 1,
+          "value": 305
+        },
+        {
+          "year": 2026,
+          "month": 2,
+          "value": 195
+        },
+        {
+          "year": 2026,
+          "month": 3,
+          "value": 145
+        },
+        {
+          "year": 2026,
+          "month": 4,
+          "value": 135
+        },
+        {
+          "year": 2026,
+          "month": 5,
+          "value": 140
+        },
+        {
+          "year": 2026,
+          "month": 6,
+          "value": 150
+        },
+        {
+          "year": 2026,
+          "month": 7,
+          "value": 165
+        },
+        {
+          "year": 2026,
+          "month": 8,
+          "value": 180
+        },
+        {
+          "year": 2026,
+          "month": 9,
+          "value": 205
+        }
+      ],
       "best20": 110
     },
     "tbc_k": {
       "average": 15
     },
     "fat_pct": {
-      "average": 4.4
+      "monthly_average": [
+        {
+          "year": 2025,
+          "month": 10,
+          "value": 5.03
+        },
+        {
+          "year": 2025,
+          "month": 11,
+          "value": 5.18
+        },
+        {
+          "year": 2025,
+          "month": 12,
+          "value": 5.28
+        },
+        {
+          "year": 2026,
+          "month": 1,
+          "value": 5.08
+        },
+        {
+          "year": 2026,
+          "month": 2,
+          "value": 4.18
+        },
+        {
+          "year": 2026,
+          "month": 3,
+          "value": 4.03
+        },
+        {
+          "year": 2026,
+          "month": 4,
+          "value": 4.03
+        },
+        {
+          "year": 2026,
+          "month": 5,
+          "value": 4.08
+        },
+        {
+          "year": 2026,
+          "month": 6,
+          "value": 4.18
+        },
+        {
+          "year": 2026,
+          "month": 7,
+          "value": 4.33
+        },
+        {
+          "year": 2026,
+          "month": 8,
+          "value": 4.53
+        },
+        {
+          "year": 2026,
+          "month": 9,
+          "value": 4.78
+        }
+      ]
     },
     "protein_pct": {
-      "average": 3.55
+      "monthly_average": [
+        {
+          "year": 2025,
+          "month": 10,
+          "value": 3.97
+        },
+        {
+          "year": 2025,
+          "month": 11,
+          "value": 4.07
+        },
+        {
+          "year": 2025,
+          "month": 12,
+          "value": 4.12
+        },
+        {
+          "year": 2026,
+          "month": 1,
+          "value": 3.92
+        },
+        {
+          "year": 2026,
+          "month": 2,
+          "value": 3.27
+        },
+        {
+          "year": 2026,
+          "month": 3,
+          "value": 3.22
+        },
+        {
+          "year": 2026,
+          "month": 4,
+          "value": 3.32
+        },
+        {
+          "year": 2026,
+          "month": 5,
+          "value": 3.42
+        },
+        {
+          "year": 2026,
+          "month": 6,
+          "value": 3.47
+        },
+        {
+          "year": 2026,
+          "month": 7,
+          "value": 3.57
+        },
+        {
+          "year": 2026,
+          "month": 8,
+          "value": 3.67
+        },
+        {
+          "year": 2026,
+          "month": 9,
+          "value": 3.82
+        }
+      ]
     }
   },
   "pricing": {

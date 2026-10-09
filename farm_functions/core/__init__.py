@@ -36,6 +36,7 @@ from farm_functions.core.rounding import (
 )
 from farm_functions.core.sensitivity import break_even_shift, min_shift_all_non_negative
 from farm_functions.core.variance import change_pct, price_volume_effects
+from farm_functions.core.statistics import geometric_mean, weighted_mean
 from farm_functions.core.surplus import net_profit, profit_margin, profit_margin_pct
 
 __all__ = [
@@ -53,6 +54,7 @@ __all__ = [
     "closing_cash",
     "compound_indexes",
     "discounted_payback",
+    "geometric_mean",
     "coverage_ratio",
     "irr",
     "latest_non_zero",
@@ -73,6 +75,7 @@ __all__ = [
     "run_rate_factors",
     "seasonal_projection",
     "straight_line_nbv",
+    "weighted_mean",
     "sum_amounts",
     "sum_cash_amounts",
 ]

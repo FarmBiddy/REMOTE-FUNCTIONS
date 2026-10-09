@@ -26,6 +26,7 @@ from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
+from farm_functions.quality import milk_quality
 from farm_functions.reports import report_accountant, report_advisor, report_bank
 from farm_functions.responses import OUTPUT_MODELS
 from farm_functions.sensitivity import risk_sensitivity, risk_tornado
@@ -62,6 +63,7 @@ from farm_functions.schemas import (
     PlMonthlyInput,
     PlCompareInput,
     InvestmentAppraisalInput,
+    MilkQualityInput,
     PartialBudgetInput,
     field_unit,
     PlanProjectionInput,
@@ -391,6 +393,18 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=BsSummaryInput,
         handler=bs_summary,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="milk.quality",
+        description=(
+            "Milk quality from monthly milk statements: litre-weighted fat, protein, SCC "
+            "and TBC; milk solids; EU rolling-limit compliance; gaps to benchmarks "
+            "(e.g. top 10% of Irish herds); and, with the co-op price schedule, the "
+            "value of components, quality bands and reaching the benchmark."
+        ),
+        input_model=MilkQualityInput,
+        handler=milk_quality,
         supports_provenance=False,
     ),
     CalculationDefinition(

@@ -34,6 +34,7 @@ _APPLICATION_MODULES = (
     FARM / "reports.py",
     FARM / "projections.py",
     FARM / "decisions.py",
+    FARM / "quality.py",
     FARM / "errors.py",
     FARM / "schemas.py",
     FARM / "loaders" / "json_loader.py",

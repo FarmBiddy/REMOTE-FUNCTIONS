@@ -793,6 +793,79 @@ class PlanProjectionInput(_StrictModel):
         return self
 
 
+class MilkQualityMonthInput(_StrictModel):
+    """One monthly milk statement (ADR-0052). SCC / TBC in thousands per ml."""
+
+    year: CalendarYear
+    month: CalendarMonth
+    milk_litres: NonNegativeNumber
+    fat_pct: NonNegativeNumber
+    protein_pct: NonNegativeNumber
+    scc_k: NonNegativeNumber
+    tbc_k: NonNegativeNumber
+
+
+class BenchmarkInput(_StrictModel):
+    """Reference values for one metric: average (ICBF / CSO), best 20% (ICBF), top 10%."""
+
+    average: NonNegativeNumber | None = None
+    best20: NonNegativeNumber | None = None
+    top10: NonNegativeNumber | None = None
+
+
+class QualityBenchmarksInput(_StrictModel):
+    scc_k: BenchmarkInput | None = None
+    tbc_k: BenchmarkInput | None = None
+    fat_pct: BenchmarkInput | None = None
+    protein_pct: BenchmarkInput | None = None
+
+
+class QualityBandInput(_StrictModel):
+    """Co-op band: up to ``max_k`` (null = open-ended last band) pays ``adjustment_c`` c/L."""
+
+    max_k: NonNegativeNumber | None = None
+    adjustment_c: SignedNumber
+
+
+def _check_bands(bands: list[QualityBandInput]) -> None:
+    limits = [b.max_k for b in bands]
+    if not bands:
+        return
+    if limits[-1] is not None or any(m is None for m in limits[:-1]) or limits[:-1] != sorted(limits[:-1]):
+        raise ValueError("bands must ascend by max_k and end with one open-ended band")
+
+
+class QualityPricingInput(_StrictModel):
+    """Co-op component price schedule (A + B − C) and quality bands."""
+
+    fat_eur_per_kg: NonNegativeNumber
+    protein_eur_per_kg: NonNegativeNumber
+    volume_charge_c_per_l: NonNegativeNumber = 0.0
+    scc_bands: list[QualityBandInput] = Field(default_factory=list, max_length=10)
+    tbc_bands: list[QualityBandInput] = Field(default_factory=list, max_length=10)
+
+    @model_validator(mode="after")
+    def _bands(self) -> "QualityPricingInput":
+        _check_bands(self.scc_bands)
+        _check_bands(self.tbc_bands)
+        return self
+
+
+class MilkQualityInput(_StrictModel):
+    """HTTP / runner input for ``milk.quality`` (ADR-0052)."""
+
+    months: list[MilkQualityMonthInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    milking_cows: NonNegativeNumber | None = None
+    hectares: NonNegativeNumber | None = None
+    benchmarks: QualityBenchmarksInput | None = None
+    pricing: QualityPricingInput | None = None
+
+    @model_validator(mode="after")
+    def _unique(self) -> "MilkQualityInput":
+        _reject_duplicate_months(self.months)
+        return self
+
+
 # ---------------------------------------------------------------------------
 # Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
 # item shape). ``forecast`` items carry period identity plus optional known
@@ -1242,6 +1315,22 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     ),
     **dict.fromkeys(("rate_shift_pp", "rate_step_pp", "interest_rate_shift_pp"), "percentage points"),
     "discount_rate": "ratio/year",
+    "fat_pct": "%",
+    "protein_pct": "%",
+    "scc_k": "×1000 cells/ml",
+    "tbc_k": "×1000 cfu/ml",
+    "max_k": "×1000 per ml",
+    "adjustment_c": "c/L",
+    "volume_charge_c_per_l": "c/L",
+    "fat_eur_per_kg": "EUR/kg",
+    "protein_eur_per_kg": "EUR/kg",
+    "top10": "metric unit",
+    "best20": "metric unit",
+    "average": "metric unit",
+    "benchmarks": "object",
+    "pricing": "object",
+    "scc_bands": "list",
+    "tbc_bands": "list",
     "min_cover": "times",
     "milk_price_c": "c/L",
     "milk_solids_kg": "kg",

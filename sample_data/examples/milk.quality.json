@@ -1,0 +1,160 @@
+{
+  "months": [
+    {
+      "year": 2025,
+      "month": 10,
+      "milk_litres": 38000,
+      "fat_pct": 4.95,
+      "protein_pct": 3.95,
+      "scc_k": 210,
+      "tbc_k": 11
+    },
+    {
+      "year": 2025,
+      "month": 11,
+      "milk_litres": 24000,
+      "fat_pct": 5.1,
+      "protein_pct": 4.05,
+      "scc_k": 260,
+      "tbc_k": 14
+    },
+    {
+      "year": 2025,
+      "month": 12,
+      "milk_litres": 8000,
+      "fat_pct": 5.2,
+      "protein_pct": 4.1,
+      "scc_k": 310,
+      "tbc_k": 18
+    },
+    {
+      "year": 2026,
+      "month": 1,
+      "milk_litres": 4000,
+      "fat_pct": 5.0,
+      "protein_pct": 3.9,
+      "scc_k": 280,
+      "tbc_k": 16
+    },
+    {
+      "year": 2026,
+      "month": 2,
+      "milk_litres": 22000,
+      "fat_pct": 4.1,
+      "protein_pct": 3.25,
+      "scc_k": 170,
+      "tbc_k": 9
+    },
+    {
+      "year": 2026,
+      "month": 3,
+      "milk_litres": 48000,
+      "fat_pct": 3.95,
+      "protein_pct": 3.2,
+      "scc_k": 120,
+      "tbc_k": 8
+    },
+    {
+      "year": 2026,
+      "month": 4,
+      "milk_litres": 62000,
+      "fat_pct": 3.95,
+      "protein_pct": 3.3,
+      "scc_k": 110,
+      "tbc_k": 7
+    },
+    {
+      "year": 2026,
+      "month": 5,
+      "milk_litres": 70000,
+      "fat_pct": 4.0,
+      "protein_pct": 3.4,
+      "scc_k": 115,
+      "tbc_k": 7
+    },
+    {
+      "year": 2026,
+      "month": 6,
+      "milk_litres": 66000,
+      "fat_pct": 4.1,
+      "protein_pct": 3.45,
+      "scc_k": 125,
+      "tbc_k": 8
+    },
+    {
+      "year": 2026,
+      "month": 7,
+      "milk_litres": 60000,
+      "fat_pct": 4.25,
+      "protein_pct": 3.55,
+      "scc_k": 140,
+      "tbc_k": 9
+    },
+    {
+      "year": 2026,
+      "month": 8,
+      "milk_litres": 54000,
+      "fat_pct": 4.45,
+      "protein_pct": 3.65,
+      "scc_k": 155,
+      "tbc_k": 10
+    },
+    {
+      "year": 2026,
+      "month": 9,
+      "milk_litres": 46000,
+      "fat_pct": 4.7,
+      "protein_pct": 3.8,
+      "scc_k": 180,
+      "tbc_k": 10
+    }
+  ],
+  "milking_cows": 100,
+  "hectares": 60,
+  "benchmarks": {
+    "scc_k": {
+      "average": 170,
+      "best20": 110
+    },
+    "tbc_k": {
+      "average": 15
+    },
+    "fat_pct": {
+      "average": 4.4
+    },
+    "protein_pct": {
+      "average": 3.55
+    }
+  },
+  "pricing": {
+    "fat_eur_per_kg": 4.8,
+    "protein_eur_per_kg": 7.3,
+    "volume_charge_c_per_l": 3.2,
+    "scc_bands": [
+      {
+        "max_k": 100,
+        "adjustment_c": 0.4
+      },
+      {
+        "max_k": 200,
+        "adjustment_c": 0.2
+      },
+      {
+        "max_k": 400,
+        "adjustment_c": 0
+      },
+      {
+        "adjustment_c": -1
+      }
+    ],
+    "tbc_bands": [
+      {
+        "max_k": 10,
+        "adjustment_c": 0.2
+      },
+      {
+        "adjustment_c": 0
+      }
+    ]
+  }
+}

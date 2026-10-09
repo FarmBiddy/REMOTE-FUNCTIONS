@@ -97,3 +97,17 @@ VALUES = {
 HOUSEHOLD = {"drawings": 30_000, "tax": 7_000, "off_farm_income": 0}
 COWS = 100
 HECTARES = 60
+
+# Monthly milk statements (spring calving): solids low in spring, high in autumn;
+# SCC rises in late lactation; TBC stays in the premium band.
+QUALITY = {  # month: (fat %, protein %, SCC ×1000, TBC ×1000)
+    10: (4.95, 3.95, 210, 11), 11: (5.10, 4.05, 260, 14), 12: (5.20, 4.10, 310, 18),
+    1: (5.00, 3.90, 280, 16), 2: (4.10, 3.25, 170, 9), 3: (3.95, 3.20, 120, 8),
+    4: (3.95, 3.30, 110, 7), 5: (4.00, 3.40, 115, 7), 6: (4.10, 3.45, 125, 8),
+    7: (4.25, 3.55, 140, 9), 8: (4.45, 3.65, 155, 10), 9: (4.70, 3.80, 180, 10),
+}
+STATEMENTS = [
+    {"year": m["year"], "month": m["month"], "milk_litres": m["milk_litres"],
+     **dict(zip(("fat_pct", "protein_pct", "scc_k", "tbc_k"), QUALITY[m["month"]]))}
+    for m in ACTUAL
+]

@@ -226,6 +226,10 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_REPORT
     if key == "plan.projection":
         return SAMPLE_PROJECTION
+    if key == "milk.quality":
+        # 10,000 L at 4% fat / 3.5% protein → 10,000 × 1.03 × 7.5% = 772.5 kg MS.
+        return {"months": [{"year": 2026, "month": 3, "milk_litres": 10_000, "fat_pct": 4.0,
+                            "protein_pct": 3.5, "scc_k": 150, "tbc_k": 12}]}
     if key == "risk.tornado":
         return {k: SAMPLE_SENSITIVITY[k] for k in ("pl_months", "cf_months", "opening_cash")}
     if key == "decision.investment":
@@ -308,6 +312,13 @@ def _zero_payload(key: str) -> dict:
             "opening_cash": 0,
             "loans": [],
             "rate_step_pp": 0,
+        }
+    if key == "milk.quality":
+        return {
+            "months": [{"year": 1, "month": 1, "milk_litres": 0, "fat_pct": 0, "protein_pct": 0,
+                        "scc_k": 0, "tbc_k": 0}],
+            "milking_cows": 0,
+            "hectares": 0,
         }
     if key == "plan.projection":
         return {
@@ -478,6 +489,9 @@ def test_happy_path(key: str) -> None:
         drivers = {d["driver"]: d["swing"]["operating_surplus"] for d in result["result"]["drivers"]}
         assert drivers["milk_price"] == 800  # ±10% of 4,000 milk revenue
         assert drivers["feed"] == 600
+    elif key == "milk.quality":
+        period = result["result"]["period"]
+        assert (period["fat_pct"], period["scc_k"], period["milk_solids_kg"]) == (4.0, 150, 772.5)
     elif key == "plan.projection":
         years = result["result"]["years"]
         assert [y["pl"]["operating_surplus"] for y in years] == [36_000, 36_000]
@@ -637,6 +651,9 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["net_change"] == 0 and result["result"]["worthwhile"] is False
     elif key == "risk.tornado":
         assert result["result"]["base"]["operating_surplus"] == 0
+    elif key == "milk.quality":
+        period = result["result"]["period"]
+        assert period["fat_pct"] is None and period["kg_ms_per_cow"] is None
     elif key == "plan.projection":
         year = result["result"]["years"][0]
         assert year["cash"]["closing"] == 0 and year["kpis"]["surplus_per_cow"] is None

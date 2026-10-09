@@ -621,6 +621,79 @@ class PlanProjectionResult(_Out):
     years: list[ProjectionYear]
 
 
+# --- milk quality ------------------------------------------------------------------
+
+
+class QualityPeriod(_Out):
+    milk_litres: float
+    fat_pct: float | None
+    protein_pct: float | None
+    scc_k: float | None
+    tbc_k: float | None
+    milk_solids_kg: float
+    kg_ms_per_cow: float | None
+    kg_ms_per_ha: float | None
+
+
+class QualityMonth(_Out):
+    period: MonthlyPeriodIdentity
+    milk_litres: float
+    fat_pct: float
+    protein_pct: float
+    scc_k: float
+    tbc_k: float
+    milk_solids_kg: float
+    scc_rolling_k: float
+    scc_breach: bool
+    tbc_rolling_k: float
+    tbc_breach: bool
+
+
+class QualityCompliance(_Out):
+    scc_limit_k: float
+    tbc_limit_k: float
+    scc_breach_months: list[MonthlyPeriodIdentity]
+    tbc_breach_months: list[MonthlyPeriodIdentity]
+
+
+class BenchmarkComparison(_Out):
+    farm: float
+    top10: float | None
+    average: float | None
+    gap_to_top10: float | None
+    better_than_top10: bool | None
+
+
+class QualityPriceBreakdown(_Out):
+    fat: float | None
+    protein: float | None
+    volume_charge: float | None
+    scc_adjustment: float | None
+    tbc_adjustment: float | None
+    total: float | None
+
+
+class QualityValue(_Out):
+    currency: Currency
+    fat_eur: float
+    protein_eur: float
+    volume_charge_eur: float
+    scc_adjustment_eur: float
+    tbc_adjustment_eur: float
+    total_eur: float
+    price_c_per_l: QualityPriceBreakdown
+    gain_to_top10_eur: float | None
+    gain_at_best_band_eur: float
+
+
+class MilkQualityResult(Span):
+    period: QualityPeriod
+    months: list[QualityMonth]
+    compliance: QualityCompliance
+    vs_benchmarks: dict[Literal["scc_k", "tbc_k", "fat_pct", "protein_pct"], BenchmarkComparison] | None
+    value: QualityValue | None
+
+
 # --- reports ---------------------------------------------------------------------
 
 
@@ -708,6 +781,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "debt.capacity": DebtCapacityResult,
     "kpi.summary": KpiSummaryResult,
     "pl.net": PlNetResult,
+    "milk.quality": MilkQualityResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

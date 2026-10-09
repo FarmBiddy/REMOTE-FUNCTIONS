@@ -71,6 +71,7 @@ def test_discovery_lists_core_functions_only():
         "debt.capacity",
         "assets.schedule",
         "pl.net",
+        "milk.quality",
         "bs.summary",
         "report.bank",
         "report.advisor",

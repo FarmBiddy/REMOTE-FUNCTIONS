@@ -357,6 +357,8 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(issue(INVALID_TYPE, text, field="assumptions", details={"reason": "assumption_longer_than_years"}))
         elif text == "investment year must be within years":
             issues.append(issue(INVALID_TYPE, text, field="investments", details={"reason": "investment_outside_years"}))
+        elif text == "bands must ascend by max_k and end with one open-ended band":
+            issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "bands_invalid"}))
         elif text == "period end must not be before period start":
             issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "period_reversed"}))
         elif text == "must be above 0 and at most 100":

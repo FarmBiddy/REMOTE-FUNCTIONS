@@ -64,6 +64,15 @@ PAYLOADS = {
     "pl.net": {"months": joe.ACTUAL, "interest": 12 * 330, **{k: joe.VALUES[k] for k in (
         "livestock_opening_value", "stock_opening_value")},
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
+    "milk.quality": {
+        "months": joe.STATEMENTS, "milking_cows": joe.COWS, "hectares": joe.HECTARES,
+        "benchmarks": {"scc_k": {"top10": 90, "average": 170}, "tbc_k": {"top10": 8, "average": 15},
+                       "fat_pct": {"top10": 4.7, "average": 4.4}, "protein_pct": {"top10": 3.75, "average": 3.55}},
+        "pricing": {"fat_eur_per_kg": 4.8, "protein_eur_per_kg": 7.3, "volume_charge_c_per_l": 3.2,
+                    "scc_bands": [{"max_k": 100, "adjustment_c": 0.4}, {"max_k": 200, "adjustment_c": 0.2},
+                                  {"max_k": 400, "adjustment_c": 0}, {"adjustment_c": -1}],
+                    "tbc_bands": [{"max_k": 10, "adjustment_c": 0.2}, {"adjustment_c": 0}]},
+    },
     "bs.summary": {"year": 2026, "month": 9, "loans": joe.LOANS, "assets": joe.ASSETS,
                    **{k: joe.VALUES[k] for k in ("debtors", "stock", "livestock", "land", "creditors")}},
     "pl.compare": {"actual": joe.ACTUAL, "comparison": joe.PRIOR},
@@ -209,3 +218,13 @@ def test_seasonal_farm_story(results):
     assert parlour["closing_cash"] < base["closing_cash"]  # €20,000 deposit out of pocket
     drivers = [d["driver"] for d in results["risk.tornado"]["drivers"]]
     assert drivers[0] in ("milk_price", "milk_volume")
+
+
+def test_milk_quality_feeds_the_kpis(results):
+    """Solids from the milk statements give the kg MS KPIs; same litres as the P&L."""
+    quality = results["milk.quality"]
+    assert quality["period"]["milk_litres"] == YEAR_LITRES
+    kpis = run_function("kpi.summary", {**PAYLOADS["kpi.summary"], "milk_solids_kg": quality["period"]["milk_solids_kg"]})["result"]
+    assert kpis["per_kg_ms"]["revenue"] == pytest.approx(kpis["totals"]["revenue"] / quality["period"]["milk_solids_kg"], abs=0.01)
+    assert quality["compliance"]["scc_breach_months"] == []  # late-lactation peak stays under the EU limit
+    assert quality["value"]["gain_to_top10_eur"] > 0

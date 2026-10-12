@@ -135,6 +135,8 @@ SW(MP)A 2024)
 | stock_relief_ytf | 100% | year first qualifying + next 3; cap **€40,000/yr and €100,000 over the 4 years** of IT + USC saved | individuals | qualifying by 2027-12-31 | s.667B; TDM 23-02-01 | enacted |
 | stock_relief_rfp | 50% (YTF partner: 100% for their 4 years) | partner's share of the increase; de minimis cap **€20,000 over rolling 3 years** of all agri de minimis aid | P (individuals) | periods ending ≤ 2027-12-31 | s.667C(3A); Reg. 1408/2013 | enacted |
 
+- In the Engine tables these rules start on 2024-01-01: the start of the
+  researched window, not when each relief began.
 - **Trading stock** (s.665): livestock, crops, produce, direct inputs (feed,
   fertiliser, seed) — not machinery, diesel, tools. Values as in the accounts.
 - Relief **cannot create or increase a loss**; model as

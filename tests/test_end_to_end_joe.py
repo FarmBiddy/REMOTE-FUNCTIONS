@@ -64,6 +64,7 @@ PAYLOADS = {
     "pl.net": {"months": joe.ACTUAL, "interest": 12 * 330, **{k: joe.VALUES[k] for k in (
         "livestock_opening_value", "stock_opening_value")},
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
+    "vat.flat_rate": {"months": joe.ACTUAL},
     "milk.quality": {
         "months": joe.STATEMENTS, "milking_cows": joe.COWS, "hectares": joe.HECTARES,
         # Platform-style: seasonal monthly averages (CSO fat / protein, ICBF SCC), fixed TBC,
@@ -235,3 +236,12 @@ def test_milk_quality_feeds_the_kpis(results):
     assert quality["compliance"]["scc_breach_months"] == []  # late-lactation peak stays under the EU limit
     assert quality["value"]["gain_to_average_eur"] > 0  # fat below average
     assert quality["vs_benchmarks"]["protein_pct"]["position"] == "about"
+
+
+def test_flat_rate_addition_is_on_the_pl_milk_and_cattle(results):
+    """Same months as the P&L; Oct–Dec 2025 at 5.1%, 2026 at 4.5% (ADR-0053)."""
+    vat = results["vat.flat_rate"]
+    milk = sum(m["milk_litres"] * m["milk_price"] for m in joe.ACTUAL)
+    assert vat["total"]["milk"] == pytest.approx(milk, abs=CENT)
+    assert [r["value"] for r in vat["rules_applied"]] == [5.1, 4.5]
+    assert vat["total"]["addition"] == pytest.approx(sum(m["addition"] for m in vat["months"]), abs=CENT)

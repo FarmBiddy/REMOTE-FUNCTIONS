@@ -226,6 +226,9 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_REPORT
     if key == "plan.projection":
         return SAMPLE_PROJECTION
+    if key == "vat.flat_rate":
+        # 10,000 L × 0.50 + 1,000 cattle = 6,000 × 4.5% (2026) = 270.
+        return {"months": [{"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.50, "cattle_sales": 1_000}]}
     if key == "milk.quality":
         # 10,000 L at 4% fat / 3.5% protein → 10,000 × 1.03 × 7.5% = 772.5 kg MS.
         return {"months": [{"year": 2026, "month": 3, "milk_litres": 10_000, "fat_pct": 4.0,
@@ -313,6 +316,8 @@ def _zero_payload(key: str) -> dict:
             "loans": [],
             "rate_step_pp": 0,
         }
+    if key == "vat.flat_rate":
+        return {"months": [{"year": 2026, "month": 1, "milk_litres": 0, "milk_price": 0}]}
     if key == "milk.quality":
         return {
             "months": [{"year": 1, "month": 1, "milk_litres": 0, "fat_pct": 0, "protein_pct": 0,
@@ -489,6 +494,8 @@ def test_happy_path(key: str) -> None:
         drivers = {d["driver"]: d["swing"]["operating_surplus"] for d in result["result"]["drivers"]}
         assert drivers["milk_price"] == 800  # ±10% of 4,000 milk revenue
         assert drivers["feed"] == 600
+    elif key == "vat.flat_rate":
+        assert result["result"]["total"] == {"milk": 5_000, "cattle_sales": 1_000, "base": 6_000, "addition": 270}
     elif key == "milk.quality":
         period = result["result"]["period"]
         assert (period["fat_pct"], period["scc_k"], period["milk_solids_kg"]) == (4.0, 150, 772.5)
@@ -651,6 +658,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["net_change"] == 0 and result["result"]["worthwhile"] is False
     elif key == "risk.tornado":
         assert result["result"]["base"]["operating_surplus"] == 0
+    elif key == "vat.flat_rate":
+        assert result["result"]["total"]["addition"] == 0
     elif key == "milk.quality":
         period = result["result"]["period"]
         assert period["fat_pct"] is None and period["kg_ms_per_cow"] is None

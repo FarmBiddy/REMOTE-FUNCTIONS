@@ -703,6 +703,43 @@ class MilkQualityResult(Span):
     value: QualityValue | None
 
 
+# --- Irish rules (ADR-0053) ------------------------------------------------------
+
+
+class RuleApplied(_Out):
+    rule_id: str
+    value: float
+    from_: str = Field(alias="from")
+    to: str | None
+    legal_ref: str
+    status: Literal["enacted", "announced"]
+
+
+class VatMonth(_Out):
+    period: MonthlyPeriodIdentity
+    milk: float
+    cattle_sales: float
+    base: float
+    rate_pct: float | None
+    addition: float
+
+
+class VatTotal(_Out):
+    milk: float
+    cattle_sales: float
+    base: float
+    addition: float
+
+
+class VatFlatRateResult(Span):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    vat_registered: bool
+    months: list[VatMonth]
+    total: VatTotal
+    rules_applied: list[RuleApplied]
+
+
 # --- reports ---------------------------------------------------------------------
 
 
@@ -791,6 +828,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "kpi.summary": KpiSummaryResult,
     "pl.net": PlNetResult,
     "milk.quality": MilkQualityResult,
+    "vat.flat_rate": VatFlatRateResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

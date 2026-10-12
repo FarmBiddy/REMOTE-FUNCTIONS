@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from math import isfinite
 from typing import Annotated, Any, Literal
 
@@ -13,6 +14,7 @@ from farm_functions.dairy.cash_flow import (
     OPERATING_CASH_INFLOW_CATEGORIES,
     OPERATING_CASH_OUTFLOW_CATEGORIES,
 )
+from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
 
 
 def _parse_finite_number(value: Any) -> float:
@@ -892,6 +894,23 @@ class MilkQualityInput(_StrictModel):
         return self
 
 
+class VatFlatRateInput(_StrictModel):
+    """HTTP / runner input for ``vat.flat_rate`` (ADR-0053): pl.months items with
+    prices ex-VAT. Flat-rate (unregistered) farmers get the addition."""
+
+    months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    vat_registered: bool = False
+
+    @model_validator(mode="after")
+    def _rules(self) -> "VatFlatRateInput":
+        _reject_duplicate_months(self.months)
+        if not self.vat_registered:
+            for m in self.months:
+                if rule_at(FLAT_RATE_ADDITION, date(m.year, m.month, 1)) is None:
+                    raise ValueError(f"no flat-rate addition rule for {m.year}-{m.month:02d}")
+        return self
+
+
 # ---------------------------------------------------------------------------
 # Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
 # item shape). ``forecast`` items carry period identity plus optional known
@@ -1387,7 +1406,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     ),
     **dict.fromkeys(("label", "name"), "text"),
     **dict.fromkeys(("cash_line", "category", "method", "rank_by"), "choice"),
-    "variable": "boolean",
+    **dict.fromkeys(("variable", "vat_registered"), "boolean"),
 }
 
 

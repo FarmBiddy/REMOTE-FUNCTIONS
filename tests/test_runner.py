@@ -72,6 +72,7 @@ def test_discovery_lists_core_functions_only():
         "assets.schedule",
         "pl.net",
         "milk.quality",
+    "vat.flat_rate",
         "bs.summary",
         "report.bank",
         "report.advisor",

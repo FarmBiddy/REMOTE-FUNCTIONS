@@ -27,6 +27,7 @@ from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.quality import milk_quality
+from farm_functions.vat import vat_flat_rate
 from farm_functions.reports import report_accountant, report_advisor, report_bank
 from farm_functions.responses import OUTPUT_MODELS
 from farm_functions.sensitivity import risk_sensitivity, risk_tornado
@@ -75,6 +76,7 @@ from farm_functions.schemas import (
     SchemeRevenueInput,
     TotalCostsInput,
     TotalRevenueInput,
+    VatFlatRateInput,
 )
 
 
@@ -405,6 +407,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=MilkQualityInput,
         handler=milk_quality,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="vat.flat_rate",
+        description=(
+            "Irish flat-rate farmer VAT addition: the % a farmer who is not VAT-registered "
+            "receives on top of milk and cattle sales (prices ex-VAT), month by month at "
+            "the rate in force, with the legal rule applied. None when vat_registered."
+        ),
+        input_model=VatFlatRateInput,
+        handler=vat_flat_rate,
         supports_provenance=False,
     ),
     CalculationDefinition(

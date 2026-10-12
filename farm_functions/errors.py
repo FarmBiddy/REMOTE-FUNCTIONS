@@ -363,6 +363,8 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(
                 issue(INVALID_TYPE, text, field="monthly_average", details={"reason": "benchmark_months_missing"})
             )
+        elif text.startswith("no flat-rate addition rule for"):
+            issues.append(issue(INVALID_TYPE, text, field="months", details={"reason": "rule_not_available"}))
         elif text == "bands must ascend by max_k and end with one open-ended band":
             issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "bands_invalid"}))
         elif text == "period end must not be before period start":

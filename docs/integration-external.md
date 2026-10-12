@@ -414,6 +414,17 @@ for the accelerated schemes, which need the DAFM certificate). Call
 `depreciation`. `profit_bridge.taxable_profit` is the `trading_profit` for
 `tax.stock_relief`.
 
+Tax estimate (ADR-0053, Ireland): call `tax.estimate` with
+`taxable_profit` = `tax.stock_relief` `profit_after_relief`, and pass that
+call's `relief` / `regime` as `stock_relief` / `stock_relief_regime` so the
+caps are checked. From the farm profile: `business_type`, `marital_status`
+(married couples are jointly assessed), `spouse_paye_income`, `other_income`,
+and `state_aid_used` (young farmer aid already received, or partnership de
+minimis aid in the previous two years). Show `total_tax` with the breakdown and
+pass it as `tax` to `debt.capacity`; there `off_farm_income` should then be
+gross, since the household tax already includes the spouse's PAYE. If the
+accountant gives a tax figure, send theirs instead.
+
 Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
 interest) and the livestock / stock valuations at start and end.

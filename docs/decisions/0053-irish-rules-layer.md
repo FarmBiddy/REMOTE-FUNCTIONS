@@ -63,9 +63,11 @@ countries.
    1. VAT basis and flat-rate addition.
    2. Stock relief.
    3. Capital allowances schedule.
-   4. Tax estimate: income tax / USC / PRSI and corporation tax, filling `tax`
-      in `debt.capacity` and `plan.projection` when not sent.
-   5. Income averaging in projections.
+   4. Tax estimate (`tax.estimate`): income tax with joint assessment for
+      married couples, USC / PRSI per person, or corporation tax; stock relief
+      caps on tax saved. Its `total_tax` is passed as `debt.capacity` `tax`
+      (composition, like `pl.net`).
+   5. Income averaging, and tax per year in `plan.projection`.
    6. Partnerships (profit split, RFP relief, SFP credit).
    7. Company extraction (salary / dividends / surcharge).
    Alongside: align KPI definitions with Teagasc NFS terms (gross output,

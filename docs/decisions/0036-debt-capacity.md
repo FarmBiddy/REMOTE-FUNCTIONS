@@ -23,7 +23,8 @@ and they keep headroom above current debt service.
    monthly headroom = headroom / months; principal = inverse annuity
    (Core `annuity_principal`) at the rate and term, **rounded down** to the cent
    so its instalment never exceeds the headroom.
-4. Tax and drawings are inputs: the Engine does not compute tax, and the
+4. Tax and drawings are inputs (for Irish farms `tax` can come from
+   `tax.estimate` `total_tax`, ADR-0053; this ID still does not compute it), and the
    household budget is Platform data. `min_cover` is lender policy, passed in.
 
 ## Consequences

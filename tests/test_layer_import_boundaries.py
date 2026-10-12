@@ -36,6 +36,7 @@ _APPLICATION_MODULES = (
     FARM / "decisions.py",
     FARM / "quality.py",
     FARM / "vat.py",
+    FARM / "tax.py",
     FARM / "errors.py",
     FARM / "schemas.py",
     FARM / "loaders" / "json_loader.py",

@@ -162,6 +162,11 @@ SW(MP)A 2024)
 | ca_car_limit | €24,000 (A–B ≤140 g/km); C 141–155 min(€12k, 50%); D–F nil — from 2027: A ≤120 €24k, B 121–140 min(€12k, 50%), C–F nil | over 8 yrs; tractors/vans exempt | all | 2027 change enacted | s.380K–M | enacted |
 | ca_balancing | allowance / charge = written-down value vs proceeds on sale or cessation; charge ≤ allowances given | | all | — | s.288 | enacted |
 
+- Engine: a full year's allowance from the tax year of the spend, by spend
+  date; an accelerated scheme outside its window falls back to the normal
+  allowance (slurry storage → farm buildings, farm safety → plant). The farm
+  buildings table starts in 2000: the start of the current 15% / 10% basis is
+  `unverified`. Not modelled: disposals and balancing charges, car limits.
 - **Capital grants (TAMS 3) are not income**: they reduce the qualifying cost.
   TAMS 3: 40% standard, 60% YTF; ceiling €90,000 per holding, €160,000 for an
   RFP with 2+ eligible partners (`unverified`, from T&C quotes).

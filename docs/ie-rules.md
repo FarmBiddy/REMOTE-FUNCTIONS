@@ -72,6 +72,12 @@ credit and USC rate pages; Teagasc NFS 2025 report and dairy factsheet.
   capped at the employee-credit amount.
 - Other credits (single person child carer, home carer, rent) exist but are
   not modelled initially.
+- Engine (`tax.estimate`): married = joint assessment, the spouse's income is
+  PAYE employment income only; earned income credit = min(credit, 20% of farm
+  profit), employee credit = min(credit, 20% of spouse PAYE); a farm loss
+  counts as nil (no loss relief or carry-forward); PRSI Class A credit for low
+  earners not modelled; USC surcharge charged on non-PAYE income above
+  €100,000 only (scope `unverified`).
 
 **USC** (TCA Part 18D, s.531AN)
 

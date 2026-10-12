@@ -404,6 +404,16 @@ lets it create a loss (`restricted_by_profit`). `caps_not_applied` lists caps th
 estimate has not checked yet (they are measured as tax saved); show them as a
 note, not a number.
 
+Capital allowances and taxable profit (ADR-0053, Ireland): send the same asset
+register as `assets.schedule`, adding `grant` (TAMS or other grant on that
+asset) and, where the default is wrong, `tax_allowance` (machinery → `plant`,
+buildings → `farm_buildings`, other → `none`; `slurry_storage` / `farm_safety`
+for the accelerated schemes, which need the DAFM certificate). Call
+`tax.capital_allowances` per tax year with `accounting_profit` = `pl.net`
+`net_profit_before_tax` **with** depreciation deducted, and that same
+`depreciation`. `profit_bridge.taxable_profit` is the `trading_profit` for
+`tax.stock_relief`.
+
 Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
 interest) and the livestock / stock valuations at start and end.

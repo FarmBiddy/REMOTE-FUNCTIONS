@@ -34,7 +34,8 @@ cash (ADR-0031) but was never spread over the asset's life.
 - Platform owns the register (names, serial numbers, which asset is which);
   results come back in input order.
 - Not included: disposals and gains/losses on sale, revaluations, impairment,
-  tax capital allowances (accountant territory), land (not depreciated; its
+  tax capital allowances (accountant territory; Irish estimate since ADR-0053
+  in `tax.capital_allowances`, same register), land (not depreciated; its
   value goes straight to the balance sheet).
 
 ## Related

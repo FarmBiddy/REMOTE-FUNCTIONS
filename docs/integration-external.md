@@ -386,6 +386,14 @@ milk-price breakdown and `value.gain_to_average_eur` ("€ a year if your fat an
 protein reached the average"). Pass `period.milk_solids_kg` to `kpi.summary` for the
 kg MS KPIs.
 
+Flat-rate VAT addition (ADR-0053, Ireland): most dairy farmers are not
+VAT-registered and receive the flat-rate addition on top of milk and cattle
+sales (4.5% in 2026, 4.8% announced for 2027). Keep `milk_price` / `cattle_sales`
+ex-VAT and gross of co-op deductions, as today, and call `vat.flat_rate` with the
+same months plus `vat_registered` from the farm profile. Show `total.addition`
+as an income line and `rules_applied[].status` ("announced" = Budget figure, not
+yet law). The engine picks the rate for each month.
+
 Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
 interest) and the livestock / stock valuations at start and end.

@@ -52,6 +52,7 @@ Keys in this table are **stable public calculation IDs** (not Python function na
 | `pl.net` | `months[]` (+ optional `depreciation`, `interest`, livestock / stock opening and closing values) | Net profit before tax: Operating Surplus ± valuation changes − depreciation − interest, with EBIT and net margin (ADR-0038) |
 | `bs.summary` | `year`, `month` (+ balances, `loans[]`, `assets[]`) | Balance sheet at month end: loans split within / after 12 months, fixed assets at NBV, net worth, equity %, debt-to-assets %, current ratio, working capital (ADR-0039) |
 | `milk.quality` | `months[]` from milk statements (litres, fat %, protein %, SCC, TBC) (+ optional cows, hectares, `benchmarks`, `pricing`) | Litre-weighted milk quality, milk solids, EU rolling-limit compliance, gaps to benchmarks (e.g. top 10% of Irish herds), component value, quality bands and € to reach the benchmark (ADR-0052) |
+| `vat.flat_rate` | `months[]` (pl.months items, prices ex-VAT) (+ `vat_registered`, default false) | Irish flat-rate farmer VAT addition on milk and cattle sales at the rate in force each month, with the legal rule and enacted / announced status; none when registered (ADR-0053) |
 | `pl.compare` | `actual[]`, `comparison[]` | P&L variance vs prior year or budget: every line with change and %, margin change in points, milk change split into volume and price effects (ADR-0035) |
 | `cf.compare` | `actual[]`, `comparison[]` | Cash flow variance vs prior year or budget: every line, section and total (movements only) (ADR-0035) |
 | `risk.sensitivity` | `pl_months[]`, `cf_months[]`, `opening_cash` (+ `scenarios[]`) | What-if scenarios (milk c/L, volume %, herd size %, % per line): operating surplus, DSCR, closing / lowest cash, overdraft months; investments with optional loan and monthly effects ("Can I afford it?", payback); exact milk-price break-evens per scenario (ADR-0029, ADR-0031) |
@@ -131,7 +132,7 @@ On Windows, use `python -m uvicorn` (the bare `uvicorn` command is often not on 
 
 ## Out of scope
 
-Benchmarking against other farms, VAT, Monte Carlo, alerts, and farm-file loading from Dairy Financials.
+Benchmarking against other farms, VAT returns for registered farmers, Monte Carlo, alerts, and farm-file loading from Dairy Financials.
 
 ## Docs
 

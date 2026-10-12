@@ -394,6 +394,16 @@ same months plus `vat_registered` from the farm profile. Show `total.addition`
 as an income line and `rules_applied[].status` ("announced" = Budget figure, not
 yet law). The engine picks the rate for each month.
 
+Stock relief (ADR-0053, Ireland): call `tax.stock_relief` for the accounting
+period with the same opening / closing livestock and stock valuations sent to
+`pl.net`, the farm profile (`business_type`, `registered_partnership`,
+`young_trained_farmer_first_year`) and `trading_profit`. Until capital
+allowances land, `pl.net` `net_profit_before_tax` is the closest stand-in; an
+accountant's figure is better. The engine picks the relief (`regime`) and never
+lets it create a loss (`restricted_by_profit`). `caps_not_applied` lists caps the
+estimate has not checked yet (they are measured as tax saved); show them as a
+note, not a number.
+
 Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
 interest) and the livestock / stock valuations at start and end.

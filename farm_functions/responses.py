@@ -806,6 +806,59 @@ class TaxCapitalAllowancesResult(_Out):
     rules_applied: list[RuleApplied]
 
 
+class TaxIncome(_Out):
+    farm_profit: float
+    other_income: float
+    spouse_paye_income: float
+    total: float
+
+
+class IncomeTaxLines(_Out):
+    standard_rate_band: float
+    at_standard_rate: float
+    at_higher_rate: float
+    gross: float
+    credits: float
+    net: float
+
+
+class PerPerson(_Out):
+    farmer: float
+    spouse: float
+    total: float
+
+
+class CorporationTaxLines(_Out):
+    trading: float
+    non_trading: float
+    total: float
+
+
+class StockReliefCap(_Out):
+    regime: Literal["young_trained_farmer", "registered_partnership"]
+    relief: float
+    tax_value: float
+    cap: float
+    clawback: float
+
+
+class TaxEstimateResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    business_type: Literal["sole_trader", "partnership", "company"]
+    tax_year: int
+    assessment: Literal["single", "joint", "company"]
+    income: TaxIncome
+    income_tax: IncomeTaxLines | None
+    usc: PerPerson | None
+    prsi: PerPerson | None
+    corporation_tax: CorporationTaxLines | None
+    stock_relief_cap: StockReliefCap | None
+    total_tax: float
+    effective_rate_pct: float | None
+    rules_applied: list[RuleApplied]
+
+
 # --- reports ---------------------------------------------------------------------
 
 
@@ -897,6 +950,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "vat.flat_rate": VatFlatRateResult,
     "tax.stock_relief": TaxStockReliefResult,
     "tax.capital_allowances": TaxCapitalAllowancesResult,
+    "tax.estimate": TaxEstimateResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

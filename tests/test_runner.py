@@ -75,6 +75,7 @@ def test_discovery_lists_core_functions_only():
     "vat.flat_rate",
     "tax.stock_relief",
     "tax.capital_allowances",
+    "tax.estimate",
         "bs.summary",
         "report.bank",
         "report.advisor",

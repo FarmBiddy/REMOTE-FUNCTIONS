@@ -8,6 +8,10 @@ opening / closing valuations ``pl.net`` takes.
 ``tax.capital_allowances``: allowances for one tax year on the
 ``assets.schedule`` register, and the bridge from accounting profit to taxable
 profit (depreciation added back, allowances deducted).
+
+``tax.estimate``: income tax (joint assessment when married), USC and PRSI for
+individuals, or corporation tax for companies, on taxable profit after both,
+with the stock relief caps measured as tax saved.
 """
 
 from __future__ import annotations
@@ -15,9 +19,11 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from farm_functions.core.rounding import round_money
+from farm_functions.core.ratios import per_unit
+from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.ie import capital_allowances as ca
 from farm_functions.ie.rules import Rule, rule_at
+from farm_functions.ie.taxes import RULES, banded, year_rules
 from farm_functions.ie.stock_relief import (
     GENERAL,
     REGISTERED_PARTNERSHIP,
@@ -160,4 +166,137 @@ def tax_capital_allowances(
     }
 
 
-__all__ = ["resolve_allowance", "stock_relief_regime", "tax_capital_allowances", "tax_stock_relief"]
+def _usc(v: dict[str, float], income: float, non_paye: float) -> float:
+    if income <= v["usc_exemption_threshold"]:
+        return 0.0
+    ceilings = (v["usc_band_low_ceiling"], v["usc_band_2pct_ceiling"], v["usc_band_middle_ceiling"])
+    usc = banded(income, ceilings, (0.5, 2.0, v["usc_rate_middle"], 8.0))
+    return usc + max(non_paye - v["usc_surcharge_threshold"], 0.0) * 3 / 100
+
+
+def _individual(v: dict[str, float], farm_profit: float, other_income: float, married: bool, spouse: float) -> dict:
+    """Joint assessment when married: one band and credit set for the couple;
+    USC and PRSI per person. Farm losses count as nil (no loss relief)."""
+    earned = max(farm_profit, 0.0)
+    farmer = earned + other_income
+    if married:
+        band = v["it_band_married_one_income"] + min(v["it_band_married_second_income_max"], farmer, spouse)
+        personal = v["it_credit_personal_married"]
+    else:
+        band, personal = v["it_band_single"], v["it_credit_personal_single"]
+    total = farmer + spouse
+    at_standard = min(total, band)
+    gross = banded(total, (band,), (v["it_rate_standard"], v["it_rate_higher"]))
+    credits = (
+        personal
+        + min(v["it_credit_earned_income"], earned * v["it_rate_standard"] / 100)
+        + min(v["it_credit_employee"], spouse * v["it_rate_standard"] / 100)
+    )
+    prsi_farmer = 0.0 if farmer < v["prsi_s_threshold"] else max(farmer * v["prsi_s_rate"] / 100, v["prsi_s_minimum"])
+    prsi_spouse = 0.0 if spouse / 52 <= v["prsi_a_weekly_exemption"] else spouse * v["prsi_a_rate"] / 100
+    return {
+        "income": {"farmer": farmer, "spouse": spouse, "total": total},
+        "income_tax": {
+            "standard_rate_band": band,
+            "at_standard_rate": at_standard,
+            "at_higher_rate": total - at_standard,
+            "gross": gross,
+            "credits": credits,
+            "net": max(gross - credits, 0.0),
+        },
+        "usc": {"farmer": _usc(v, farmer, farmer), "spouse": _usc(v, spouse, 0.0)},
+        "prsi": {"farmer": prsi_farmer, "spouse": prsi_spouse},
+    }
+
+
+def _it_usc(person: dict) -> float:
+    return person["income_tax"]["net"] + person["usc"]["farmer"] + person["usc"]["spouse"]
+
+
+def _rounded(lines: dict[str, float]) -> dict[str, float]:
+    out = {k: round_money(x) for k, x in lines.items()}
+    return {**out, "total": round_money(sum(out.values()))}
+
+
+def tax_estimate(
+    *,
+    business_type: str,
+    tax_year: int,
+    taxable_profit: float,
+    other_income: float = 0.0,
+    marital_status: str = "single",
+    spouse_paye_income: float = 0.0,
+    stock_relief: float = 0.0,
+    stock_relief_regime: str = "general",
+    state_aid_used: float = 0.0,
+) -> dict[str, Any]:
+    """``tax.estimate``: tax for one year on taxable farming profit (after capital
+    allowances and stock relief), applying the stock relief caps on tax value."""
+    rules = year_rules(tax_year)
+    v = {k: r.value for k, r in rules.items()}
+    used: list[str]
+    income_tax = usc = prsi = corporation = cap = None
+    if business_type == "company":
+        used = ["ct_rate_trading", "ct_rate_non_trading"]
+        corporation = _rounded({
+            "trading": max(taxable_profit, 0.0) * v["ct_rate_trading"] / 100,
+            "non_trading": other_income * v["ct_rate_non_trading"] / 100,
+        })
+        income = {"farm_profit": taxable_profit, "other_income": other_income, "spouse_paye_income": 0.0}
+        total_tax = corporation["total"]
+    else:
+        used = [k for k in RULES if k.startswith(("it_", "usc_", "prsi_"))]
+        married = marital_status == "married"
+        person = _individual(v, taxable_profit, other_income, married, spouse_paye_income)
+        clawback = 0.0
+        if stock_relief_regime != "general" and stock_relief > 0:
+            without = _individual(v, taxable_profit + stock_relief, other_income, married, spouse_paye_income)
+            tax_value = _it_usc(without) - _it_usc(person)
+            if stock_relief_regime == "young_trained_farmer":
+                used += ["stock_relief_ytf_cap", "state_aid_young_farmer_lifetime"]
+                limit = min(v["stock_relief_ytf_cap"], max(v["state_aid_young_farmer_lifetime"] - state_aid_used, 0.0))
+            else:
+                used.append("stock_relief_rfp_de_minimis")
+                limit = max(v["stock_relief_rfp_de_minimis"] - state_aid_used, 0.0)
+            clawback = max(tax_value - limit, 0.0)
+            cap = {
+                "regime": stock_relief_regime,
+                "relief": round_money(stock_relief),
+                "tax_value": round_money(tax_value),
+                "cap": round_money(limit),
+                "clawback": round_money(clawback),
+            }
+        it = person["income_tax"]
+        income_tax = {k: round_money(x) for k, x in it.items()}
+        usc = _rounded(person["usc"])
+        prsi = _rounded(person["prsi"])
+        income = {"farm_profit": taxable_profit, "other_income": other_income, "spouse_paye_income": spouse_paye_income}
+        total_tax = round_money(income_tax["net"] + usc["total"] + prsi["total"] + round_money(clawback))
+    income = {k: round_money(x) for k, x in income.items()}
+    income["total"] = round_money(max(income["farm_profit"], 0.0) + income["other_income"] + income["spouse_paye_income"])
+    rate = per_unit(total_tax, income["total"])
+    return {
+        "currency": "EUR",
+        "jurisdiction": "IE",
+        "business_type": business_type,
+        "tax_year": tax_year,
+        "assessment": "company" if business_type == "company" else ("joint" if marital_status == "married" else "single"),
+        "income": income,
+        "income_tax": income_tax,
+        "usc": usc,
+        "prsi": prsi,
+        "corporation_tax": corporation,
+        "stock_relief_cap": cap,
+        "total_tax": total_tax,
+        "effective_rate_pct": None if rate is None else round_margin_pct(rate * 100),
+        "rules_applied": [rules[k].as_dict() for k in used],
+    }
+
+
+__all__ = [
+    "resolve_allowance",
+    "stock_relief_regime",
+    "tax_capital_allowances",
+    "tax_estimate",
+    "tax_stock_relief",
+]

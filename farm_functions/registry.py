@@ -27,7 +27,7 @@ from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.quality import milk_quality
-from farm_functions.tax import tax_capital_allowances, tax_stock_relief
+from farm_functions.tax import tax_capital_allowances, tax_estimate, tax_stock_relief
 from farm_functions.vat import vat_flat_rate
 from farm_functions.reports import report_accountant, report_advisor, report_bank
 from farm_functions.responses import OUTPUT_MODELS
@@ -78,6 +78,7 @@ from farm_functions.schemas import (
     TotalCostsInput,
     TotalRevenueInput,
     TaxCapitalAllowancesInput,
+    TaxEstimateInput,
     TaxStockReliefInput,
     VatFlatRateInput,
 )
@@ -445,6 +446,18 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=TaxCapitalAllowancesInput,
         handler=tax_capital_allowances,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.estimate",
+        description=(
+            "Irish tax estimate for one tax year on taxable farming profit (after capital "
+            "allowances and stock relief): income tax with joint assessment for married "
+            "couples, USC and PRSI per person, or corporation tax for a company; young "
+            "trained farmer and partnership stock relief caps applied as tax saved."
+        ),
+        input_model=TaxEstimateInput,
+        handler=tax_estimate,
         supports_provenance=False,
     ),
     CalculationDefinition(

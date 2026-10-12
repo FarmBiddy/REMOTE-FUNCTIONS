@@ -66,6 +66,7 @@ PAYLOADS = {
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "vat.flat_rate": {"months": joe.ACTUAL},
     "tax.capital_allowances": {"tax_year": 2026, "period_end_month": 9, "assets": joe.ASSETS},
+    "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married"},
     "tax.stock_relief": {"business_type": "sole_trader", "period_end_year": 2026, "period_end_month": 9,
                          "trading_profit": 60_000, **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
                          "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
@@ -281,3 +282,21 @@ def test_taxable_profit_chains_into_stock_relief(results):
     assert taxable == pytest.approx(results["pl.net"]["net_profit_before_tax"] - 12_625, abs=CENT)
     relief = run_function("tax.stock_relief", {**PAYLOADS["tax.stock_relief"], "trading_profit": taxable})["result"]
     assert relief["relief"] == 3_500
+
+
+def test_full_tax_chain_into_debt_capacity(results):
+    """pl.net → capital allowances → stock relief → tax estimate → debt capacity,
+    each step fed only with the previous engine output (ADR-0053)."""
+    depreciation = results["assets.schedule"]["total"]["depreciation"]
+    net = run_function("pl.net", {**PAYLOADS["pl.net"], "depreciation": depreciation})["result"]
+    taxable = run_function("tax.capital_allowances", {
+        **PAYLOADS["tax.capital_allowances"],
+        "accounting_profit": net["net_profit_before_tax"], "depreciation": depreciation,
+    })["result"]["profit_bridge"]["taxable_profit"]
+    relief = run_function("tax.stock_relief", {**PAYLOADS["tax.stock_relief"], "trading_profit": taxable})["result"]
+    tax = run_function("tax.estimate", {
+        **PAYLOADS["tax.estimate"], "taxable_profit": relief["profit_after_relief"], "stock_relief": relief["relief"],
+    })["result"]
+    assert tax["assessment"] == "joint" and 0 < tax["total_tax"] < relief["profit_after_relief"]
+    capacity = run_function("debt.capacity", {**PAYLOADS["debt.capacity"], "tax": tax["total_tax"]})["result"]
+    assert capacity["tax"] == tax["total_tax"]

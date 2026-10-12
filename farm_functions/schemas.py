@@ -16,6 +16,7 @@ from farm_functions.dairy.cash_flow import (
 )
 from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
 from farm_functions.ie.capital_allowances import DEFAULT_FOR_CATEGORY
+from farm_functions.ie.taxes import year_rules
 from farm_functions.tax import resolve_allowance, stock_relief_regime
 
 
@@ -952,6 +953,36 @@ class TaxStockReliefInput(_StrictModel):
         return self
 
 
+class TaxEstimateInput(_StrictModel):
+    """HTTP / runner input for ``tax.estimate`` (ADR-0053). ``taxable_profit`` is
+    after capital allowances and stock relief (``tax.stock_relief``
+    ``profit_after_relief``); partners send their share. Married couples are
+    jointly assessed; ``spouse_paye_income`` is the spouse's employment income."""
+
+    business_type: Literal["sole_trader", "partnership", "company"]
+    tax_year: CalendarYear
+    taxable_profit: SignedNumber
+    other_income: NonNegativeNumber = 0.0
+    marital_status: Literal["single", "married"] = "single"
+    spouse_paye_income: NonNegativeNumber = 0.0
+    stock_relief: NonNegativeNumber = 0.0
+    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership"] = "general"
+    state_aid_used: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _profile(self) -> "TaxEstimateInput":
+        personal = self.marital_status == "married" or self.stock_relief_regime != "general" or self.state_aid_used
+        if self.business_type == "company" and personal:
+            raise ValueError("marital status, enhanced stock relief and State aid are for individuals")
+        if self.stock_relief_regime == "registered_partnership" and self.business_type != "partnership":
+            raise ValueError("registered_partnership needs business_type partnership")
+        if self.spouse_paye_income and self.marital_status != "married":
+            raise ValueError("spouse_paye_income needs marital_status married")
+        if year_rules(self.tax_year) is None:
+            raise ValueError(f"no tax rules for tax year {self.tax_year}")
+        return self
+
+
 class TaxCapitalAllowancesInput(_StrictModel):
     """HTTP / runner input for ``tax.capital_allowances`` (ADR-0053): the
     ``assets.schedule`` register for one tax year. ``accounting_profit``
@@ -1414,7 +1445,8 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "depreciation", "drawings", "interest", "land", "livestock", "livestock_closing_value",
             "livestock_opening_value", "off_farm_income", "other_long_term_liabilities",
             "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax", "trading_profit",
-            "grant", "accounting_profit",
+            "grant", "accounting_profit", "taxable_profit", "other_income", "spouse_paye_income",
+            "stock_relief", "state_aid_used",
         ),
         _EUR,
     ),
@@ -1474,7 +1506,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     "period_end_month": "month",
     "young_trained_farmer_first_year": "year",
     "tax_year": "year",
-    **dict.fromkeys(("business_type", "tax_allowance"), "choice"),
+    **dict.fromkeys(("business_type", "tax_allowance", "marital_status", "stock_relief_regime"), "choice"),
 }
 
 

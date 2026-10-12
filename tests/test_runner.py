@@ -73,6 +73,7 @@ def test_discovery_lists_core_functions_only():
         "pl.net",
         "milk.quality",
     "vat.flat_rate",
+    "tax.stock_relief",
         "bs.summary",
         "report.bank",
         "report.advisor",

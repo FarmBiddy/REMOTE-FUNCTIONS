@@ -39,6 +39,7 @@ EXPECTED_PUBLIC_IDS = (
     "bs.summary",
     "milk.quality",
     "vat.flat_rate",
+    "tax.stock_relief",
     "pl.compare",
     "cf.compare",
     "risk.sensitivity",
@@ -146,6 +147,8 @@ def _happy_payload(calculation_id: str) -> dict:
             "opening_cash": 0,
             "milking_cows": 100,
         }
+    if calculation_id == "tax.stock_relief":
+        return {"business_type": "sole_trader", "period_end_year": 2026, "trading_profit": 10_000}
     if calculation_id == "vat.flat_rate":
         return {"months": [{"year": 2026, "month": 3, "milk_litres": 1_000, "milk_price": 0.5}]}
     if calculation_id == "milk.quality":
@@ -173,10 +176,10 @@ def _happy_payload(calculation_id: str) -> dict:
     raise AssertionError(f"No happy payload for {calculation_id}")
 
 
-def test_exactly_thirty_two_unique_public_calculation_ids() -> None:
+def test_exactly_thirty_three_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 32
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 32
+    assert len(PUBLIC_CALCULATION_IDS) == 33
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 33
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

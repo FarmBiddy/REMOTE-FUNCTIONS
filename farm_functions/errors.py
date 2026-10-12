@@ -365,6 +365,17 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             )
         elif text.startswith("no flat-rate addition rule for"):
             issues.append(issue(INVALID_TYPE, text, field="months", details={"reason": "rule_not_available"}))
+        elif text.startswith("no stock relief rule for"):
+            issues.append(issue(INVALID_TYPE, text, field="period_end_year", details={"reason": "rule_not_available"}))
+        elif text in (
+            "young trained farmer and partnership stock relief are for individuals",
+            "registered_partnership needs business_type partnership",
+        ):
+            issues.append(issue(INVALID_TYPE, text, field="business_type", details={"reason": "regime_not_available"}))
+        elif text == "young_trained_farmer_first_year is after the period":
+            issues.append(
+                issue(INVALID_TYPE, text, field="young_trained_farmer_first_year", details={"reason": "period_reversed"})
+            )
         elif text == "bands must ascend by max_k and end with one open-ended band":
             issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "bands_invalid"}))
         elif text == "period end must not be before period start":

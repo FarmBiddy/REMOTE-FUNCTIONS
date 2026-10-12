@@ -27,6 +27,7 @@ from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.quality import milk_quality
+from farm_functions.tax import tax_stock_relief
 from farm_functions.vat import vat_flat_rate
 from farm_functions.reports import report_accountant, report_advisor, report_bank
 from farm_functions.responses import OUTPUT_MODELS
@@ -76,6 +77,7 @@ from farm_functions.schemas import (
     SchemeRevenueInput,
     TotalCostsInput,
     TotalRevenueInput,
+    TaxStockReliefInput,
     VatFlatRateInput,
 )
 
@@ -418,6 +420,18 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=VatFlatRateInput,
         handler=vat_flat_rate,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.stock_relief",
+        description=(
+            "Irish farm stock relief: 25% general, 100% for a young trained farmer in their "
+            "first 4 tax years, 50% for a registered farm partnership partner, of the increase "
+            "in trading stock (livestock + feed / fertiliser stock), never creating a loss. "
+            "Caps measured as tax saved are listed, not yet applied."
+        ),
+        input_model=TaxStockReliefInput,
+        handler=tax_stock_relief,
         supports_provenance=False,
     ),
     CalculationDefinition(

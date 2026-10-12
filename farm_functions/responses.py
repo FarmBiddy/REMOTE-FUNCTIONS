@@ -740,6 +740,26 @@ class VatFlatRateResult(Span):
     rules_applied: list[RuleApplied]
 
 
+class TaxStockReliefResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    business_type: Literal["sole_trader", "partnership", "company"]
+    period_end: MonthlyPeriodIdentity
+    regime: Literal["general", "young_trained_farmer", "registered_partnership"]
+    opening_stock: float
+    closing_stock: float
+    stock_increase: float
+    rate_pct: float
+    relief_before_profit_limit: float
+    trading_profit: float
+    relief: float
+    profit_after_relief: float
+    restricted_by_profit: bool
+    losses_forward_restricted: bool
+    caps_not_applied: list[str]
+    rules_applied: list[RuleApplied]
+
+
 # --- reports ---------------------------------------------------------------------
 
 
@@ -829,6 +849,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "pl.net": PlNetResult,
     "milk.quality": MilkQualityResult,
     "vat.flat_rate": VatFlatRateResult,
+    "tax.stock_relief": TaxStockReliefResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

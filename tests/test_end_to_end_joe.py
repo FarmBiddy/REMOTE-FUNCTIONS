@@ -65,6 +65,9 @@ PAYLOADS = {
         "livestock_opening_value", "stock_opening_value")},
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "vat.flat_rate": {"months": joe.ACTUAL},
+    "tax.stock_relief": {"business_type": "sole_trader", "period_end_year": 2026, "period_end_month": 9,
+                         "trading_profit": 60_000, **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
+                         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "milk.quality": {
         "months": joe.STATEMENTS, "milking_cows": joe.COWS, "hectares": joe.HECTARES,
         # Platform-style: seasonal monthly averages (CSO fat / protein, ICBF SCC), fixed TBC,
@@ -245,3 +248,14 @@ def test_flat_rate_addition_is_on_the_pl_milk_and_cattle(results):
     assert vat["total"]["milk"] == pytest.approx(milk, abs=CENT)
     assert [r["value"] for r in vat["rules_applied"]] == [5.1, 4.5]
     assert vat["total"]["addition"] == pytest.approx(sum(m["addition"] for m in vat["months"]), abs=CENT)
+
+
+def test_stock_relief_on_the_pl_net_valuations(results):
+    """Herd 330k → 342k and feed 9k → 11k: 25% of the 14,000 increase (ADR-0053).
+
+    pl.net profit stands in for taxable profit until capital allowances land.
+    """
+    profit = results["pl.net"]["net_profit_before_tax"]
+    relief = run_function("tax.stock_relief", {**PAYLOADS["tax.stock_relief"], "trading_profit": profit})["result"]
+    assert (relief["stock_increase"], relief["relief"]) == (14_000, 3_500)
+    assert relief["profit_after_relief"] == pytest.approx(profit - 3_500, abs=CENT)

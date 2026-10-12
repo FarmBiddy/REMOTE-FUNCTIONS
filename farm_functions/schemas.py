@@ -15,6 +15,7 @@ from farm_functions.dairy.cash_flow import (
     OPERATING_CASH_OUTFLOW_CATEGORIES,
 )
 from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
+from farm_functions.tax import stock_relief_regime
 
 
 def _parse_finite_number(value: Any) -> float:
@@ -911,6 +912,39 @@ class VatFlatRateInput(_StrictModel):
         return self
 
 
+class TaxStockReliefInput(_StrictModel):
+    """HTTP / runner input for ``tax.stock_relief`` (ADR-0053). Stock values as in
+    ``pl.net``; ``trading_profit`` is the period's taxable farming profit before
+    stock relief. Partners send their own share."""
+
+    business_type: Literal["sole_trader", "partnership", "company"]
+    period_end_year: CalendarYear
+    period_end_month: CalendarMonth = 12
+    trading_profit: SignedNumber
+    livestock_opening_value: NonNegativeNumber = 0.0
+    livestock_closing_value: NonNegativeNumber = 0.0
+    stock_opening_value: NonNegativeNumber = 0.0
+    stock_closing_value: NonNegativeNumber = 0.0
+    registered_partnership: bool = False
+    young_trained_farmer_first_year: CalendarYear | None = None
+
+    @model_validator(mode="after")
+    def _regime(self) -> "TaxStockReliefInput":
+        first = self.young_trained_farmer_first_year
+        if self.business_type == "company" and (self.registered_partnership or first is not None):
+            raise ValueError("young trained farmer and partnership stock relief are for individuals")
+        if self.registered_partnership and self.business_type != "partnership":
+            raise ValueError("registered_partnership needs business_type partnership")
+        if first is not None and first > self.period_end_year:
+            raise ValueError("young_trained_farmer_first_year is after the period")
+        _, rules = stock_relief_regime(self.period_end_year, self.registered_partnership, first)
+        if rule_at(rules, date(self.period_end_year, self.period_end_month, 1)) is None:
+            raise ValueError(
+                f"no stock relief rule for period ending {self.period_end_year}-{self.period_end_month:02d}"
+            )
+        return self
+
+
 # ---------------------------------------------------------------------------
 # Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
 # item shape). ``forecast`` items carry period identity plus optional known
@@ -1351,7 +1385,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "amount", "annual_benefit", "cash", "cost", "creditors", "debt_balance", "debtors",
             "depreciation", "drawings", "interest", "land", "livestock", "livestock_closing_value",
             "livestock_opening_value", "off_farm_income", "other_long_term_liabilities",
-            "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax",
+            "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax", "trading_profit",
         ),
         _EUR,
     ),
@@ -1406,7 +1440,11 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     ),
     **dict.fromkeys(("label", "name"), "text"),
     **dict.fromkeys(("cash_line", "category", "method", "rank_by"), "choice"),
-    **dict.fromkeys(("variable", "vat_registered"), "boolean"),
+    **dict.fromkeys(("variable", "vat_registered", "registered_partnership"), "boolean"),
+    "period_end_year": "year",
+    "period_end_month": "month",
+    "young_trained_farmer_first_year": "year",
+    "business_type": "choice",
 }
 
 

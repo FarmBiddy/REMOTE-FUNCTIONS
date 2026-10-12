@@ -226,6 +226,10 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_REPORT
     if key == "plan.projection":
         return SAMPLE_PROJECTION
+    if key == "tax.stock_relief":
+        # Stock 100,000 → 120,000: 25% of 20,000 = 5,000 relief on 30,000 profit.
+        return {"business_type": "sole_trader", "period_end_year": 2026, "trading_profit": 30_000,
+                "livestock_opening_value": 100_000, "livestock_closing_value": 120_000}
     if key == "vat.flat_rate":
         # 10,000 L × 0.50 + 1,000 cattle = 6,000 × 4.5% (2026) = 270.
         return {"months": [{"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.50, "cattle_sales": 1_000}]}
@@ -316,6 +320,8 @@ def _zero_payload(key: str) -> dict:
             "loans": [],
             "rate_step_pp": 0,
         }
+    if key == "tax.stock_relief":
+        return {"business_type": "sole_trader", "period_end_year": 2026, "trading_profit": 0}
     if key == "vat.flat_rate":
         return {"months": [{"year": 2026, "month": 1, "milk_litres": 0, "milk_price": 0}]}
     if key == "milk.quality":
@@ -494,6 +500,9 @@ def test_happy_path(key: str) -> None:
         drivers = {d["driver"]: d["swing"]["operating_surplus"] for d in result["result"]["drivers"]}
         assert drivers["milk_price"] == 800  # ±10% of 4,000 milk revenue
         assert drivers["feed"] == 600
+    elif key == "tax.stock_relief":
+        body = result["result"]
+        assert (body["regime"], body["relief"], body["profit_after_relief"]) == ("general", 5_000, 25_000)
     elif key == "vat.flat_rate":
         assert result["result"]["total"] == {"milk": 5_000, "cattle_sales": 1_000, "base": 6_000, "addition": 270}
     elif key == "milk.quality":
@@ -660,6 +669,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["base"]["operating_surplus"] == 0
     elif key == "vat.flat_rate":
         assert result["result"]["total"]["addition"] == 0
+    elif key == "tax.stock_relief":
+        assert result["result"]["relief"] == 0 and result["result"]["restricted_by_profit"] is False
     elif key == "milk.quality":
         period = result["result"]["period"]
         assert period["fat_pct"] is None and period["kg_ms_per_cow"] is None

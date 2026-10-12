@@ -365,6 +365,10 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             )
         elif text.startswith("no flat-rate addition rule for"):
             issues.append(issue(INVALID_TYPE, text, field="months", details={"reason": "rule_not_available"}))
+        elif text.startswith("no capital allowance rule for"):
+            issues.append(issue(INVALID_TYPE, text, field="assets", details={"reason": "rule_not_available"}))
+        elif text == "grant must not exceed cost":
+            issues.append(issue(INVALID_TYPE, text, field="grant", details={"reason": "grant_above_cost"}))
         elif text.startswith("no stock relief rule for"):
             issues.append(issue(INVALID_TYPE, text, field="period_end_year", details={"reason": "rule_not_available"}))
         elif text in (

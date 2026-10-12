@@ -65,6 +65,7 @@ PAYLOADS = {
         "livestock_opening_value", "stock_opening_value")},
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "vat.flat_rate": {"months": joe.ACTUAL},
+    "tax.capital_allowances": {"tax_year": 2026, "period_end_month": 9, "assets": joe.ASSETS},
     "tax.stock_relief": {"business_type": "sole_trader", "period_end_year": 2026, "period_end_month": 9,
                          "trading_profit": 60_000, **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
                          "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
@@ -259,3 +260,24 @@ def test_stock_relief_on_the_pl_net_valuations(results):
     relief = run_function("tax.stock_relief", {**PAYLOADS["tax.stock_relief"], "trading_profit": profit})["result"]
     assert (relief["stock_increase"], relief["relief"]) == (14_000, 3_500)
     assert relief["profit_after_relief"] == pytest.approx(profit - 3_500, abs=CENT)
+
+
+def test_taxable_profit_chains_into_stock_relief(results):
+    """Accounting profit → taxable profit → stock relief, engine outputs only (ADR-0053).
+
+    Tax year to Sep 2026: 2018 shed written off after 7 years; 2024 loader 95,000 × 12.5%
+    = 11,875 (year 3); 2026 topper 6,000 × 12.5% = 750 → allowances 12,625.
+    """
+    assert results["tax.capital_allowances"]["total"]["allowance"] == 12_625
+    depreciation = results["assets.schedule"]["total"]["depreciation"]
+    net = run_function("pl.net", {**PAYLOADS["pl.net"], "depreciation": depreciation})["result"]
+    allowances = run_function("tax.capital_allowances", {
+        **PAYLOADS["tax.capital_allowances"],
+        "accounting_profit": net["net_profit_before_tax"],
+        "depreciation": depreciation,
+    })["result"]
+    taxable = allowances["profit_bridge"]["taxable_profit"]
+    # Depreciation added back, so taxable = profit before depreciation − allowances.
+    assert taxable == pytest.approx(results["pl.net"]["net_profit_before_tax"] - 12_625, abs=CENT)
+    relief = run_function("tax.stock_relief", {**PAYLOADS["tax.stock_relief"], "trading_profit": taxable})["result"]
+    assert relief["relief"] == 3_500

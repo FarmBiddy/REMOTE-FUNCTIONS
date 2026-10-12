@@ -74,6 +74,7 @@ def test_discovery_lists_core_functions_only():
         "milk.quality",
     "vat.flat_rate",
     "tax.stock_relief",
+    "tax.capital_allowances",
         "bs.summary",
         "report.bank",
         "report.advisor",

@@ -226,6 +226,10 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_REPORT
     if key == "plan.projection":
         return SAMPLE_PROJECTION
+    if key == "tax.capital_allowances":
+        # 16,000 tractor − 4,000 grant = 12,000 × 12.5% = 1,500 in its second year.
+        return {"tax_year": 2026, "assets": [{"cost": 16_000, "grant": 4_000, "year": 2025, "month": 5, "life_months": 96}],
+                "accounting_profit": 20_000, "depreciation": 2_000}
     if key == "tax.stock_relief":
         # Stock 100,000 → 120,000: 25% of 20,000 = 5,000 relief on 30,000 profit.
         return {"business_type": "sole_trader", "period_end_year": 2026, "trading_profit": 30_000,
@@ -320,6 +324,8 @@ def _zero_payload(key: str) -> dict:
             "loans": [],
             "rate_step_pp": 0,
         }
+    if key == "tax.capital_allowances":
+        return {"tax_year": 2026, "assets": [{"cost": 0, "year": 2026, "month": 1, "life_months": 1}], "accounting_profit": 0}
     if key == "tax.stock_relief":
         return {"business_type": "sole_trader", "period_end_year": 2026, "trading_profit": 0}
     if key == "vat.flat_rate":
@@ -500,6 +506,10 @@ def test_happy_path(key: str) -> None:
         drivers = {d["driver"]: d["swing"]["operating_surplus"] for d in result["result"]["drivers"]}
         assert drivers["milk_price"] == 800  # ±10% of 4,000 milk revenue
         assert drivers["feed"] == 600
+    elif key == "tax.capital_allowances":
+        body = result["result"]
+        assert (body["total"]["opening_twdv"], body["total"]["allowance"], body["total"]["closing_twdv"]) == (10_500, 1_500, 9_000)
+        assert body["profit_bridge"]["taxable_profit"] == 20_500
     elif key == "tax.stock_relief":
         body = result["result"]
         assert (body["regime"], body["relief"], body["profit_after_relief"]) == ("general", 5_000, 25_000)
@@ -669,6 +679,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["base"]["operating_surplus"] == 0
     elif key == "vat.flat_rate":
         assert result["result"]["total"]["addition"] == 0
+    elif key == "tax.capital_allowances":
+        assert result["result"]["total"]["allowance"] == 0 and result["result"]["profit_bridge"]["taxable_profit"] == 0
     elif key == "tax.stock_relief":
         assert result["result"]["relief"] == 0 and result["result"]["restricted_by_profit"] is False
     elif key == "milk.quality":

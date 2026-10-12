@@ -760,6 +760,52 @@ class TaxStockReliefResult(_Out):
     rules_applied: list[RuleApplied]
 
 
+AllowanceType = Literal["plant", "farm_buildings", "slurry_storage", "farm_safety", "none"]
+
+
+class AllowanceAsset(_Out):
+    category: Literal["machinery", "buildings", "other"]
+    allowance_type: AllowanceType
+    allowance_applied: AllowanceType
+    qualifying_cost: float
+    opening_twdv: float
+    allowance: float
+    closing_twdv: float
+
+
+class AllowanceTotals(_Out):
+    opening_twdv: float
+    allowance: float
+    closing_twdv: float
+
+
+class AllowanceByType(_Out):
+    plant: float
+    farm_buildings: float
+    slurry_storage: float
+    farm_safety: float
+
+
+class ProfitBridge(_Out):
+    accounting_profit: float
+    add_back_depreciation: float
+    capital_allowances: float
+    taxable_profit: float
+
+
+class TaxCapitalAllowancesResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    tax_year: int
+    period_end_month: int
+    assets: list[AllowanceAsset]
+    by_type: AllowanceByType
+    total: AllowanceTotals
+    profit_bridge: ProfitBridge | None
+    caps_not_applied: list[str]
+    rules_applied: list[RuleApplied]
+
+
 # --- reports ---------------------------------------------------------------------
 
 
@@ -850,6 +896,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "milk.quality": MilkQualityResult,
     "vat.flat_rate": VatFlatRateResult,
     "tax.stock_relief": TaxStockReliefResult,
+    "tax.capital_allowances": TaxCapitalAllowancesResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

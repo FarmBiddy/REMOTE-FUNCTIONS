@@ -1,9 +1,13 @@
-"""Irish tax estimates (ADR-0053). ``tax.stock_relief``: farm stock relief.
+"""Irish tax estimates (ADR-0053).
 
-Application layer: picks the relief the taxpayer is entitled to for the period
-(young trained farmer in their 4 years, registered farm partnership, else
-general) and applies it to the trading stock increase. Stock values are the
-same opening / closing livestock and stock valuations ``pl.net`` takes.
+``tax.stock_relief``: picks the relief the taxpayer is entitled to for the
+period (young trained farmer in their 4 years, registered farm partnership,
+else general) and applies it to the trading stock increase, using the same
+opening / closing valuations ``pl.net`` takes.
+
+``tax.capital_allowances``: allowances for one tax year on the
+``assets.schedule`` register, and the bridge from accounting profit to taxable
+profit (depreciation added back, allowances deducted).
 """
 
 from __future__ import annotations
@@ -12,6 +16,7 @@ from datetime import date
 from typing import Any
 
 from farm_functions.core.rounding import round_money
+from farm_functions.ie import capital_allowances as ca
 from farm_functions.ie.rules import Rule, rule_at
 from farm_functions.ie.stock_relief import (
     GENERAL,
@@ -84,4 +89,75 @@ def tax_stock_relief(
     }
 
 
-__all__ = ["stock_relief_regime", "tax_stock_relief"]
+def resolve_allowance(kind: str, year: int, month: int) -> tuple[str, Rule | None]:
+    """Allowance type actually given for a spend date, falling back from an
+    accelerated scheme outside its window. ``none`` has no rule."""
+    if kind == "none":
+        return kind, None
+    rule = rule_at(ca.RULES[kind], date(year, month, 1))
+    if rule is None and kind in ca.FALLBACK:
+        kind = ca.FALLBACK[kind]
+        rule = rule_at(ca.RULES[kind], date(year, month, 1))
+    return kind, rule
+
+
+def tax_capital_allowances(
+    *,
+    tax_year: int,
+    assets: list[dict[str, Any]],
+    period_end_month: int = 12,
+    accounting_profit: float | None = None,
+    depreciation: float = 0.0,
+) -> dict[str, Any]:
+    """``tax.capital_allowances``: allowances for one tax year per asset (input order)."""
+    rows, rules, caps = [], {}, set()
+    for asset in assets:
+        requested = asset.get("tax_allowance") or ca.DEFAULT_FOR_CATEGORY[asset["category"]]
+        applied, rule = resolve_allowance(requested, asset["year"], asset["month"])
+        spend_year = asset["year"] + (asset["month"] > period_end_month)
+        qualifying = asset["cost"] - asset.get("grant", 0.0)
+        opening = allowance = closing = 0.0
+        if rule is not None and tax_year >= spend_year:
+            opening, allowance, closing = ca.allowance_in_year(qualifying, ca.SCHEDULES[applied], tax_year - spend_year)
+            rules[(rule.rule_id, rule.start)] = rule
+            if allowance and applied in ca.CAPS:
+                caps.add(ca.CAPS[applied])
+        rows.append(
+            {
+                "category": asset["category"],
+                "allowance_type": requested,
+                "allowance_applied": applied,
+                "qualifying_cost": round_money(qualifying),
+                "opening_twdv": round_money(opening),
+                "allowance": round_money(allowance),
+                "closing_twdv": round_money(closing),
+            }
+        )
+    total = round_money(sum(r["allowance"] for r in rows))
+    bridge = None
+    if accounting_profit is not None:
+        bridge = {
+            "accounting_profit": round_money(accounting_profit),
+            "add_back_depreciation": round_money(depreciation),
+            "capital_allowances": total,
+            "taxable_profit": round_money(accounting_profit + depreciation - total),
+        }
+    return {
+        "currency": "EUR",
+        "jurisdiction": "IE",
+        "tax_year": tax_year,
+        "period_end_month": period_end_month,
+        "assets": rows,
+        "by_type": {
+            t: round_money(sum(r["allowance"] for r in rows if r["allowance_applied"] == t)) for t in ca.SCHEDULES
+        },
+        "total": {
+            f: round_money(sum(r[f] for r in rows)) for f in ("opening_twdv", "allowance", "closing_twdv")
+        },
+        "profit_bridge": bridge,
+        "caps_not_applied": sorted(caps),
+        "rules_applied": [rules[k].as_dict() for k in sorted(rules)],
+    }
+
+
+__all__ = ["resolve_allowance", "stock_relief_regime", "tax_capital_allowances", "tax_stock_relief"]

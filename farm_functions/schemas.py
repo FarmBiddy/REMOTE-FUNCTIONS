@@ -15,7 +15,8 @@ from farm_functions.dairy.cash_flow import (
     OPERATING_CASH_OUTFLOW_CATEGORIES,
 )
 from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
-from farm_functions.tax import stock_relief_regime
+from farm_functions.ie.capital_allowances import DEFAULT_FOR_CATEGORY
+from farm_functions.tax import resolve_allowance, stock_relief_regime
 
 
 def _parse_finite_number(value: Any) -> float:
@@ -384,9 +385,15 @@ class AssetInput(_StrictModel):
     life_months: Annotated[int, BeforeValidator(_parse_loan_months)] | None = None
     residual_value: NonNegativeNumber = 0.0
     annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)] | None = None
+    # Tax only (ADR-0053): grants reduce the cost allowances are given on;
+    # tax_allowance overrides the default type for the category.
+    grant: NonNegativeNumber = 0.0
+    tax_allowance: Literal["plant", "farm_buildings", "slurry_storage", "farm_safety", "none"] | None = None
 
     @model_validator(mode="after")
     def _method_fields(self) -> "AssetInput":
+        if self.grant > self.cost:
+            raise ValueError("grant must not exceed cost")
         if self.method == "straight_line" and self.life_months is None:
             raise ValueError("life_months is required for straight_line")
         if self.method == "reducing_balance" and self.annual_rate is None:
@@ -945,6 +952,27 @@ class TaxStockReliefInput(_StrictModel):
         return self
 
 
+class TaxCapitalAllowancesInput(_StrictModel):
+    """HTTP / runner input for ``tax.capital_allowances`` (ADR-0053): the
+    ``assets.schedule`` register for one tax year. ``accounting_profit``
+    (``pl.net`` net profit before tax) with the period's ``depreciation``
+    (``assets.schedule``) gives taxable profit."""
+
+    tax_year: CalendarYear
+    period_end_month: CalendarMonth = 12
+    assets: list[AssetInput] = Field(..., min_length=1, max_length=200)
+    accounting_profit: SignedNumber | None = None
+    depreciation: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _rules(self) -> "TaxCapitalAllowancesInput":
+        for i, a in enumerate(self.assets):
+            kind = a.tax_allowance or DEFAULT_FOR_CATEGORY[a.category]
+            if kind != "none" and resolve_allowance(kind, a.year, a.month)[1] is None:
+                raise ValueError(f"no capital allowance rule for assets[{i}] ({kind}) bought {a.year}-{a.month:02d}")
+        return self
+
+
 # ---------------------------------------------------------------------------
 # Forecast inputs (ADR-0026). ``history`` = actual months (pl.months / cf.months
 # item shape). ``forecast`` items carry period identity plus optional known
@@ -1386,6 +1414,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "depreciation", "drawings", "interest", "land", "livestock", "livestock_closing_value",
             "livestock_opening_value", "off_farm_income", "other_long_term_liabilities",
             "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax", "trading_profit",
+            "grant", "accounting_profit",
         ),
         _EUR,
     ),
@@ -1444,7 +1473,8 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     "period_end_year": "year",
     "period_end_month": "month",
     "young_trained_farmer_first_year": "year",
-    "business_type": "choice",
+    "tax_year": "year",
+    **dict.fromkeys(("business_type", "tax_allowance"), "choice"),
 }
 
 

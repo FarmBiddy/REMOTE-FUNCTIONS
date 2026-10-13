@@ -181,7 +181,13 @@ def _usc(v: dict[str, float], income: float, non_paye: float) -> float:
 
 
 def _individual(
-    v: dict[str, float], farm_profit: float, other_income: float, married: bool, spouse: float, extra_credit: float = 0.0
+    v: dict[str, float],
+    farm_profit: float,
+    other_income: float,
+    married: bool,
+    spouse: float,
+    extra_credit: float = 0.0,
+    paye: float = 0.0,
 ) -> dict:
     """Joint assessment when married: one band and credit set for the couple;
     USC and PRSI per person. Farm losses count as nil (no loss relief)."""
@@ -213,7 +219,7 @@ def _individual(
             "credits": credits,
             "net": max(gross - credits, 0.0),
         },
-        "usc": {"farmer": _usc(v, farmer, farmer), "spouse": _usc(v, spouse, 0.0)},
+        "usc": {"farmer": _usc(v, farmer, farmer - paye), "spouse": _usc(v, spouse, 0.0)},
         "prsi": {"farmer": prsi_farmer, "spouse": prsi_spouse},
     }
 
@@ -467,8 +473,91 @@ def tax_partnership(
     }
 
 
+def tax_company_extraction(
+    *,
+    tax_year: int,
+    trading_profit: float,
+    non_trading_income: float = 0.0,
+    salary: float = 0.0,
+    dividends: float = 0.0,
+    marital_status: str = "single",
+    spouse_paye_income: float = 0.0,
+    other_income: float = 0.0,
+) -> dict[str, Any]:
+    """``tax.company_extraction``: one way of paying the farmer-director (salary
+    and / or dividends) through to company tax, the director's tax and the cash
+    the household keeps. Call once per mix to compare."""
+    rules = year_rules(tax_year)
+    v = {k: r.value for k, r in rules.items()}
+    taxable = max(trading_profit - salary, 0.0)
+    trading_ct = taxable * v["ct_rate_trading"] / 100
+    non_trading_ct = non_trading_income * v["ct_rate_non_trading"] / 100
+    after_tax = trading_profit - salary + non_trading_income - trading_ct - non_trading_ct
+    # s.440: after-tax investment / estate income, less 7.5% for a trading company,
+    # not paid out as dividends (this year's dividends assumed paid within 18 months).
+    investment = (non_trading_income - non_trading_ct) * (100 - v["ct_close_surcharge_trading_reduction"]) / 100
+    excess = max(investment - dividends, 0.0)
+    surcharge = excess * v["ct_close_surcharge_rate"] / 100 if excess > v["ct_close_surcharge_de_minimis"] else 0.0
+    dwt = dividends * v["dwt_rate"] / 100
+
+    # Proprietary director: salary is earned (earned income credit, PAYE for USC),
+    # dividends are taxed as income; PRSI Class S on both.
+    person = _individual(
+        v, salary, dividends + other_income, marital_status == "married", spouse_paye_income, paye=salary
+    )
+    income_tax = {k: round_money(x) for k, x in person["income_tax"].items()}
+    usc, prsi = _rounded(person["usc"]), _rounded(person["prsi"])
+    director_tax = round_money(income_tax["net"] + usc["total"] + prsi["total"])
+    company_tax = round_money(trading_ct + non_trading_ct + surcharge)
+    profits = trading_profit + non_trading_income
+    rate = per_unit(company_tax + director_tax, profits)
+    used = [
+        "ct_rate_trading", "ct_rate_non_trading", "ct_close_surcharge_rate",
+        "ct_close_surcharge_trading_reduction", "ct_close_surcharge_de_minimis", "dwt_rate",
+        *(k for k in RULES if k.startswith(("it_", "usc_", "prsi_"))),
+    ]
+    return {
+        "currency": "EUR",
+        "jurisdiction": "IE",
+        "tax_year": tax_year,
+        "company": {
+            "trading_profit": round_money(trading_profit),
+            "salary": round_money(salary),
+            "taxable_trading_profit": round_money(taxable),
+            "non_trading_income": round_money(non_trading_income),
+            "corporation_tax": round_money(trading_ct + non_trading_ct),
+            "profit_after_tax": round_money(after_tax),
+            "dividends": round_money(dividends),
+            "dwt_withheld": round_money(dwt),
+            "close_company_surcharge": round_money(surcharge),
+            "retained": round_money(after_tax - dividends - surcharge),
+        },
+        "director": {
+            "salary": round_money(salary),
+            "dividends": round_money(dividends),
+            "other_income": round_money(other_income),
+            "spouse_paye_income": round_money(spouse_paye_income),
+            "assessment": "joint" if marital_status == "married" else "single",
+            "income_tax": income_tax,
+            "usc": usc,
+            "prsi": prsi,
+            "total_tax": director_tax,
+            "dwt_credit": round_money(dwt),
+            "balance_due": round_money(director_tax - dwt),
+        },
+        "household": {
+            # Joint assessment taxes the spouse's pay too, so count it on both sides.
+            "income_after_tax": round_money(salary + dividends + other_income + spouse_paye_income - director_tax),
+            "total_tax": round_money(company_tax + director_tax),
+            "effective_rate_pct": None if rate is None else round_margin_pct(rate * 100),
+        },
+        "rules_applied": [rules[k].as_dict() for k in used],
+    }
+
+
 __all__ = [
     "estimate_with_rules",
+    "tax_company_extraction",
     "succession_credit_amount",
     "tax_partnership",
     "projected_tax",

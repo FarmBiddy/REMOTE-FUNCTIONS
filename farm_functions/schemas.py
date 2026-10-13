@@ -1021,6 +1021,30 @@ class TaxEstimateInput(_StrictModel):
         return self
 
 
+class TaxCompanyExtractionInput(_StrictModel):
+    """HTTP / runner input for ``tax.company_extraction`` (ADR-0053): a farm
+    company's taxable trading profit before the director's salary (after capital
+    allowances and stock relief), its non-trading income, and how the director
+    is paid. The director is a proprietary director (Class S PRSI)."""
+
+    tax_year: CalendarYear
+    trading_profit: SignedNumber
+    non_trading_income: NonNegativeNumber = 0.0
+    salary: NonNegativeNumber = 0.0
+    dividends: NonNegativeNumber = 0.0
+    marital_status: Literal["single", "married"] = "single"
+    spouse_paye_income: NonNegativeNumber = 0.0
+    other_income: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _profile(self) -> "TaxCompanyExtractionInput":
+        if self.spouse_paye_income and self.marital_status != "married":
+            raise ValueError("spouse_paye_income needs marital_status married")
+        if year_rules(self.tax_year) is None:
+            raise ValueError(f"no tax rules for tax year {self.tax_year}")
+        return self
+
+
 class PartnerInput(_StrictModel):
     """One partner (an individual) in ``tax.partnership`` (ADR-0053)."""
 
@@ -1551,7 +1575,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "livestock_opening_value", "off_farm_income", "other_long_term_liabilities",
             "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax", "trading_profit",
             "grant", "accounting_profit", "taxable_profit", "other_income", "spouse_paye_income",
-            "stock_relief", "state_aid_used",
+            "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends",
         ),
         _EUR,
     ),

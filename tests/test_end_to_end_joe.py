@@ -67,6 +67,8 @@ PAYLOADS = {
     "vat.flat_rate": {"months": joe.ACTUAL},
     "tax.capital_allowances": {"tax_year": 2026, "period_end_month": 9, "assets": joe.ASSETS},
     "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married"},
+    "tax.company_extraction": {"tax_year": 2026, "trading_profit": 60_000, "salary": 30_000, "dividends": 15_000,
+                               "marital_status": "married", "spouse_paye_income": 32_000},
     "tax.partnership": {"tax_year": 2026, "period_end_month": 9, "trading_profit": 60_000,
                         "partners": [{"label": "Joe", "profit_share_pct": 70, "marital_status": "married"},
                                      {"label": "Mark", "profit_share_pct": 30, "young_trained_farmer_first_year": 2026}],
@@ -327,3 +329,13 @@ def test_succession_partnership_with_his_son(results):
     assert (joe_row["stock_relief"], mark["stock_relief"]) == (4_900, 4_200)
     assert (joe_row["succession_credit"], mark["succession_credit"]) == (3_500, 1_500)
     assert body["total"]["total_tax"] == pytest.approx(sum(p["tax"]["total_tax"] for p in body["partners"]), abs=CENT)
+
+
+def test_company_route_compared_with_sole_trader(results):
+    """Same 60,000 profit through a company (30,000 salary + 15,000 dividends) vs as a
+    sole trader: the engine gives both totals; which is better is the advisor's call."""
+    company = results["tax.company_extraction"]
+    assert company["company"]["retained"] == pytest.approx(30_000 * 0.875 - 15_000, abs=CENT)
+    sole = results["tax.estimate"]
+    assert company["director"]["assessment"] == sole["assessment"] == "joint"
+    assert company["household"]["total_tax"] > 0 and sole["total_tax"] > 0

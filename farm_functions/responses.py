@@ -876,6 +876,49 @@ class TaxEstimateResult(_Out):
     rules_applied: list[RuleApplied]
 
 
+class ExtractionCompany(_Out):
+    trading_profit: float
+    salary: float
+    taxable_trading_profit: float
+    non_trading_income: float
+    corporation_tax: float
+    profit_after_tax: float
+    dividends: float
+    dwt_withheld: float
+    close_company_surcharge: float
+    retained: float
+
+
+class ExtractionDirector(_Out):
+    salary: float
+    dividends: float
+    other_income: float
+    spouse_paye_income: float
+    assessment: Literal["single", "joint"]
+    income_tax: IncomeTaxLines
+    usc: PerPerson
+    prsi: PerPerson
+    total_tax: float
+    dwt_credit: float
+    balance_due: float
+
+
+class ExtractionHousehold(_Out):
+    income_after_tax: float
+    total_tax: float
+    effective_rate_pct: float | None
+
+
+class TaxCompanyExtractionResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    tax_year: int
+    company: ExtractionCompany
+    director: ExtractionDirector
+    household: ExtractionHousehold
+    rules_applied: list[RuleApplied]
+
+
 class PartnerResult(_Out):
     label: str
     profit_share_pct: float
@@ -1000,6 +1043,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "tax.capital_allowances": TaxCapitalAllowancesResult,
     "tax.estimate": TaxEstimateResult,
     "tax.partnership": TaxPartnershipResult,
+    "tax.company_extraction": TaxCompanyExtractionResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

@@ -77,6 +77,7 @@ def test_discovery_lists_core_functions_only():
     "tax.capital_allowances",
     "tax.estimate",
     "tax.partnership",
+    "tax.company_extraction",
         "bs.summary",
         "report.bank",
         "report.advisor",

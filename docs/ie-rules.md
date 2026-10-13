@@ -127,8 +127,15 @@ SW(MP)A 2024)
 - Company: general stock relief (25%) only; no YTF/RFP enhanced relief, no
   income averaging, no SFP credit. Capital allowances and FRA as individuals.
 - Extraction (salary → PAYE + USC + Class S for proprietary directors with
-  > 15%; dividends → marginal IT + USC + PRSI, DWT credited) is a later phase;
-  summary is `unverified`.
+  > 15%; dividends → marginal IT + USC + PRSI, DWT credited); summary is
+  `unverified`.
+- Engine (`tax.company_extraction`): the director is a proprietary director;
+  salary is deductible for the company, earned income for the earned income
+  credit and PAYE for the USC surcharge; dividends are income with the 25% DWT
+  credited; Class S PRSI on salary and dividends (no employer PRSI). Surcharge:
+  20% × (after-tax non-trading income × 92.5% − this year's dividends), nil if
+  ≤ €2,000; dividends are assumed paid within 18 months. Not modelled:
+  pensions, directors' loans, benefits in kind, s.441 service companies.
 - Teagasc *Farming Through a Company* (2018) is useful for structure (lease
   land to the company, directors' loan from assets at book value, tell DAFM and
   the milk processor) but its rates are stale.

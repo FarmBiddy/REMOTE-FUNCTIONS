@@ -66,6 +66,12 @@ RULES: dict[str, tuple[Rule, ...]] = {
     # Corporation tax (TCA s.21, s.21A)
     "ct_rate_trading": _fixed("ct_rate_trading", 12.5, "TCA s.21"),
     "ct_rate_non_trading": _fixed("ct_rate_non_trading", 25.0, "TCA s.21A"),
+    # Close company surcharge on undistributed investment and estate income (s.440):
+    # trading companies first reduce that income by 7.5%; nothing if the excess ≤ 2,000.
+    "ct_close_surcharge_rate": _fixed("ct_close_surcharge_rate", 20.0, "TCA s.440"),
+    "ct_close_surcharge_trading_reduction": _fixed("ct_close_surcharge_trading_reduction", 7.5, "TCA s.434"),
+    "ct_close_surcharge_de_minimis": _fixed("ct_close_surcharge_de_minimis", 2_000, "TCA s.440"),
+    "dwt_rate": _fixed("dwt_rate", 25.0, "TCA s.172B"),
     # Stock relief caps on tax value (IT + USC saved)
     "stock_relief_ytf_cap": _fixed("stock_relief_ytf_cap", 40_000, "TCA s.667B(5A)"),
     "state_aid_young_farmer_lifetime": _fixed(

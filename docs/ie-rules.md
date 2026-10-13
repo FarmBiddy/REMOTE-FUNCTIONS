@@ -212,6 +212,14 @@ SW(MP)A 2024)
   **€5,000/yr; €10,000/yr for SFPs registered from 2027-01-01** (`announced`),
   and the 3-year transfer wait is removed for applications from 2027.
   Counts towards the €100k young farmer cap.
+- Engine (`tax.partnership`): partners are individuals; profit after capital
+  allowances and the stock increase are split by profit share; stock relief per
+  partner (young trained farmer 100% in their window, else 50% registered, 25%
+  otherwise); the succession credit is fixed by the registration year, split by
+  profit share, at most the partner's taxable profit, and deducted from income
+  tax. Successor age on 1 January = tax year − birth year − 1. The €20,000
+  de minimis cap is checked per partner (per undertaking `unverified`). Not
+  modelled: company partners, the asset-transfer conditions and clawback.
 
 ## 8. Other farm items
 

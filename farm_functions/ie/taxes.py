@@ -12,6 +12,7 @@ from datetime import date
 from farm_functions.ie.rules import Rule, rule_at
 
 _YEARS = (2024, 2025, 2026, 2027)
+LAST_TAX_YEAR = _YEARS[-1]
 
 
 def _yearly(rule_id: str, values: tuple[float, ...], legal_ref: str, announced_from: int | None = None) -> tuple[Rule, ...]:
@@ -89,4 +90,4 @@ def banded(income: float, ceilings: tuple[float, ...], rates_pct: tuple[float, .
     return tax
 
 
-__all__ = ["RULES", "banded", "year_rules"]
+__all__ = ["LAST_TAX_YEAR", "RULES", "banded", "year_rules"]

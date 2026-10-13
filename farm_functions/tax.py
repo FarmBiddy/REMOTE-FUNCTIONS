@@ -23,7 +23,7 @@ from farm_functions.core.ratios import per_unit
 from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.ie import capital_allowances as ca
 from farm_functions.ie.rules import Rule, rule_at
-from farm_functions.ie.taxes import RULES, banded, year_rules
+from farm_functions.ie.taxes import LAST_TAX_YEAR, RULES, banded, year_rules
 from farm_functions.ie.stock_relief import (
     GENERAL,
     REGISTERED_PARTNERSHIP,
@@ -218,7 +218,14 @@ def _rounded(lines: dict[str, float]) -> dict[str, float]:
     return {**out, "total": round_money(sum(out.values()))}
 
 
-def tax_estimate(
+def tax_estimate(*, tax_year: int, **inputs: Any) -> dict[str, Any]:
+    """``tax.estimate``: tax for one year on taxable farming profit (after capital
+    allowances and stock relief), applying the stock relief caps on tax value."""
+    return estimate_with_rules(year_rules(tax_year), tax_year=tax_year, **inputs)
+
+
+def estimate_with_rules(
+    rules: dict[str, Rule],
     *,
     business_type: str,
     tax_year: int,
@@ -230,9 +237,6 @@ def tax_estimate(
     stock_relief_regime: str = "general",
     state_aid_used: float = 0.0,
 ) -> dict[str, Any]:
-    """``tax.estimate``: tax for one year on taxable farming profit (after capital
-    allowances and stock relief), applying the stock relief caps on tax value."""
-    rules = year_rules(tax_year)
     v = {k: r.value for k, r in rules.items()}
     used: list[str]
     income_tax = usc = prsi = corporation = cap = None
@@ -293,7 +297,80 @@ def tax_estimate(
     }
 
 
+def projected_tax(
+    profile: dict[str, Any],
+    history: list[float],
+    *,
+    tax_year: int,
+    period_end_month: int,
+    operating_profit: float,
+    livestock_increase: float,
+    register: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Tax for one ``plan.projection`` year (ADR-0053 phase 5).
+
+    ``history`` holds farming profits before capital allowances (oldest first,
+    seeded with the Platform's prior years) and gains this year's. Years after
+    the last tax year with rules use that year's rules, labelled
+    ``latest_held_constant``: a planning assumption, not a forecast of Budgets.
+    """
+    basis_year = min(tax_year, LAST_TAX_YEAR)
+    company = profile["business_type"] == "company"
+    allowances = (
+        tax_capital_allowances(tax_year=tax_year, assets=register, period_end_month=period_end_month)["total"]["allowance"]
+        if register
+        else 0.0
+    )
+    profit = operating_profit + livestock_increase
+    regime, table = (
+        ("general", GENERAL)
+        if company
+        else stock_relief_regime(tax_year, profile["registered_partnership"], profile["young_trained_farmer_first_year"])
+    )
+    rule = rule_at(table, date(basis_year, period_end_month, 1))
+    relief = stock_relief(livestock_increase, rule.value, profit - allowances)
+    before_allowances = profit - relief
+    history.append(before_allowances)
+    averaged, averaging = before_allowances, "off"
+    if profile["income_averaging"]:
+        if len(history) >= 5:
+            averaged, averaging = sum(history[-5:]) / 5, "applied"
+        else:
+            averaging = "insufficient_history"
+    estimate = estimate_with_rules(
+        year_rules(basis_year),
+        business_type=profile["business_type"],
+        tax_year=tax_year,
+        taxable_profit=averaged - allowances,
+        other_income=profile["other_income"],
+        marital_status=profile["marital_status"],
+        spouse_paye_income=profile["spouse_paye_income"],
+        stock_relief=relief,
+        stock_relief_regime=regime,
+        state_aid_used=profile["state_aid_used"],
+    )
+    return {
+        "tax_year": tax_year,
+        "rules_basis": "in_force" if basis_year == tax_year else "latest_held_constant",
+        "rules_status": (
+            "announced" if any(r["status"] == "announced" for r in estimate["rules_applied"]) else "enacted"
+        ),
+        "profit_before_allowances": round_money(profit),
+        "livestock_increase": round_money(livestock_increase),
+        "stock_relief_regime": regime,
+        "stock_relief": round_money(relief),
+        "capital_allowances": round_money(allowances),
+        "averaging": averaging,
+        "averaged_profit": round_money(averaged),
+        "assessable_profit": round_money(averaged - allowances),
+        "total_tax": estimate["total_tax"],
+        "effective_rate_pct": estimate["effective_rate_pct"],
+    }
+
+
 __all__ = [
+    "estimate_with_rules",
+    "projected_tax",
     "resolve_allowance",
     "stock_relief_regime",
     "tax_capital_allowances",

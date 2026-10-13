@@ -32,7 +32,10 @@ countries.
    `legal_ref`, `source` and `status` (`enacted` | `announced`). Lookup is by
    date or tax year. A date with no rule is an error (`rule_not_available`);
    the Engine never extrapolates a rate. Results using an `announced` rule say
-   so.
+   so. **One exception, projections:** `plan.projection` years after the last
+   tax year with rules use that year's rules unchanged and say so
+   (`rules_basis: latest_held_constant`). This is the usual planning
+   assumption, not a forecast of future Budgets.
 3. **Estimates, not returns.** Irish outputs carry `jurisdiction: "IE"`,
    `tax_year` and `rules_applied: [{rule_id, value, status}]`. A tax figure
    sent by the caller (the accountant's number) always wins over the estimate;
@@ -67,7 +70,12 @@ countries.
       married couples, USC / PRSI per person, or corporation tax; stock relief
       caps on tax saved. Its `total_tax` is passed as `debt.capacity` `tax`
       (composition, like `pl.net`).
-   5. Income averaging, and tax per year in `plan.projection`.
+   5. Tax per year in `plan.projection` from a `tax_profile` (instead of
+      `assumptions.tax`, never both): herd value change as taxable trading
+      stock with stock relief, capital allowances on the register, and income
+      averaging over the Platform's `prior_farming_profits` then projected
+      years (`insufficient_history` until 5 years are known). The Engine keeps
+      no history between calls.
    6. Partnerships (profit split, RFP relief, SFP credit).
    7. Company extraction (salary / dividends / surcharge).
    Alongside: align KPI definitions with Teagasc NFS terms (gross output,

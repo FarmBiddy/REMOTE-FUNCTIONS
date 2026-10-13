@@ -437,6 +437,14 @@ send nothing for "everything stays as this year". Show `assumptions_used`
 next to the figures, and `flags` for years with negative cash or DSCR below the
 lender's `min_cover`.
 
+Tax in the plan (ADR-0053, Ireland): send `tax_profile` (the farm profile used
+for `tax.estimate`, plus `income_averaging` and `prior_farming_profits`: up to
+4 past years of farming profit before capital allowances, oldest first, kept by
+the Platform) instead of `assumptions.tax`. Each year then has `tax` with the
+breakdown, and cash uses its `total_tax`. Show `rules_basis:
+latest_held_constant` as "at 2027 tax rates" and `averaging:
+insufficient_history` as "not enough history to average yet".
+
 Reports (ADR-0041): build one farm file and call `report.bank`,
 `report.advisor` or `report.accountant`. Each returns structured sections
 (outputs of the matching IDs) for the Platform to render as a PDF or screen.

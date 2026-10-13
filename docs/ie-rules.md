@@ -193,6 +193,11 @@ SW(MP)A 2024)
   deferred tax paid in 4 equal instalments (all due on permanent exit).
   Re-entry after 4 years on the normal basis.
 - A sole trade moving into an RFP continues for averaging (s.657(10A)).
+- Engine (`plan.projection` `tax_profile`): the farmer opts in with
+  `income_averaging`; the window is the Platform's `prior_farming_profits`
+  (before capital allowances) followed by projected years; until 5 years are
+  known the year is taxed on actual profit (`insufficient_history`). Not
+  modelled: exit top-up, step-out year, and the 4-year eligibility test.
 
 ## 7. Partnerships
 

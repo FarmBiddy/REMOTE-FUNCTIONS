@@ -76,7 +76,10 @@ countries.
       averaging over the Platform's `prior_farming_profits` then projected
       years (`insufficient_history` until 5 years are known). The Engine keeps
       no history between calls.
-   6. Partnerships (profit split, RFP relief, SFP credit).
+   6. Partnerships (`tax.partnership`): profit and stock increase split by
+      profit share, relief and succession credit per partner, each partner's
+      own estimate. An ownership split, so it does not wait for ADR-0047
+      (enterprise split).
    7. Company extraction (salary / dividends / surcharge).
    Alongside: align KPI definitions with Teagasc NFS terms (gross output,
    direct / overhead costs, family farm income) where they differ.

@@ -421,9 +421,17 @@ caps are checked. From the farm profile: `business_type`, `marital_status`
 (married couples are jointly assessed), `spouse_paye_income`, `other_income`,
 and `state_aid_used` (young farmer aid already received, or partnership de
 minimis aid in the previous two years). Show `total_tax` with the breakdown and
-pass it as `tax` to `debt.capacity`; there `off_farm_income` should then be
+pass it as `tax` to `debt.capacity` (partnerships: see below); there `off_farm_income` should then be
 gross, since the household tax already includes the spouse's PAYE. If the
 accountant gives a tax figure, send theirs instead.
+
+Partnerships (ADR-0053, Ireland): for a registered or succession farm
+partnership call `tax.partnership` once with the partnership's
+`trading_profit` (`tax.capital_allowances` `profit_bridge.taxable_profit`),
+the stock valuations and each partner's profile and profit share (from the
+partnership agreement). Each partner comes back with their own `tax`; show the
+partner's own figures to that partner. `succession` needs the registration
+year, the successor's birth year and which partner is the successor.
 
 Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`

@@ -80,7 +80,10 @@ countries.
       profit share, relief and succession credit per partner, each partner's
       own estimate. An ownership split, so it does not wait for ADR-0047
       (enterprise split).
-   7. Company extraction (salary / dividends / surcharge).
+   7. Company extraction (`tax.company_extraction`): one salary / dividend mix
+      per call through company tax, DWT, close company surcharge and the
+      director's tax to household income after tax. The Platform compares
+      mixes; choosing one is advice, not Engine work.
    Alongside: align KPI definitions with Teagasc NFS terms (gross output,
    direct / overhead costs, family farm income) where they differ.
 8. **Rule maintenance:** after each Finance Act, `docs/ie-rules.md` and the

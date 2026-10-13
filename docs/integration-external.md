@@ -433,6 +433,14 @@ partnership agreement). Each partner comes back with their own `tax`; show the
 partner's own figures to that partner. `succession` needs the registration
 year, the successor's birth year and which partner is the successor.
 
+Farm companies (ADR-0053, Ireland): `tax.estimate` with `business_type:
+company` gives the company's corporation tax. To show what reaches the family,
+call `tax.company_extraction` with the company's taxable profit before the
+director's salary and a salary / dividend mix; call it again for each mix the
+user wants to compare and show `household.income_after_tax`,
+`household.total_tax` and `company.retained` side by side. The engine does not
+pick the best mix (that is advice), and does not model pensions.
+
 Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
 interest) and the livestock / stock valuations at start and end.

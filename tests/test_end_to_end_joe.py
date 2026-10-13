@@ -300,3 +300,14 @@ def test_full_tax_chain_into_debt_capacity(results):
     assert tax["assessment"] == "joint" and 0 < tax["total_tax"] < relief["profit_after_relief"]
     capacity = run_function("debt.capacity", {**PAYLOADS["debt.capacity"], "tax": tax["total_tax"]})["result"]
     assert capacity["tax"] == tax["total_tax"]
+
+
+def test_projection_estimates_tax_each_year():
+    """Joe and his wife, jointly assessed, averaging with four past years (ADR-0053)."""
+    profile = {"business_type": "sole_trader", "marital_status": "married", "spouse_paye_income": 32_000,
+               "income_averaging": True, "prior_farming_profits": [41_000, 38_000, 62_000, 55_000]}
+    years = run_function("plan.projection", {**PAYLOADS["plan.projection"], "tax_profile": profile})["result"]["years"]
+    assert [y["tax"]["tax_year"] for y in years] == [2027, 2028, 2029, 2030, 2031]
+    assert {y["tax"]["averaging"] for y in years} == {"applied"}
+    assert [y["tax"]["rules_basis"] for y in years][:2] == ["in_force", "latest_held_constant"]
+    assert all(y["cash"]["tax"] == y["tax"]["total_tax"] > 0 for y in years)

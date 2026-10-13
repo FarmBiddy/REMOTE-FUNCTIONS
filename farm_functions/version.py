@@ -4,4 +4,4 @@ Bump on any change to published figures or response shapes, so reports can
 state which engine produced them.
 """
 
-ENGINE_VERSION = "1.5.0"
+ENGINE_VERSION = "1.6.0"

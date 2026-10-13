@@ -18,6 +18,7 @@ from farm_functions.core.rounding import round_money
 from farm_functions.dairy.costs import HERD_LINKED_INCOME, OPERATING_COST_CATEGORIES, VARIABLE_COST_CATEGORIES
 from farm_functions.dairy.monthly_statement import monthly_pl_summary
 from farm_functions.schemas import PROJECTION_AMOUNT_LINES
+from farm_functions.tax import projected_tax
 
 _HERD_LINES = VARIABLE_COST_CATEGORIES + HERD_LINKED_INCOME
 
@@ -60,8 +61,13 @@ def plan_projection(
     land: float = 0.0,
     livestock: float = 0.0,
     min_cover: float | None = None,
+    tax_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """``plan.projection``: per-year P&L, cash, debt, balance sheet and flags."""
+    """``plan.projection``: per-year P&L, cash, debt, balance sheet and flags.
+
+    With ``tax_profile`` (Irish farms, ADR-0053) tax per year is estimated
+    instead of read from ``assumptions.tax``.
+    """
     a = assumptions or {}
     loans, assets, investments = loans or [], assets or [], investments or []
 
@@ -145,6 +151,7 @@ def plan_projection(
 
     cash = opening_cash
     out_years = []
+    history = list(tax_profile["prior_farming_profits"]) if tax_profile else []
     for y, (start, end) in enumerate(windows):
         drivers = {}
         for k in lines:
@@ -162,6 +169,17 @@ def plan_projection(
         debt_service = debt[y]["interest"] + debt[y]["principal"]
         pl = monthly_pl_summary(milk_price=price[y], loan_repayments=debt_service, **drivers)
         surplus = pl["profit"]["net"]
+        tax_detail = None
+        tax_y = tax[y]
+        if tax_profile:
+            # Herd value change is trading stock: taxable, and the base for stock relief.
+            livestock_increase = livestock * (herd[y] - (herd[y - 1] if y else 1.0))
+            tax_detail = projected_tax(
+                tax_profile, history, tax_year=end // 12, period_end_month=end % 12 + 1,
+                operating_profit=surplus - debt[y]["interest"], livestock_increase=livestock_increase,
+                register=register,
+            )
+            tax_y = tax_detail["total_tax"]
 
         fixed = (
             assets_schedule(
@@ -172,12 +190,12 @@ def plan_projection(
             else {"depreciation": 0.0, "closing_nbv": 0.0}
         )
         net_cash = (
-            surplus + off_farm[y] - drawings[y] - tax[y] - debt_service - capex[y] + proceeds[y]
+            surplus + off_farm[y] - drawings[y] - tax_y - debt_service - capex[y] + proceeds[y]
         )
         opening, cash = cash, cash + net_cash
         cows = milking_cows * herd[y]
         dscr = coverage_ratio(surplus, debt_service)
-        cover = coverage_ratio(surplus + off_farm[y] - drawings[y] - tax[y], debt_service)
+        cover = coverage_ratio(surplus + off_farm[y] - drawings[y] - tax_y, debt_service)
         livestock_value = livestock * herd[y]
         net_worth = cash + fixed["closing_nbv"] + land + livestock_value - debt[y]["balance"]
         out_years.append(
@@ -190,7 +208,7 @@ def plan_projection(
                     "yield_index": round(yield_[y], 4),
                     "cost_inflation_pct": general[y] if y < len(general) else 0.0,
                     "drawings": drawings[y],
-                    "tax": tax[y],
+                    "tax": tax_y,
                     "off_farm_income": off_farm[y],
                     "interest_rate_shift_pp": rate_shift[y],
                 },
@@ -208,7 +226,7 @@ def plan_projection(
                     "operating_surplus": round_money(surplus),
                     "off_farm_income": round_money(off_farm[y]),
                     "drawings": round_money(drawings[y]),
-                    "tax": round_money(tax[y]),
+                    "tax": round_money(tax_y),
                     "interest": round_money(debt[y]["interest"]),
                     "principal": round_money(debt[y]["principal"]),
                     "capex": round_money(capex[y]),
@@ -230,6 +248,7 @@ def plan_projection(
                     "debt": round_money(debt[y]["balance"]),
                     "net_worth": round_money(net_worth),
                 },
+                "tax": tax_detail,
                 "kpis": {
                     "milking_cows": round_money(cows),
                     "milk_price_c": round_money(price[y] * 100),

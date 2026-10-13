@@ -603,6 +603,22 @@ class ProjectionFlags(_Out):
     below_min_cover: bool | None
 
 
+class ProjectionTax(_Out):
+    tax_year: int
+    rules_basis: Literal["in_force", "latest_held_constant"]
+    rules_status: Literal["enacted", "announced"]
+    profit_before_allowances: float
+    livestock_increase: float
+    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership"]
+    stock_relief: float
+    capital_allowances: float
+    averaging: Literal["off", "applied", "insufficient_history"]
+    averaged_profit: float
+    assessable_profit: float
+    total_tax: float
+    effective_rate_pct: float | None
+
+
 class ProjectionYear(_Out):
     year: int
     period: FromTo
@@ -611,6 +627,7 @@ class ProjectionYear(_Out):
     cash: ProjectionCash
     debt: ProjectionDebt
     balance_sheet: ProjectionBalanceSheet
+    tax: ProjectionTax | None
     kpis: ProjectionKpis
     flags: ProjectionFlags
 

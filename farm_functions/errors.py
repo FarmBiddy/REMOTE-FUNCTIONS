@@ -367,7 +367,12 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(issue(INVALID_TYPE, text, field="months", details={"reason": "rule_not_available"}))
         elif text.startswith("no tax rules for tax year"):
             issues.append(issue(INVALID_TYPE, text, field="tax_year", details={"reason": "rule_not_available"}))
-        elif text == "marital status, enhanced stock relief and State aid are for individuals":
+        elif text == "send assumptions.tax or tax_profile, not both":
+            issues.append(issue(INVALID_TYPE, text, field="tax_profile", details={"reason": "tax_conflict"}))
+        elif text in (
+            "marital status, enhanced stock relief and State aid are for individuals",
+            "marital status, enhanced stock relief, State aid and averaging are for individuals",
+        ):
             issues.append(issue(INVALID_TYPE, text, field="business_type", details={"reason": "regime_not_available"}))
         elif text == "spouse_paye_income needs marital_status married":
             issues.append(issue(INVALID_TYPE, text, field="spouse_paye_income", details={"reason": "spouse_needs_married"}))

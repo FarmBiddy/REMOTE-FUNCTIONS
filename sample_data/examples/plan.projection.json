@@ -343,5 +343,17 @@
     }
   ],
   "land": 1600000,
-  "livestock": 342000
+  "livestock": 342000,
+  "tax_profile": {
+    "business_type": "sole_trader",
+    "marital_status": "married",
+    "spouse_paye_income": 32000,
+    "income_averaging": true,
+    "prior_farming_profits": [
+      41000,
+      38000,
+      62000,
+      55000
+    ]
+  }
 }

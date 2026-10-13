@@ -16,7 +16,7 @@ from farm_functions.dairy.cash_flow import (
 )
 from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
 from farm_functions.ie.capital_allowances import DEFAULT_FOR_CATEGORY
-from farm_functions.ie.taxes import year_rules
+from farm_functions.ie.taxes import LAST_TAX_YEAR, year_rules
 from farm_functions.tax import resolve_allowance, stock_relief_regime
 
 
@@ -775,6 +775,37 @@ class ProjectionInvestmentInput(_StrictModel):
         return self
 
 
+class ProjectionTaxProfileInput(_StrictModel):
+    """Irish tax profile for ``plan.projection`` (ADR-0053): tax per year is
+    estimated from it. ``prior_farming_profits``: up to 4 past years of farming
+    profit before capital allowances, oldest first (Platform history, needed for
+    income averaging)."""
+
+    business_type: Literal["sole_trader", "partnership", "company"]
+    marital_status: Literal["single", "married"] = "single"
+    spouse_paye_income: NonNegativeNumber = 0.0
+    other_income: NonNegativeNumber = 0.0
+    registered_partnership: bool = False
+    young_trained_farmer_first_year: CalendarYear | None = None
+    state_aid_used: NonNegativeNumber = 0.0
+    income_averaging: bool = False
+    prior_farming_profits: list[SignedNumber] = Field(default_factory=list, max_length=4)
+
+    @model_validator(mode="after")
+    def _profile(self) -> "ProjectionTaxProfileInput":
+        personal = (
+            self.marital_status == "married" or self.registered_partnership or self.state_aid_used
+            or self.young_trained_farmer_first_year is not None or self.income_averaging
+        )
+        if self.business_type == "company" and personal:
+            raise ValueError("marital status, enhanced stock relief, State aid and averaging are for individuals")
+        if self.registered_partnership and self.business_type != "partnership":
+            raise ValueError("registered_partnership needs business_type partnership")
+        if self.spouse_paye_income and self.marital_status != "married":
+            raise ValueError("spouse_paye_income needs marital_status married")
+        return self
+
+
 class PlanProjectionInput(_StrictModel):
     """HTTP / runner input for ``plan.projection`` (ADR-0042)."""
 
@@ -789,9 +820,12 @@ class PlanProjectionInput(_StrictModel):
     land: NonNegativeNumber = 0.0
     livestock: NonNegativeNumber = 0.0
     min_cover: Annotated[float, BeforeValidator(_parse_cover)] | None = None
+    tax_profile: ProjectionTaxProfileInput | None = None
 
     @model_validator(mode="after")
     def _consistent(self) -> "PlanProjectionInput":
+        if self.tax_profile and self.assumptions.tax:
+            raise ValueError("send assumptions.tax or tax_profile, not both")
         _reject_duplicate_months(self.base_pl_months)
         keys = sorted((m.year, m.month) for m in self.base_pl_months)
         first = keys[0][0] * 12 + keys[0][1]
@@ -801,6 +835,9 @@ class PlanProjectionInput(_StrictModel):
             raise ValueError("assumption lists must not be longer than years")
         if any(inv.year > self.years for inv in self.investments):
             raise ValueError("investment year must be within years")
+        # First projected year ends 12 months after the base: its calendar year is the tax year.
+        if self.tax_profile and year_rules(keys[-1][0] + 1) is None and keys[-1][0] + 1 < LAST_TAX_YEAR:
+            raise ValueError(f"no tax rules for tax year {keys[-1][0] + 1}")
         return self
 
 
@@ -1488,20 +1525,20 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "actual", "added_costs", "added_income", "assets", "base_pl_months", "cash_flows",
             "cf_months", "comparison", "forecast", "history", "investments", "loans", "months",
             "pl_months", "prior_pl_months", "projected_cf_months", "projected_pl_months",
-            "reduced_costs", "reduced_income", "scenarios",
+            "reduced_costs", "reduced_income", "scenarios", "prior_farming_profits",
         ),
         "list",
     ),
     **dict.fromkeys(
         (
             "annual_effects", "assumptions", "capital", "lines_amount", "lines_inflation_pct",
-            "lines_pct", "loan", "monthly_effects", "new_loan", "ytd",
+            "lines_pct", "loan", "monthly_effects", "new_loan", "ytd", "tax_profile",
         ),
         "object",
     ),
     **dict.fromkeys(("label", "name"), "text"),
     **dict.fromkeys(("cash_line", "category", "method", "rank_by"), "choice"),
-    **dict.fromkeys(("variable", "vat_registered", "registered_partnership"), "boolean"),
+    **dict.fromkeys(("variable", "vat_registered", "registered_partnership", "income_averaging"), "boolean"),
     "period_end_year": "year",
     "period_end_month": "month",
     "young_trained_farmer_first_year": "year",

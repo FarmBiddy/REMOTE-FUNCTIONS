@@ -876,6 +876,37 @@ class TaxEstimateResult(_Out):
     rules_applied: list[RuleApplied]
 
 
+class PartnerResult(_Out):
+    label: str
+    profit_share_pct: float
+    profit_share: float
+    stock_increase_share: float
+    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership"]
+    stock_relief: float
+    taxable_profit: float
+    succession_credit: float
+    tax: TaxEstimateResult
+
+
+class PartnershipTotals(_Out):
+    stock_relief: float
+    succession_credit: float
+    total_tax: float
+
+
+class TaxPartnershipResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    tax_year: int
+    registered_partnership: bool
+    succession_credit_total: float
+    trading_profit: float
+    stock_increase: float
+    partners: list[PartnerResult]
+    total: PartnershipTotals
+    rules_applied: list[RuleApplied]
+
+
 # --- reports ---------------------------------------------------------------------
 
 
@@ -968,6 +999,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "tax.stock_relief": TaxStockReliefResult,
     "tax.capital_allowances": TaxCapitalAllowancesResult,
     "tax.estimate": TaxEstimateResult,
+    "tax.partnership": TaxPartnershipResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

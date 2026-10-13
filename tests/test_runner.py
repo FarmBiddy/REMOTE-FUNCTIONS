@@ -76,6 +76,7 @@ def test_discovery_lists_core_functions_only():
     "tax.stock_relief",
     "tax.capital_allowances",
     "tax.estimate",
+    "tax.partnership",
         "bs.summary",
         "report.bank",
         "report.advisor",

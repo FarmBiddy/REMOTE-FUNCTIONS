@@ -1,0 +1,28 @@
+{
+  "tax_year": 2026,
+  "period_end_month": 12,
+  "trading_profit": 118000,
+  "registered_partnership": true,
+  "livestock_opening_value": 330000,
+  "livestock_closing_value": 342000,
+  "stock_opening_value": 9000,
+  "stock_closing_value": 11000,
+  "partners": [
+    {
+      "label": "Joe",
+      "profit_share_pct": 60,
+      "marital_status": "married",
+      "spouse_paye_income": 32000
+    },
+    {
+      "label": "Mark",
+      "profit_share_pct": 40,
+      "young_trained_farmer_first_year": 2025
+    }
+  ],
+  "succession": {
+    "registered_year": 2026,
+    "successor_birth_year": 1999,
+    "successor": 1
+  }
+}

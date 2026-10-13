@@ -367,6 +367,14 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(issue(INVALID_TYPE, text, field="months", details={"reason": "rule_not_available"}))
         elif text.startswith("no tax rules for tax year"):
             issues.append(issue(INVALID_TYPE, text, field="tax_year", details={"reason": "rule_not_available"}))
+        elif text == "partner profit shares must add up to 100":
+            issues.append(issue(INVALID_TYPE, text, field="partners", details={"reason": "shares_not_100"}))
+        elif text in (
+            "a succession partnership must be a registered partnership",
+            "succession.successor must be the index of a partner",
+            "the successor needs at least a 20% profit share",
+        ):
+            issues.append(issue(INVALID_TYPE, text, field="succession", details={"reason": "succession_invalid"}))
         elif text == "send assumptions.tax or tax_profile, not both":
             issues.append(issue(INVALID_TYPE, text, field="tax_profile", details={"reason": "tax_conflict"}))
         elif text in (

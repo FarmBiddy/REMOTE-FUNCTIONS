@@ -16,6 +16,7 @@ from farm_functions.dairy.cash_flow import (
 )
 from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
 from farm_functions.ie.capital_allowances import DEFAULT_FOR_CATEGORY
+from farm_functions.ie.partnership import MIN_SUCCESSOR_SHARE_PCT
 from farm_functions.ie.taxes import LAST_TAX_YEAR, year_rules
 from farm_functions.tax import resolve_allowance, stock_relief_regime
 
@@ -1020,6 +1021,73 @@ class TaxEstimateInput(_StrictModel):
         return self
 
 
+class PartnerInput(_StrictModel):
+    """One partner (an individual) in ``tax.partnership`` (ADR-0053)."""
+
+    label: str = Field("", max_length=80)
+    profit_share_pct: Annotated[float, BeforeValidator(_parse_non_negative_number)]
+    marital_status: Literal["single", "married"] = "single"
+    spouse_paye_income: NonNegativeNumber = 0.0
+    other_income: NonNegativeNumber = 0.0
+    young_trained_farmer_first_year: CalendarYear | None = None
+    state_aid_used: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _spouse(self) -> "PartnerInput":
+        if self.spouse_paye_income and self.marital_status != "married":
+            raise ValueError("spouse_paye_income needs marital_status married")
+        return self
+
+
+class SuccessionInput(_StrictModel):
+    """Succession farm partnership: year registered and the successor's birth year."""
+
+    registered_year: CalendarYear
+    successor_birth_year: CalendarYear
+    successor: Annotated[int, BeforeValidator(_parse_non_negative_number)]
+
+
+class TaxPartnershipInput(_StrictModel):
+    """HTTP / runner input for ``tax.partnership`` (ADR-0053): partnership taxable
+    profit after capital allowances, before stock relief (``tax.capital_allowances``
+    ``profit_bridge.taxable_profit``), stock valuations as in ``pl.net``, and the
+    partners (2–10 individuals) with profit shares summing to 100."""
+
+    tax_year: CalendarYear
+    period_end_month: CalendarMonth = 12
+    trading_profit: SignedNumber
+    partners: list[PartnerInput] = Field(..., min_length=2, max_length=10)
+    registered_partnership: bool = True
+    succession: SuccessionInput | None = None
+    livestock_opening_value: NonNegativeNumber = 0.0
+    livestock_closing_value: NonNegativeNumber = 0.0
+    stock_opening_value: NonNegativeNumber = 0.0
+    stock_closing_value: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _partners(self) -> "TaxPartnershipInput":
+        if abs(sum(p.profit_share_pct for p in self.partners) - 100) > 0.01:
+            raise ValueError("partner profit shares must add up to 100")
+        if self.succession:
+            s = self.succession
+            if not self.registered_partnership:
+                raise ValueError("a succession partnership must be a registered partnership")
+            if s.successor >= len(self.partners):
+                raise ValueError("succession.successor must be the index of a partner")
+            if self.partners[s.successor].profit_share_pct < MIN_SUCCESSOR_SHARE_PCT:
+                raise ValueError("the successor needs at least a 20% profit share")
+        if year_rules(self.tax_year) is None:
+            raise ValueError(f"no tax rules for tax year {self.tax_year}")
+        for p in self.partners:
+            first = p.young_trained_farmer_first_year
+            if first is not None and first > self.tax_year:
+                raise ValueError("young_trained_farmer_first_year is after the period")
+            _, rules = stock_relief_regime(self.tax_year, self.registered_partnership, first)
+            if rule_at(rules, date(self.tax_year, self.period_end_month, 1)) is None:
+                raise ValueError(f"no stock relief rule for period ending {self.tax_year}-{self.period_end_month:02d}")
+        return self
+
+
 class TaxCapitalAllowancesInput(_StrictModel):
     """HTTP / runner input for ``tax.capital_allowances`` (ADR-0053): the
     ``assets.schedule`` register for one tax year. ``accounting_profit``
@@ -1525,14 +1593,14 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "actual", "added_costs", "added_income", "assets", "base_pl_months", "cash_flows",
             "cf_months", "comparison", "forecast", "history", "investments", "loans", "months",
             "pl_months", "prior_pl_months", "projected_cf_months", "projected_pl_months",
-            "reduced_costs", "reduced_income", "scenarios", "prior_farming_profits",
+            "reduced_costs", "reduced_income", "scenarios", "prior_farming_profits", "partners",
         ),
         "list",
     ),
     **dict.fromkeys(
         (
             "annual_effects", "assumptions", "capital", "lines_amount", "lines_inflation_pct",
-            "lines_pct", "loan", "monthly_effects", "new_loan", "ytd", "tax_profile",
+            "lines_pct", "loan", "monthly_effects", "new_loan", "ytd", "tax_profile", "succession",
         ),
         "object",
     ),
@@ -1542,7 +1610,9 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     "period_end_year": "year",
     "period_end_month": "month",
     "young_trained_farmer_first_year": "year",
-    "tax_year": "year",
+    **dict.fromkeys(("tax_year", "registered_year", "successor_birth_year"), "year"),
+    "profit_share_pct": "%",
+    "successor": "index",
     **dict.fromkeys(("business_type", "tax_allowance", "marital_status", "stock_relief_regime"), "choice"),
 }
 

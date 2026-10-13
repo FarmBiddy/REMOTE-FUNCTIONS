@@ -67,6 +67,12 @@ PAYLOADS = {
     "vat.flat_rate": {"months": joe.ACTUAL},
     "tax.capital_allowances": {"tax_year": 2026, "period_end_month": 9, "assets": joe.ASSETS},
     "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married"},
+    "tax.partnership": {"tax_year": 2026, "period_end_month": 9, "trading_profit": 60_000,
+                        "partners": [{"label": "Joe", "profit_share_pct": 70, "marital_status": "married"},
+                                     {"label": "Mark", "profit_share_pct": 30, "young_trained_farmer_first_year": 2026}],
+                        "succession": {"registered_year": 2026, "successor_birth_year": 2001, "successor": 1},
+                        **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
+                        "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "tax.stock_relief": {"business_type": "sole_trader", "period_end_year": 2026, "period_end_month": 9,
                          "trading_profit": 60_000, **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
                          "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
@@ -311,3 +317,13 @@ def test_projection_estimates_tax_each_year():
     assert {y["tax"]["averaging"] for y in years} == {"applied"}
     assert [y["tax"]["rules_basis"] for y in years][:2] == ["in_force", "latest_held_constant"]
     assert all(y["cash"]["tax"] == y["tax"]["total_tax"] > 0 for y in years)
+
+
+def test_succession_partnership_with_his_son(results):
+    """Joe 70% / Mark 30%, succession partnership from 2026 (ADR-0053): the 14,000 stock
+    increase splits 9,800 / 4,200; Joe gets 50% relief, Mark 100% as a young trained farmer."""
+    body = results["tax.partnership"]
+    joe_row, mark = body["partners"]
+    assert (joe_row["stock_relief"], mark["stock_relief"]) == (4_900, 4_200)
+    assert (joe_row["succession_credit"], mark["succession_credit"]) == (3_500, 1_500)
+    assert body["total"]["total_tax"] == pytest.approx(sum(p["tax"]["total_tax"] for p in body["partners"]), abs=CENT)

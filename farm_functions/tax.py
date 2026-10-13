@@ -22,6 +22,12 @@ from typing import Any
 from farm_functions.core.ratios import per_unit
 from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.ie import capital_allowances as ca
+from farm_functions.ie.partnership import (
+    SUCCESSION_CREDIT,
+    SUCCESSION_CREDIT_YEARS,
+    SUCCESSOR_AGE_LIMIT,
+    succession_credit,
+)
 from farm_functions.ie.rules import Rule, rule_at
 from farm_functions.ie.taxes import LAST_TAX_YEAR, RULES, banded, year_rules
 from farm_functions.ie.stock_relief import (
@@ -174,7 +180,9 @@ def _usc(v: dict[str, float], income: float, non_paye: float) -> float:
     return usc + max(non_paye - v["usc_surcharge_threshold"], 0.0) * 3 / 100
 
 
-def _individual(v: dict[str, float], farm_profit: float, other_income: float, married: bool, spouse: float) -> dict:
+def _individual(
+    v: dict[str, float], farm_profit: float, other_income: float, married: bool, spouse: float, extra_credit: float = 0.0
+) -> dict:
     """Joint assessment when married: one band and credit set for the couple;
     USC and PRSI per person. Farm losses count as nil (no loss relief)."""
     earned = max(farm_profit, 0.0)
@@ -191,6 +199,7 @@ def _individual(v: dict[str, float], farm_profit: float, other_income: float, ma
         personal
         + min(v["it_credit_earned_income"], earned * v["it_rate_standard"] / 100)
         + min(v["it_credit_employee"], spouse * v["it_rate_standard"] / 100)
+        + extra_credit
     )
     prsi_farmer = 0.0 if farmer < v["prsi_s_threshold"] else max(farmer * v["prsi_s_rate"] / 100, v["prsi_s_minimum"])
     prsi_spouse = 0.0 if spouse / 52 <= v["prsi_a_weekly_exemption"] else spouse * v["prsi_a_rate"] / 100
@@ -236,6 +245,7 @@ def estimate_with_rules(
     stock_relief: float = 0.0,
     stock_relief_regime: str = "general",
     state_aid_used: float = 0.0,
+    extra_credit: float = 0.0,
 ) -> dict[str, Any]:
     v = {k: r.value for k, r in rules.items()}
     used: list[str]
@@ -251,10 +261,10 @@ def estimate_with_rules(
     else:
         used = [k for k in RULES if k.startswith(("it_", "usc_", "prsi_"))]
         married = marital_status == "married"
-        person = _individual(v, taxable_profit, other_income, married, spouse_paye_income)
+        person = _individual(v, taxable_profit, other_income, married, spouse_paye_income, extra_credit)
         clawback = 0.0
         if stock_relief_regime != "general" and stock_relief > 0:
-            without = _individual(v, taxable_profit + stock_relief, other_income, married, spouse_paye_income)
+            without = _individual(v, taxable_profit + stock_relief, other_income, married, spouse_paye_income, extra_credit)
             tax_value = _it_usc(without) - _it_usc(person)
             if stock_relief_regime == "young_trained_farmer":
                 used += ["stock_relief_ytf_cap", "state_aid_young_farmer_lifetime"]
@@ -368,8 +378,99 @@ def projected_tax(
     }
 
 
+def succession_credit_amount(succession: dict[str, Any] | None, tax_year: int) -> tuple[float, Rule | None]:
+    """Total succession partnership credit for the year (0 outside its 5 years or
+    once the successor is 40 on 1 January), with the rule fixed at registration."""
+    if not succession:
+        return 0.0, None
+    registered = succession["registered_year"]
+    rule = rule_at(SUCCESSION_CREDIT, date(registered, 1, 1))
+    age_on_1_january = tax_year - succession["successor_birth_year"] - 1  # exact unless born on 1 January
+    if rule is None or not registered <= tax_year < registered + SUCCESSION_CREDIT_YEARS:
+        return 0.0, rule
+    return (0.0 if age_on_1_january >= SUCCESSOR_AGE_LIMIT else rule.value), rule
+
+
+def tax_partnership(
+    *,
+    tax_year: int,
+    trading_profit: float,
+    partners: list[dict[str, Any]],
+    period_end_month: int = 12,
+    registered_partnership: bool = True,
+    succession: dict[str, Any] | None = None,
+    livestock_opening_value: float = 0.0,
+    livestock_closing_value: float = 0.0,
+    stock_opening_value: float = 0.0,
+    stock_closing_value: float = 0.0,
+) -> dict[str, Any]:
+    """``tax.partnership``: split taxable profit and the stock increase by profit
+    share, then stock relief, succession credit and tax for each partner."""
+    rules = year_rules(tax_year)
+    increase = (livestock_closing_value + stock_closing_value) - (livestock_opening_value + stock_opening_value)
+    credit_total, credit_rule = succession_credit_amount(succession, tax_year)
+    applied: dict[tuple[str, Any], dict] = {}
+    rows = []
+    for partner in partners:
+        pct = partner["profit_share_pct"]
+        profit = trading_profit * pct / 100
+        regime, table = stock_relief_regime(tax_year, registered_partnership, partner["young_trained_farmer_first_year"])
+        rule = rule_at(table, date(tax_year, period_end_month, 1))
+        relief = stock_relief(increase * pct / 100, rule.value, profit)
+        taxable = profit - relief
+        credit = succession_credit(credit_total, pct, taxable)
+        tax = estimate_with_rules(
+            rules,
+            business_type="partnership",
+            tax_year=tax_year,
+            taxable_profit=taxable,
+            other_income=partner["other_income"],
+            marital_status=partner["marital_status"],
+            spouse_paye_income=partner["spouse_paye_income"],
+            stock_relief=relief,
+            stock_relief_regime=regime,
+            state_aid_used=partner["state_aid_used"],
+            extra_credit=credit,
+        )
+        for r in [rule.as_dict(), *tax["rules_applied"]]:
+            applied[(r["rule_id"], r["from"])] = r
+        rows.append(
+            {
+                "label": partner["label"],
+                "profit_share_pct": pct,
+                "profit_share": round_money(profit),
+                "stock_increase_share": round_money(increase * pct / 100),
+                "stock_relief_regime": regime,
+                "stock_relief": round_money(relief),
+                "taxable_profit": round_money(taxable),
+                "succession_credit": round_money(credit),
+                "tax": tax,
+            }
+        )
+    if credit_total and credit_rule is not None:
+        applied[(credit_rule.rule_id, credit_rule.start.isoformat())] = credit_rule.as_dict()
+    return {
+        "currency": "EUR",
+        "jurisdiction": "IE",
+        "tax_year": tax_year,
+        "registered_partnership": registered_partnership,
+        "succession_credit_total": round_money(credit_total),
+        "trading_profit": round_money(trading_profit),
+        "stock_increase": round_money(increase),
+        "partners": rows,
+        "total": {
+            "stock_relief": round_money(sum(r["stock_relief"] for r in rows)),
+            "succession_credit": round_money(sum(r["succession_credit"] for r in rows)),
+            "total_tax": round_money(sum(r["tax"]["total_tax"] for r in rows)),
+        },
+        "rules_applied": list(applied.values()),
+    }
+
+
 __all__ = [
     "estimate_with_rules",
+    "succession_credit_amount",
+    "tax_partnership",
     "projected_tax",
     "resolve_allowance",
     "stock_relief_regime",

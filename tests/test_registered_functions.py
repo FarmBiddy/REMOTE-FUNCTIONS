@@ -226,6 +226,10 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_REPORT
     if key == "plan.projection":
         return SAMPLE_PROJECTION
+    if key == "tax.partnership":
+        # 100,000 split 50 / 50, no stock change: each partner a single farmer on 50,000.
+        return {"tax_year": 2026, "trading_profit": 100_000,
+                "partners": [{"profit_share_pct": 50}, {"profit_share_pct": 50}]}
     if key == "tax.estimate":
         # Company: 100,000 × 12.5% = 12,500.
         return {"business_type": "company", "tax_year": 2026, "taxable_profit": 100_000}
@@ -327,6 +331,8 @@ def _zero_payload(key: str) -> dict:
             "loans": [],
             "rate_step_pp": 0,
         }
+    if key == "tax.partnership":
+        return {"tax_year": 2026, "trading_profit": 0, "partners": [{"profit_share_pct": 50}, {"profit_share_pct": 50}]}
     if key == "tax.estimate":
         return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 0}
     if key == "tax.capital_allowances":
@@ -511,6 +517,10 @@ def test_happy_path(key: str) -> None:
         drivers = {d["driver"]: d["swing"]["operating_surplus"] for d in result["result"]["drivers"]}
         assert drivers["milk_price"] == 800  # ±10% of 4,000 milk revenue
         assert drivers["feed"] == 600
+    elif key == "tax.partnership":
+        partners = result["result"]["partners"]
+        assert [p["taxable_profit"] for p in partners] == [50_000, 50_000]
+        assert result["result"]["total"]["total_tax"] == 2 * partners[0]["tax"]["total_tax"]
     elif key == "tax.estimate":
         assert result["result"]["total_tax"] == 12_500
     elif key == "tax.capital_allowances":
@@ -686,6 +696,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["base"]["operating_surplus"] == 0
     elif key == "vat.flat_rate":
         assert result["result"]["total"]["addition"] == 0
+    elif key == "tax.partnership":
+        assert result["result"]["total"]["total_tax"] == 0
     elif key == "tax.estimate":
         assert result["result"]["total_tax"] == 0 and result["result"]["effective_rate_pct"] is None
     elif key == "tax.capital_allowances":

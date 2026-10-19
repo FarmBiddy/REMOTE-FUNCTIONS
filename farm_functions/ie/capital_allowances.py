@@ -14,8 +14,8 @@ from farm_functions.ie.rules import Rule
 
 RULES: dict[str, tuple[Rule, ...]] = {
     "plant": (Rule("ca_plant_wear_tear", 12.5, date(2002, 12, 4), None, "TCA s.284(2)(ad)", "enacted"),),
-    # Start of the current 7-year basis not confirmed; 2000 covers any register in use.
-    "farm_buildings": (Rule("ca_farm_buildings", 15.0, date(2000, 1, 1), None, "TCA s.658", "enacted"),),
+    # 15% x 6 + 10% applies to spend from 27 Jan 1994 (s.658(2)(c)); earlier spend is out of scope.
+    "farm_buildings": (Rule("ca_farm_buildings", 15.0, date(1994, 1, 27), None, "TCA s.658", "enacted"),),
     "slurry_storage": (
         Rule("ca_slurry_storage", 50.0, date(2023, 1, 1), date(2029, 12, 31), "TCA s.658A", "enacted"),
     ),

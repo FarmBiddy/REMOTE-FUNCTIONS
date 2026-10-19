@@ -77,7 +77,7 @@ credit and USC rate pages; Teagasc NFS 2025 report and dairy factsheet.
   profit), employee credit = min(credit, 20% of spouse PAYE); a farm loss
   counts as nil (no loss relief or carry-forward); PRSI Class A credit for low
   earners not modelled; USC surcharge charged on non-PAYE income above
-  €100,000 only (scope `unverified`).
+  €100,000 only (confirmed: s.531AN(2) "that excess"; TDM 18D-00-01 §4.3).
 
 **USC** (TCA Part 18D, s.531AN)
 
@@ -90,7 +90,8 @@ credit and USC rate pages; Teagasc NFS 2025 report and dairy factsheet.
 
 - Exempt if total income ≤ €13,000 (then USC on all income above it).
 - +3% surcharge on non-PAYE income above €100,000 (11% band) — scope
-  "above €100k only" is `unverified` (KPMG; Revenue page silent).
+  confirmed: 3% on the non-PAYE income above €100,000 only; PAYE income does
+  not count towards the €100,000 (TDM 18D-00-01 §4.3, example €110k → €300).
 - Reduced rate (age 70+ or full medical card, income ≤ €60,000): 0.5% to
   12,012, 2% on the rest. Not modelled initially.
 
@@ -171,16 +172,23 @@ SW(MP)A 2024)
 | ca_plant_wear_tear | 12.5%/yr × 8 yrs, straight line | cost − grants (s.317) − recoverable VAT; owned and in use at period end | all | post 2002 | s.284(2)(ad) | enacted |
 | ca_farm_buildings | 15%/yr yrs 1–6, 10% yr 7 | net of grants (s.658(13)); buildings (not dwellings), yards, roads, fences, drains, reclamation, water, electrics | all | — | s.658; TDM 23-01-07 | enacted |
 | ca_slurry_storage | 50%/yr × 2 yrs | buildings via s.658, Sch. 35A equipment via s.284; net of grants; cap €500k tax benefit; SME only | all | spend 2023-01-01 → 2029-12-31 | s.658A; TDM 23-01-37 | enacted |
-| ca_farm_safety | 50%/yr × 2 yrs | DAFM-certified Sch. 35 items at DAFM reasonable cost, net of TAMS | all | spend 2021-01-01 → 2026-12-31 (law); → 2029-12-31 + 12 items | s.285D; TDM 09-02-07; Budget 2027 §4.10 | enacted / extension announced |
+| ca_farm_safety | 50%/yr × 2 yrs | DAFM-certified Sch. 35 items at DAFM reasonable cost, net of TAMS | all | spend 2021-01-01 → 2026-12-31 (law); → 2029-12-31 + 12 items | s.285D; TDM 09-02-07; Finance (No. 2) Bill 2026 s.22 | enacted / extension announced |
 | ca_car_limit | €24,000 (A–B ≤140 g/km); C 141–155 min(€12k, 50%); D–F nil — from 2027: A ≤120 €24k, B 121–140 min(€12k, 50%), C–F nil | over 8 yrs; tractors/vans exempt | all | 2027 change enacted | s.380K–M | enacted |
 | ca_balancing | allowance / charge = written-down value vs proceeds on sale or cessation; charge ≤ allowances given | | all | — | s.288 | enacted |
 
 - Engine: a full year's allowance from the tax year of the spend, by spend
   date; an accelerated scheme outside its window falls back to the normal
   allowance (slurry storage → farm buildings for buildings, plant for Sch. 35A
-  equipment; farm safety → plant). The farm
-  buildings table starts in 2000: the start of the current 15% / 10% basis is
-  `unverified`. Not modelled: disposals and balancing charges, car limits.
+  equipment; farm safety → plant). The farm buildings 15% / 10% basis applies
+  to spend from 27 Jan 1994 (s.658(2)(c)); earlier spend has no rule (its
+  10-year allowances ended by 2004). Not modelled: disposals and balancing
+  charges, car limits.
+- Farm safety items (Sch. 35 Part 2): 19 today; Finance (No. 2) Bill 2026 s.22
+  adds 12 — mobile cattle crush, mobile cattle penning, hoof paring crate,
+  mobile sheep handling, wheel changing crate, wheel pumping crate, slurry tank
+  fencing, slurry agitation platform, silo wall safety rails, hydraulic motor
+  to replace a PTO shaft, horse handling facilities, bale slice. The Engine does
+  not check items: the DAFM certificate does.
 - **Capital grants (TAMS 3) are not income**: they reduce the qualifying cost.
   TAMS 3: 40% standard, 60% YTF; ceiling €90,000 per holding, €160,000 for an
   RFP with 2+ eligible partners (`unverified`, from T&C quotes).
@@ -231,7 +239,10 @@ SW(MP)A 2024)
   otherwise); the succession credit is fixed by the registration year, split by
   profit share, at most the partner's taxable profit, and deducted from income
   tax. Successor age on 1 January = tax year − birth year − 1. The €20,000
-  de minimis cap is checked per partner (per undertaking `unverified`). Not
+  de minimis cap is checked per partner, as Revenue applies it (TDM 23-02-09
+  §2.1.2, "any individual farmer"); it is shared with the partner's other
+  agricultural de minimis aid, which the Engine cannot see, so the result is
+  an upper bound. Reg. (EU) 2025/1989 only corrects Reg. 1408/2013. Not
   modelled: company partners, the asset-transfer conditions and clawback.
 
 ## 8. Other farm items
@@ -280,5 +291,6 @@ The Profit Monitor's own definitions are behind a login and not public.
 3. Current TDM 23-02-09 (RFP) is offline; the archived Oct 2023 copy is
    superseded by NfG FA2025 (end 2027, €20k cap, €100k lifetime).
 4. ABER (Reg. 2022/2472) end date; corporate partner in an RFP and the 50% rate.
-5. USC surcharge scope; BISS tax TDM; TAMS 3 T&Cs.
+5. BISS tax TDM; TAMS 3 T&Cs. (USC surcharge scope, de minimis unit and the
+   farm buildings start date were confirmed on 19 Oct 2026.)
 6. DoF Budget 2027 PDF says "4.8% (4.5% in 2025)" — typo; 4.5% is 2026 (FA2025).

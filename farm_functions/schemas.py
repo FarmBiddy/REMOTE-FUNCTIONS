@@ -117,6 +117,7 @@ class TotalCostsInput(_StrictModel):
     fertiliser: NonNegativeNumber = 0
     vet: NonNegativeNumber = 0
     contractor: NonNegativeNumber = 0
+    casual_labour: NonNegativeNumber = 0
     labour: NonNegativeNumber = 0
     insurance: NonNegativeNumber = 0
     fuel: NonNegativeNumber = 0
@@ -450,6 +451,14 @@ class KpiSummaryInput(_StrictModel):
     milk_solids_kg: NonNegativeNumber | None = None
     hectares: NonNegativeNumber | None = None
     debt_balance: NonNegativeNumber | None = None
+    # Teagasc NFS view (sent only together with depreciation): the same period
+    # totals pl.net takes.
+    depreciation: NonNegativeNumber | None = None
+    interest: NonNegativeNumber = 0.0
+    livestock_opening_value: NonNegativeNumber = 0.0
+    livestock_closing_value: NonNegativeNumber = 0.0
+    stock_opening_value: NonNegativeNumber = 0.0
+    stock_closing_value: NonNegativeNumber = 0.0
 
 
 def _parse_pct_change(value: Any) -> float:
@@ -1391,6 +1400,18 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         description="Annual contractor / contract-services operating cost",
     ),
     InputFieldMetadata(
+        name="casual_labour",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description=(
+            "Annual casual / relief labour (relief milkers, calving help): a variable "
+            "(direct) cost, as in the Teagasc NFS; regular hired labour goes in labour"
+        ),
+    ),
+    InputFieldMetadata(
         name="labour",
         type="number",
         required=False,
@@ -1800,13 +1821,22 @@ MONTHLY_DAIRY_INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         description="Contractor operating cost in the statement month",
     ),
     InputFieldMetadata(
+        name="casual_labour",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Casual / relief labour in the statement month (variable cost)",
+    ),
+    InputFieldMetadata(
         name="labour",
         type="number",
         required=False,
         minimum=0,
         maximum=None,
         unit="EUR",
-        description="Labour operating cost in the statement month",
+        description="Regular hired labour in the statement month (fixed cost)",
     ),
     InputFieldMetadata(
         name="insurance",

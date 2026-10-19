@@ -14,6 +14,7 @@ OPERATING_COST_CATEGORIES = (
     "fertiliser",
     "vet",
     "contractor",
+    "casual_labour",
     "labour",
     "insurance",
     "fuel",
@@ -28,7 +29,8 @@ OPERATING_COST_CATEGORIES = (
 
 # Variable vs fixed split (ADR-0033), broadly the Teagasc Profit Monitor:
 # variable costs move with cows / litres, fixed costs do not.
-VARIABLE_COST_CATEGORIES = ("feed", "fertiliser", "vet", "contractor", "levies")
+# casual_labour is a direct cost in the Teagasc NFS; regular hired labour is an overhead.
+VARIABLE_COST_CATEGORIES = ("feed", "fertiliser", "vet", "contractor", "casual_labour", "levies")
 FIXED_COST_CATEGORIES = tuple(
     c for c in OPERATING_COST_CATEGORIES if c not in VARIABLE_COST_CATEGORIES
 )
@@ -44,6 +46,7 @@ def total_costs(
     fertiliser: float = 0,
     vet: float = 0,
     contractor: float = 0,
+    casual_labour: float = 0,
     labour: float = 0,
     insurance: float = 0,
     fuel: float = 0,
@@ -64,6 +67,7 @@ def total_costs(
         fertiliser,
         vet,
         contractor,
+        casual_labour,
         labour,
         insurance,
         fuel,

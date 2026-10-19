@@ -74,6 +74,7 @@ class CostLines(BaseModel):
     fertiliser: float
     vet: float
     contractor: float
+    casual_labour: float
     labour: float
     insurance: float
     fuel: float

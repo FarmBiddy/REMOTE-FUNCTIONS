@@ -88,3 +88,9 @@ def test_errors():
 
 def test_http_matches_runner():
     assert client.post("/v1/functions/tax.partnership/run", json=BASE).json() == _run()
+
+
+def test_errors_name_the_partner_field():
+    result = _run(partners=[FATHER, {**SON, "spouse_paye_income": 10_000}])
+    assert result["errors"][0]["field"] == "partners.1.spouse_paye_income"
+    assert _run(tax_year=2028, succession=None)["errors"][0]["field"] == "tax_year"

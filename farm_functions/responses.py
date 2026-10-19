@@ -564,6 +564,7 @@ class ProjectionPl(_Out):
 class ProjectionCash(_Out):
     opening: float
     operating_surplus: float
+    flat_rate_addition: float
     off_farm_income: float
     drawings: float
     tax: float
@@ -603,13 +604,24 @@ class ProjectionFlags(_Out):
     below_min_cover: bool | None
 
 
+class ProjectionPartnerTax(_Out):
+    label: str
+    profit_share_pct: float
+    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership"]
+    stock_relief: float
+    averaged_profit: float
+    assessable_profit: float
+    total_tax: float
+
+
 class ProjectionTax(_Out):
     tax_year: int
     rules_basis: Literal["in_force", "latest_held_constant"]
     rules_status: Literal["enacted", "announced"]
+    flat_rate_addition: float
     profit_before_allowances: float
     livestock_increase: float
-    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership"]
+    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership", "per_partner"]
     stock_relief: float
     capital_allowances: float
     averaging: Literal["off", "applied", "insufficient_history"]
@@ -617,6 +629,7 @@ class ProjectionTax(_Out):
     assessable_profit: float
     total_tax: float
     effective_rate_pct: float | None
+    partners: list[ProjectionPartnerTax] | None
 
 
 class ProjectionYear(_Out):
@@ -806,6 +819,7 @@ class AllowanceByType(_Out):
 class ProfitBridge(_Out):
     accounting_profit: float
     add_back_depreciation: float
+    flat_rate_addition: float
     capital_allowances: float
     taxable_profit: float
 

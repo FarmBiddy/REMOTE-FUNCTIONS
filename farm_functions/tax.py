@@ -30,6 +30,7 @@ from farm_functions.ie.partnership import (
 )
 from farm_functions.ie.rules import Rule, rule_at
 from farm_functions.ie.taxes import LAST_TAX_YEAR, RULES, banded, year_rules
+from farm_functions.ie.vat import FLAT_RATE_ADDITION, flat_rate_addition
 from farm_functions.ie.stock_relief import (
     GENERAL,
     REGISTERED_PARTNERSHIP,
@@ -101,15 +102,15 @@ def tax_stock_relief(
     }
 
 
-def resolve_allowance(kind: str, year: int, month: int) -> tuple[str, Rule | None]:
+def resolve_allowance(kind: str, year: int, month: int, category: str) -> tuple[str, Rule | None]:
     """Allowance type actually given for a spend date, falling back from an
     accelerated scheme outside its window. ``none`` has no rule."""
     if kind == "none":
         return kind, None
     rule = rule_at(ca.RULES[kind], date(year, month, 1))
-    if rule is None and kind in ca.FALLBACK:
-        kind = ca.FALLBACK[kind]
-        rule = rule_at(ca.RULES[kind], date(year, month, 1))
+    normal = ca.fallback(kind, category)
+    if rule is None and normal:
+        kind, rule = normal, rule_at(ca.RULES[normal], date(year, month, 1))
     return kind, rule
 
 
@@ -120,12 +121,13 @@ def tax_capital_allowances(
     period_end_month: int = 12,
     accounting_profit: float | None = None,
     depreciation: float = 0.0,
+    flat_rate_addition: float = 0.0,
 ) -> dict[str, Any]:
     """``tax.capital_allowances``: allowances for one tax year per asset (input order)."""
     rows, rules, caps = [], {}, set()
     for asset in assets:
         requested = asset.get("tax_allowance") or ca.DEFAULT_FOR_CATEGORY[asset["category"]]
-        applied, rule = resolve_allowance(requested, asset["year"], asset["month"])
+        applied, rule = resolve_allowance(requested, asset["year"], asset["month"], asset["category"])
         spend_year = asset["year"] + (asset["month"] > period_end_month)
         qualifying = asset["cost"] - asset.get("grant", 0.0)
         opening = allowance = closing = 0.0
@@ -151,8 +153,9 @@ def tax_capital_allowances(
         bridge = {
             "accounting_profit": round_money(accounting_profit),
             "add_back_depreciation": round_money(depreciation),
+            "flat_rate_addition": round_money(flat_rate_addition),
             "capital_allowances": total,
-            "taxable_profit": round_money(accounting_profit + depreciation - total),
+            "taxable_profit": round_money(accounting_profit + depreciation + flat_rate_addition - total),
         }
     return {
         "currency": "EUR",
@@ -313,74 +316,133 @@ def estimate_with_rules(
     }
 
 
+def _projection_people(profile: dict[str, Any]) -> list[dict[str, Any]]:
+    """The taxpayers of a projection: each partner of a partnership (with their
+    share), else the farmer or company alone at 100%."""
+    if profile["business_type"] == "partnership":
+        return profile["partners"]
+    return [{**profile, "label": "", "profit_share_pct": 100.0}]
+
+
 def projected_tax(
     profile: dict[str, Any],
-    history: list[float],
+    state: dict[str, Any],
     *,
     tax_year: int,
     period_end_month: int,
     operating_profit: float,
     livestock_increase: float,
+    agricultural_sales: float,
     register: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Tax for one ``plan.projection`` year (ADR-0053 phase 5).
 
-    ``history`` holds farming profits before capital allowances (oldest first,
-    seeded with the Platform's prior years) and gains this year's. Years after
-    the last tax year with rules use that year's rules, labelled
+    ``state`` carries what one year hands the next, per taxpayer: farming
+    profits before capital allowances (oldest first, seeded with the Platform's
+    prior years) for averaging, and State aid given for the caps. Years after the
+    last tax year with rules use that year's rules, labelled
     ``latest_held_constant``: a planning assumption, not a forecast of Budgets.
     """
+    people = _projection_people(profile)
+    if not state:
+        state.update(
+            history=[[x * p["profit_share_pct"] / 100 for x in profile["prior_farming_profits"]] for p in people],
+            aid=[p["state_aid_used"] for p in people],
+            given=[[] for _ in people],
+        )
     basis_year = min(tax_year, LAST_TAX_YEAR)
+    rules = year_rules(basis_year)
     company = profile["business_type"] == "company"
-    allowances = (
-        tax_capital_allowances(tax_year=tax_year, assets=register, period_end_month=period_end_month)["total"]["allowance"]
-        if register
-        else 0.0
-    )
-    profit = operating_profit + livestock_increase
-    regime, table = (
-        ("general", GENERAL)
-        if company
-        else stock_relief_regime(tax_year, profile["registered_partnership"], profile["young_trained_farmer_first_year"])
-    )
-    rule = rule_at(table, date(basis_year, period_end_month, 1))
-    relief = stock_relief(livestock_increase, rule.value, profit - allowances)
-    before_allowances = profit - relief
-    history.append(before_allowances)
-    averaged, averaging = before_allowances, "off"
-    if profile["income_averaging"]:
-        if len(history) >= 5:
-            averaged, averaging = sum(history[-5:]) / 5, "applied"
+    applied: list[dict[str, Any]] = []
+    fra = 0.0
+    if not profile["vat_registered"]:
+        # ponytail: one rate for the year (the one in force in its last month); split by month if a mid-year change matters
+        fra_rule = rule_at(FLAT_RATE_ADDITION, date(tax_year, period_end_month, 1))
+        if fra_rule is not None:
+            fra = flat_rate_addition(agricultural_sales, fra_rule.value)
+            applied.append(fra_rule.as_dict())
+    allowances = 0.0
+    if register:
+        ca_result = tax_capital_allowances(tax_year=tax_year, assets=register, period_end_month=period_end_month)
+        allowances = ca_result["total"]["allowance"]
+        applied += ca_result["rules_applied"]
+    profit = operating_profit + livestock_increase + fra
+
+    rows, incomes = [], []
+    averaging = "off"
+    for i, person in enumerate(people):
+        share = person["profit_share_pct"] / 100
+        own_profit, own_allowances = profit * share, allowances * share
+        regime, table = (
+            ("general", GENERAL)
+            if company
+            else stock_relief_regime(tax_year, profile["registered_partnership"], person["young_trained_farmer_first_year"])
+        )
+        rule = rule_at(table, date(basis_year, period_end_month, 1))
+        applied.append(rule.as_dict())
+        relief = stock_relief(livestock_increase * share, rule.value, own_profit - own_allowances)
+        history = state["history"][i]
+        history.append(own_profit - relief)
+        averaged, relief_effect = history[-1], relief
+        if profile["income_averaging"]:
+            if len(history) >= 5:
+                # This year's relief moves the 5-year average by a fifth only.
+                averaged, averaging, relief_effect = sum(history[-5:]) / 5, "applied", relief / 5
+            else:
+                averaging = "insufficient_history"
+        given = state["given"][i]
+        if regime == "registered_partnership":
+            # De minimis over a rolling 3 years: the Platform's figure covers the 2 years before the plan.
+            aid_used = (state["aid"][i] if len(given) < 2 else 0.0) + sum(given[-2:])
         else:
-            averaging = "insufficient_history"
-    estimate = estimate_with_rules(
-        year_rules(basis_year),
-        business_type=profile["business_type"],
-        tax_year=tax_year,
-        taxable_profit=averaged - allowances,
-        other_income=profile["other_income"],
-        marital_status=profile["marital_status"],
-        spouse_paye_income=profile["spouse_paye_income"],
-        stock_relief=relief,
-        stock_relief_regime=regime,
-        state_aid_used=profile["state_aid_used"],
-    )
+            aid_used = state["aid"][i]
+        estimate = estimate_with_rules(
+            rules,
+            business_type=profile["business_type"],
+            tax_year=tax_year,
+            taxable_profit=averaged - own_allowances,
+            other_income=person["other_income"],
+            marital_status=person["marital_status"],
+            spouse_paye_income=person["spouse_paye_income"],
+            stock_relief=relief_effect,
+            stock_relief_regime=regime,
+            state_aid_used=aid_used,
+        )
+        cap = estimate["stock_relief_cap"]
+        given.append(0.0 if cap is None else cap["tax_value"] - cap["clawback"])
+        if regime == "young_trained_farmer":
+            state["aid"][i] += given[-1]
+        applied += estimate["rules_applied"]
+        incomes.append(estimate["income"]["total"])
+        rows.append(
+            {
+                "label": person["label"],
+                "profit_share_pct": person["profit_share_pct"],
+                "stock_relief_regime": regime,
+                "stock_relief": round_money(relief),
+                "averaged_profit": round_money(averaged),
+                "assessable_profit": round_money(averaged - own_allowances),
+                "total_tax": estimate["total_tax"],
+            }
+        )
+    total_tax = round_money(sum(r["total_tax"] for r in rows))
+    rate = per_unit(total_tax, sum(incomes))
     return {
         "tax_year": tax_year,
         "rules_basis": "in_force" if basis_year == tax_year else "latest_held_constant",
-        "rules_status": (
-            "announced" if any(r["status"] == "announced" for r in estimate["rules_applied"]) else "enacted"
-        ),
+        "rules_status": "announced" if any(r["status"] == "announced" for r in applied) else "enacted",
+        "flat_rate_addition": round_money(fra),
         "profit_before_allowances": round_money(profit),
         "livestock_increase": round_money(livestock_increase),
-        "stock_relief_regime": regime,
-        "stock_relief": round_money(relief),
+        "stock_relief_regime": rows[0]["stock_relief_regime"] if len(rows) == 1 else "per_partner",
+        "stock_relief": round_money(sum(r["stock_relief"] for r in rows)),
         "capital_allowances": round_money(allowances),
         "averaging": averaging,
-        "averaged_profit": round_money(averaged),
-        "assessable_profit": round_money(averaged - allowances),
-        "total_tax": estimate["total_tax"],
-        "effective_rate_pct": estimate["effective_rate_pct"],
+        "averaged_profit": round_money(sum(r["averaged_profit"] for r in rows)),
+        "assessable_profit": round_money(sum(r["assessable_profit"] for r in rows)),
+        "total_tax": total_tax,
+        "effective_rate_pct": None if rate is None else round_margin_pct(rate * 100),
+        "partners": rows if profile["business_type"] == "partnership" else None,
     }
 
 
@@ -490,8 +552,11 @@ def tax_company_extraction(
     rules = year_rules(tax_year)
     v = {k: r.value for k, r in rules.items()}
     taxable = max(trading_profit - salary, 0.0)
-    trading_ct = taxable * v["ct_rate_trading"] / 100
-    non_trading_ct = non_trading_income * v["ct_rate_non_trading"] / 100
+    corporation = estimate_with_rules(
+        rules, business_type="company", tax_year=tax_year,
+        taxable_profit=trading_profit - salary, other_income=non_trading_income,
+    )["corporation_tax"]
+    trading_ct, non_trading_ct = corporation["trading"], corporation["non_trading"]
     after_tax = trading_profit - salary + non_trading_income - trading_ct - non_trading_ct
     # s.440: after-tax investment / estate income, less 7.5% for a trading company,
     # not paid out as dividends (this year's dividends assumed paid within 18 months).

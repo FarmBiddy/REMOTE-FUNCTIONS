@@ -151,7 +151,7 @@ def plan_projection(
 
     cash = opening_cash
     out_years = []
-    history = list(tax_profile["prior_farming_profits"]) if tax_profile else []
+    tax_state: dict[str, Any] = {}
     for y, (start, end) in enumerate(windows):
         drivers = {}
         for k in lines:
@@ -170,16 +170,17 @@ def plan_projection(
         pl = monthly_pl_summary(milk_price=price[y], loan_repayments=debt_service, **drivers)
         surplus = pl["profit"]["net"]
         tax_detail = None
-        tax_y = tax[y]
+        tax_y, fra = tax[y], 0.0
         if tax_profile:
             # Herd value change is trading stock: taxable, and the base for stock relief.
             livestock_increase = livestock * (herd[y] - (herd[y - 1] if y else 1.0))
             tax_detail = projected_tax(
-                tax_profile, history, tax_year=end // 12, period_end_month=end % 12 + 1,
+                tax_profile, tax_state, tax_year=end // 12, period_end_month=end % 12 + 1,
                 operating_profit=surplus - debt[y]["interest"], livestock_increase=livestock_increase,
+                agricultural_sales=pl["revenue"]["milk"] + drivers.get("cattle_sales", 0.0),
                 register=register,
             )
-            tax_y = tax_detail["total_tax"]
+            tax_y, fra = tax_detail["total_tax"], tax_detail["flat_rate_addition"]
 
         fixed = (
             assets_schedule(
@@ -190,12 +191,12 @@ def plan_projection(
             else {"depreciation": 0.0, "closing_nbv": 0.0}
         )
         net_cash = (
-            surplus + off_farm[y] - drawings[y] - tax_y - debt_service - capex[y] + proceeds[y]
+            surplus + fra + off_farm[y] - drawings[y] - tax_y - debt_service - capex[y] + proceeds[y]
         )
         opening, cash = cash, cash + net_cash
         cows = milking_cows * herd[y]
         dscr = coverage_ratio(surplus, debt_service)
-        cover = coverage_ratio(surplus + off_farm[y] - drawings[y] - tax_y, debt_service)
+        cover = coverage_ratio(surplus + fra + off_farm[y] - drawings[y] - tax_y, debt_service)
         livestock_value = livestock * herd[y]
         net_worth = cash + fixed["closing_nbv"] + land + livestock_value - debt[y]["balance"]
         out_years.append(
@@ -224,6 +225,7 @@ def plan_projection(
                 "cash": {
                     "opening": round_money(opening),
                     "operating_surplus": round_money(surplus),
+                    "flat_rate_addition": round_money(fra),
                     "off_farm_income": round_money(off_farm[y]),
                     "drawings": round_money(drawings[y]),
                     "tax": round_money(tax_y),

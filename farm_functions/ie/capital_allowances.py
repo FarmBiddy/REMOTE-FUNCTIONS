@@ -31,7 +31,17 @@ SCHEDULES: dict[str, tuple[float, ...]] = {
     "slurry_storage": (50.0, 50.0),
     "farm_safety": (50.0, 50.0),
 }
-FALLBACK = {"slurry_storage": "farm_buildings", "farm_safety": "plant"}
+
+
+def fallback(kind: str, category: str) -> str | None:
+    """Normal allowance for an accelerated scheme outside its window: slurry
+    storage buildings are farm buildings, its Sch. 35A equipment and farm safety
+    equipment are plant."""
+    if kind == "farm_safety" or (kind == "slurry_storage" and category != "buildings"):
+        return "plant"
+    return "farm_buildings" if kind == "slurry_storage" else None
+
+
 DEFAULT_FOR_CATEGORY = {"machinery": "plant", "buildings": "farm_buildings", "other": "none"}
 # €500k tax-benefit cap per person (s.658A, s.285D): needs the tax estimate.
 CAPS = {"slurry_storage": "ca_accelerated_cap", "farm_safety": "ca_accelerated_cap"}
@@ -47,4 +57,4 @@ def allowance_in_year(qualifying_cost: float, schedule: tuple[float, ...], year_
     return opening, allowance, opening - allowance
 
 
-__all__ = ["CAPS", "DEFAULT_FOR_CATEGORY", "FALLBACK", "RULES", "SCHEDULES", "allowance_in_year"]
+__all__ = ["CAPS", "DEFAULT_FOR_CATEGORY", "RULES", "SCHEDULES", "allowance_in_year", "fallback"]

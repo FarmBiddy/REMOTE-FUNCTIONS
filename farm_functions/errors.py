@@ -158,6 +158,10 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
     issues: list[dict[str, Any]] = []
     for err in exc.errors():
         field = _field_from_loc(err.get("loc") or ())
+        # Whole-model checks report the field they are about, under the model's own path
+        # (e.g. partners.1.spouse_paye_income, tax_profile.partners).
+        path = ".".join(str(part) for part in (err.get("loc") or ()) if part != "body")
+        at = (lambda name, _path=path: f"{_path}.{name}" if _path else name)
         text = _ctx_error_text(err)
         err_type = err.get("type") or ""
         raw_input = err.get("input")
@@ -364,40 +368,49 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
                 issue(INVALID_TYPE, text, field="monthly_average", details={"reason": "benchmark_months_missing"})
             )
         elif text.startswith("no flat-rate addition rule for"):
-            issues.append(issue(INVALID_TYPE, text, field="months", details={"reason": "rule_not_available"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("months"), details={"reason": "rule_not_available"}))
         elif text.startswith("no tax rules for tax year"):
-            issues.append(issue(INVALID_TYPE, text, field="tax_year", details={"reason": "rule_not_available"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
+        elif text.startswith("no tax rules for the first projected tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("base_pl_months"), details={"reason": "rule_not_available"}))
+        elif text in (
+            "a partnership tax_profile needs 2 or more partners, each with their own details",
+            "partners are only for business_type partnership",
+        ):
+            issues.append(issue(INVALID_TYPE, text, field=at("partners"), details={"reason": "partners_invalid"}))
         elif text == "partner profit shares must add up to 100":
-            issues.append(issue(INVALID_TYPE, text, field="partners", details={"reason": "shares_not_100"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("partners"), details={"reason": "shares_not_100"}))
         elif text in (
             "a succession partnership must be a registered partnership",
             "succession.successor must be the index of a partner",
             "the successor needs at least a 20% profit share",
         ):
-            issues.append(issue(INVALID_TYPE, text, field="succession", details={"reason": "succession_invalid"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("succession"), details={"reason": "succession_invalid"}))
         elif text == "send assumptions.tax or tax_profile, not both":
-            issues.append(issue(INVALID_TYPE, text, field="tax_profile", details={"reason": "tax_conflict"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_profile"), details={"reason": "tax_conflict"}))
         elif text in (
             "marital status, enhanced stock relief and State aid are for individuals",
             "marital status, enhanced stock relief, State aid and averaging are for individuals",
         ):
-            issues.append(issue(INVALID_TYPE, text, field="business_type", details={"reason": "regime_not_available"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
         elif text == "spouse_paye_income needs marital_status married":
-            issues.append(issue(INVALID_TYPE, text, field="spouse_paye_income", details={"reason": "spouse_needs_married"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("spouse_paye_income"), details={"reason": "spouse_needs_married"}))
         elif text.startswith("no capital allowance rule for"):
-            issues.append(issue(INVALID_TYPE, text, field="assets", details={"reason": "rule_not_available"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("assets"), details={"reason": "rule_not_available"}))
         elif text == "grant must not exceed cost":
-            issues.append(issue(INVALID_TYPE, text, field="grant", details={"reason": "grant_above_cost"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("grant"), details={"reason": "grant_above_cost"}))
+        elif text.startswith("no stock relief rule for tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
         elif text.startswith("no stock relief rule for"):
-            issues.append(issue(INVALID_TYPE, text, field="period_end_year", details={"reason": "rule_not_available"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("period_end_year"), details={"reason": "rule_not_available"}))
         elif text in (
             "young trained farmer and partnership stock relief are for individuals",
             "registered_partnership needs business_type partnership",
         ):
-            issues.append(issue(INVALID_TYPE, text, field="business_type", details={"reason": "regime_not_available"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
         elif text == "young_trained_farmer_first_year is after the period":
             issues.append(
-                issue(INVALID_TYPE, text, field="young_trained_farmer_first_year", details={"reason": "period_reversed"})
+                issue(INVALID_TYPE, text, field=at("young_trained_farmer_first_year"), details={"reason": "period_reversed"})
             )
         elif text == "bands must ascend by max_k and end with one open-ended band":
             issues.append(issue(INVALID_TYPE, text, field=field, details={"reason": "bands_invalid"}))

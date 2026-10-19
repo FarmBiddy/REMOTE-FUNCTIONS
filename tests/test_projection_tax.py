@@ -166,3 +166,17 @@ def test_partnership_profile_errors_name_the_field():
     assert (result["errors"][0]["details"]["reason"], result["errors"][0]["field"]) == ("partners_invalid", "tax_profile.partners")
     old = [{**m, "year": 2020} for m in BASE["base_pl_months"]]
     assert _run(base_pl_months=old)["errors"][0]["field"] == "base_pl_months"
+
+
+def test_rules_status_counts_every_rule_the_year_used(monkeypatch):
+    """A year whose tax rules are law but whose flat-rate addition is only announced
+    is labelled 'announced' (today no such year exists, so the VAT table is patched)."""
+    from datetime import date
+
+    import farm_functions.tax as tax
+    from farm_functions.ie.rules import Rule
+
+    assert _years(tax_profile={"business_type": "sole_trader"})[0]["tax"]["rules_status"] == "enacted"  # 2026
+    announced = (Rule("vat_fra", 4.5, date(2026, 1, 1), None, "test", "announced"),)
+    monkeypatch.setattr(tax, "FLAT_RATE_ADDITION", announced)
+    assert _years(tax_profile={"business_type": "sole_trader"})[0]["tax"]["rules_status"] == "announced"

@@ -198,6 +198,22 @@ class DebtKpis(_Out):
     per_hectare: float | None
 
 
+class TeagascPerLitre(_Out):
+    gross_output: float | None
+    direct_costs: float | None
+    fixed_costs: float | None
+    total_costs: float | None
+    net_margin: float | None
+
+
+class TeagascKpis(_Out):
+    family_farm_income: float
+    gross_output: float
+    direct_costs: float
+    overhead_costs: float
+    per_litre_c: TeagascPerLitre
+
+
 class KpiSummaryResult(Span):
     currency: Currency
     milking_cows: float
@@ -208,6 +224,7 @@ class KpiSummaryResult(Span):
     per_hectare: PerUnitWithLitres | None
     debt: DebtKpis | None
     dscr: float | None
+    teagasc: TeagascKpis | None
 
 
 class PlNetResult(Span):

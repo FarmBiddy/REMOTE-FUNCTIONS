@@ -411,8 +411,10 @@ buildings → `farm_buildings`, other → `none`; `slurry_storage` / `farm_safet
 for the accelerated schemes, which need the DAFM certificate). Call
 `tax.capital_allowances` per tax year with `accounting_profit` = `pl.net`
 `net_profit_before_tax` **with** depreciation deducted, and that same
-`depreciation`. `profit_bridge.taxable_profit` is the `trading_profit` for
-`tax.stock_relief`.
+`depreciation`. For a farmer who is not VAT-registered, also pass
+`flat_rate_addition` (`vat.flat_rate` `total.addition` for the period): it is
+taxable income that `pl.net` leaves out. `profit_bridge.taxable_profit` is the
+`trading_profit` for `tax.stock_relief`.
 
 Tax estimate (ADR-0053, Ireland): call `tax.estimate` with
 `taxable_profit` = `tax.stock_relief` `profit_after_relief`, and pass that
@@ -457,7 +459,10 @@ Tax in the plan (ADR-0053, Ireland): send `tax_profile` (the farm profile used
 for `tax.estimate`, plus `income_averaging` and `prior_farming_profits`: up to
 4 past years of farming profit before capital allowances, oldest first, kept by
 the Platform) instead of `assumptions.tax`. Each year then has `tax` with the
-breakdown, and cash uses its `total_tax`. Show `rules_basis:
+breakdown, and cash uses its `total_tax`. Send `vat_registered` from the farm
+profile: when false, the flat-rate addition is added to each year's cash and
+taxable profit. For a partnership send `partners` (as for `tax.partnership`):
+each year is taxed per partner and `tax.partners` shows each one. Show `rules_basis:
 latest_held_constant` as "at 2027 tax rates" and `averaging:
 insufficient_history` as "not enough history to average yet".
 

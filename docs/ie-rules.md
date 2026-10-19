@@ -177,7 +177,8 @@ SW(MP)A 2024)
 
 - Engine: a full year's allowance from the tax year of the spend, by spend
   date; an accelerated scheme outside its window falls back to the normal
-  allowance (slurry storage → farm buildings, farm safety → plant). The farm
+  allowance (slurry storage → farm buildings for buildings, plant for Sch. 35A
+  equipment; farm safety → plant). The farm
   buildings table starts in 2000: the start of the current 15% / 10% basis is
   `unverified`. Not modelled: disposals and balancing charges, car limits.
 - **Capital grants (TAMS 3) are not income**: they reduce the qualifying cost.
@@ -205,6 +206,11 @@ SW(MP)A 2024)
   (before capital allowances) followed by projected years; until 5 years are
   known the year is taxed on actual profit (`insufficient_history`). Not
   modelled: exit top-up, step-out year, and the 4-year eligibility test.
+  Under averaging, this year's stock relief counts a fifth towards its cap (it
+  moves the average by a fifth). Young farmer aid given adds up across
+  projected years; partnership de minimis aid rolls over 3 years. Partnerships
+  are projected per partner (share of profit, relief, averaging, aid). The
+  flat-rate addition (unless `vat_registered`) is taxable income and cash.
 
 ## 7. Partnerships
 

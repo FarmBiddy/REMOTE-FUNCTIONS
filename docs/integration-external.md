@@ -33,7 +33,7 @@ Body: flat JSON numbers (Phase 1 Dairy Operating Statement drivers).
 
 - Schemes: `biss`, `acres`, `other_grants`
 - Other income: `cattle_sales`, `land_leasing_income`, `other`
-- Operating costs: `feed`, `fertiliser`, `vet`, `contractor`, `labour`, `insurance`, `fuel`, `electricity`, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`, `other_operating_costs`
+- Operating costs: `feed`, `fertiliser`, `vet`, `contractor`, `casual_labour`, `labour`, `insurance`, `fuel`, `electricity`, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`, `other_operating_costs`
 - Finance: `loan_repayments` (does **not** reduce Operating Surplus)
 
 Unknown field names, `null`, negatives, and non-numbers are rejected.
@@ -163,7 +163,7 @@ Body: flat JSON — period identity plus monthly financial drivers. The client m
 
 - Schemes: `biss`, `acres`, `other_grants` (EUR for the statement month)
 - Other income: `cattle_sales`, `land_leasing_income`, `other`
-- Operating costs: `feed`, `fertiliser`, `vet`, `contractor`, `labour`, `insurance`, `fuel`, `electricity`, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`, `other_operating_costs`
+- Operating costs: `feed`, `fertiliser`, `vet`, `contractor`, `casual_labour`, `labour`, `insurance`, `fuel`, `electricity`, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`, `other_operating_costs`
 - Finance: `loan_repayments` (does **not** reduce Operating Surplus)
 
 Unknown field names (including annual-only `milking_cows` / `litres_per_cow`), `null`,
@@ -363,7 +363,14 @@ Optional: `milk_solids_kg` (co-op statements) → `per_kg_ms`; `hectares` →
 `per_hectare`; `debt_balance` (`loan.schedule` `total_balance`) → `debt` per cow / ha
 (ADR-0032).
 Variable / fixed costs and gross margin (revenue − variable costs) follow the
-Teagasc split (ADR-0033).
+Teagasc split (ADR-0033). Ask for casual / relief labour (`casual_labour`, a
+variable cost) separately from regular hired `labour` (fixed).
+Teagasc comparison (ADR-0054): send `depreciation`, `interest` and the
+livestock / stock valuations (the same as `pl.net`) to get `teagasc`: family
+farm income and per-litre gross output, total costs and net margin on National
+Farm Survey terms. Show them next to the NFS benchmarks the Platform holds
+(2025 dairy: total costs 35.03c/L, net margin 23.13c/L); note that depreciation
+is the farm's register, not the NFS replacement-cost basis.
 
 Machinery and buildings (ADR-0037): keep the register on the Platform and call
 `assets.schedule` for the period to get depreciation and net book values (results

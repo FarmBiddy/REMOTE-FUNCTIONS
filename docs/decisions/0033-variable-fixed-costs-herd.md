@@ -14,7 +14,7 @@ cows, feed does. Teagasc also reports variable / fixed costs and gross margin
 ## Decision
 
 1. **Dairy policy** (`dairy/costs.py`), broadly the Teagasc Profit Monitor:
-   - Variable: `feed`, `fertiliser`, `vet`, `contractor`, `levies`.
+   - Variable: `feed`, `fertiliser`, `vet`, `contractor`, `casual_labour` (since ADR-0054), `levies`.
    - Fixed: every other operating cost line (labour, insurance, fuel,
      electricity, water, repairs, rent, professional fees, other).
    - Herd-linked income: `cattle_sales` (calves, culls). Schemes do not move

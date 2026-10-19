@@ -84,7 +84,7 @@ countries.
       per call through company tax, DWT, close company surcharge and the
       director's tax to household income after tax. The Platform compares
       mixes; choosing one is advice, not Engine work.
-   Alongside: align KPI definitions with Teagasc NFS terms (gross output,
+   Alongside (done, ADR-0054): align KPI definitions with Teagasc NFS terms (gross output,
    direct / overhead costs, family farm income) where they differ.
 8. **Rule maintenance:** after each Finance Act, `docs/ie-rules.md` and the
    tables are updated together; tests pin one known case per tax year.

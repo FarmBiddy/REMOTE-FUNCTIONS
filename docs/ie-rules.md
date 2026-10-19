@@ -5,7 +5,7 @@ for Ireland must appear here with its legal basis and source. Researched
 2026-10-12 (after Budget 2027, 6 Oct 2026; before Finance Bill 2026).
 
 **Status:** `enacted` = in an Act / S.I. or Revenue manual; `announced` =
-Budget 2027, not yet law (re-check against Finance Act 2026); `unverified` =
+in Finance (No. 2) Bill 2026 (Bill No. 98, initiated 19 Oct 2026), not yet law; `unverified` =
 secondary source only. Abbreviations: TCA = Taxes Consolidation Act 1997,
 VATCA = VAT Consolidation Act 2010, FA = Finance Act, TDM = Revenue Tax and
 Duty Manual, NfG = Revenue Notes for Guidance (FA 2025 edition), YTF = young
@@ -263,9 +263,14 @@ The Profit Monitor's own definitions are behind a login and not public.
 
 ## 10. Open items
 
-1. Re-check every `announced` row against **Finance Act 2026** (Bill due
-   15 Oct 2026).
-2. Confirm the SW(MP)A 2024 PRSI schedule (4.5% / 4.7%) on irishstatutebook.
+1. Checked 19 Oct 2026: every 2027 `announced` value matches Finance (No. 2)
+   Bill 2026 (No. 98): bands and credits s.3, USC s.2, flat-rate addition s.52,
+   farm safety to 2029 s.22, succession credit €10,000 s.23; stock relief end
+   date unchanged. Mark them `enacted` when the Act is signed (usually December).
+   The Bill also cuts CGT to 31% from 7 Oct 2026 and lifts the s.667D clawback
+   cap to €250,000 (not modelled).
+2. Confirmed: Class S PRSI 4.35% / 4.5% / 4.7% (Oct 2026 / 2027 / 2028) and the
+   €650 minimum are in SW(MP)A 2024 (No. 24 of 2024) s.3 and s.5.
 3. Current TDM 23-02-09 (RFP) is offline; the archived Oct 2023 copy is
    superseded by NfG FA2025 (end 2027, €20k cap, €100k lifetime).
 4. ABER (Reg. 2022/2472) end date; corporate partner in an RFP and the 50% rate.

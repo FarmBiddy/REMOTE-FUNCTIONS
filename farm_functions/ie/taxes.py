@@ -15,12 +15,16 @@ _YEARS = (2024, 2025, 2026, 2027)
 LAST_TAX_YEAR = _YEARS[-1]
 
 
-def _yearly(rule_id: str, values: tuple[float, ...], legal_ref: str, announced_from: int | None = None) -> tuple[Rule, ...]:
+# Last tax year still in a Bill, not yet enacted: Finance (No. 2) Bill 2026 (No. 98, 19 Oct 2026).
+ANNOUNCED_YEAR = 2027
+
+
+def _yearly(rule_id: str, values: tuple[float, ...], legal_ref: str, bill_ref: str | None = None) -> tuple[Rule, ...]:
     return tuple(
         Rule(
             rule_id, v, date(y, 1, 1), date(y, 12, 31),
-            "Budget 2027" if announced_from and y >= announced_from else legal_ref,
-            "announced" if announced_from and y >= announced_from else "enacted",
+            bill_ref if bill_ref and y >= ANNOUNCED_YEAR else legal_ref,
+            "announced" if bill_ref and y >= ANNOUNCED_YEAR else "enacted",
         )
         for y, v in zip(_YEARS, values)
     )
@@ -34,7 +38,7 @@ RULES: dict[str, tuple[Rule, ...]] = {
     # Income tax (TCA s.15, s.461, s.472, s.472AB)
     "it_rate_standard": _fixed("it_rate_standard", 20.0, "TCA s.15"),
     "it_rate_higher": _fixed("it_rate_higher", 40.0, "TCA s.15"),
-    "it_band_single": _yearly("it_band_single", (42_000, 44_000, 44_000, 46_500), "TCA s.15", 2027),
+    "it_band_single": _yearly("it_band_single", (42_000, 44_000, 44_000, 46_500), "TCA s.15", "Finance (No. 2) Bill 2026 s.3"),
     "it_band_married_one_income": _yearly(
         "it_band_married_one_income", (51_000, 53_000, 53_000, 55_500), "TCA s.15", 2027
     ),
@@ -47,22 +51,22 @@ RULES: dict[str, tuple[Rule, ...]] = {
     "it_credit_personal_married": _yearly(
         "it_credit_personal_married", (3_750, 4_000, 4_000, 4_250), "TCA s.461", 2027
     ),
-    "it_credit_earned_income": _yearly("it_credit_earned_income", (1_875, 2_000, 2_000, 2_125), "TCA s.472AB", 2027),
-    "it_credit_employee": _yearly("it_credit_employee", (1_875, 2_000, 2_000, 2_125), "TCA s.472", 2027),
+    "it_credit_earned_income": _yearly("it_credit_earned_income", (1_875, 2_000, 2_000, 2_125), "TCA s.472AB", "Finance (No. 2) Bill 2026 s.3"),
+    "it_credit_employee": _yearly("it_credit_employee", (1_875, 2_000, 2_000, 2_125), "TCA s.472", "Finance (No. 2) Bill 2026 s.3"),
     # USC (TCA s.531AN): 0.5% to 12,012; 2% to the yearly ceiling; middle rate to 70,044; 8% above.
     "usc_exemption_threshold": _fixed("usc_exemption_threshold", 13_000, "TCA Part 18D"),
     "usc_band_low_ceiling": _fixed("usc_band_low_ceiling", 12_012, "TCA s.531AN"),
-    "usc_band_2pct_ceiling": _yearly("usc_band_2pct_ceiling", (25_760, 27_382, 28_700, 30_300), "TCA s.531AN", 2027),
+    "usc_band_2pct_ceiling": _yearly("usc_band_2pct_ceiling", (25_760, 27_382, 28_700, 30_300), "TCA s.531AN", "Finance (No. 2) Bill 2026 s.2"),
     "usc_rate_middle": _yearly("usc_rate_middle", (4.0, 3.0, 3.0, 3.0), "TCA s.531AN"),
     "usc_band_middle_ceiling": _fixed("usc_band_middle_ceiling", 70_044, "TCA s.531AN"),
     "usc_surcharge_threshold": _fixed("usc_surcharge_threshold", 100_000, "TCA s.531AN"),
-    # PRSI (SWCA s.13 as amended by SW(MP)A 2024): rate changes each October, so
+    # PRSI (SWCA s.21 as amended by SW(MP)A 2024 s.3, s.5): rate changes each October, so
     # the tax-year rate is 9 months old + 3 months new (2027 is our arithmetic).
-    "prsi_s_rate": _yearly("prsi_s_rate", (4.025, 4.125, 4.2375, 4.3875), "SWCA s.13"),
-    "prsi_s_minimum": _yearly("prsi_s_minimum", (537.5, 650, 650, 650), "SWCA s.13"),
-    "prsi_s_threshold": _fixed("prsi_s_threshold", 5_000, "SWCA s.13"),
-    "prsi_a_rate": _yearly("prsi_a_rate", (4.025, 4.125, 4.2375, 4.3875), "SWCA s.13"),
-    "prsi_a_weekly_exemption": _fixed("prsi_a_weekly_exemption", 352, "SWCA s.13"),
+    "prsi_s_rate": _yearly("prsi_s_rate", (4.025, 4.125, 4.2375, 4.3875), "SWCA s.21 (SW(MP)A 2024 s.3)"),
+    "prsi_s_minimum": _yearly("prsi_s_minimum", (537.5, 650, 650, 650), "SWCA s.21 (SW(MP)A 2024 s.5)"),
+    "prsi_s_threshold": _fixed("prsi_s_threshold", 5_000, "SWCA s.21 (SW(MP)A 2024 s.3)"),
+    "prsi_a_rate": _yearly("prsi_a_rate", (4.025, 4.125, 4.2375, 4.3875), "SWCA s.21 (SW(MP)A 2024 s.3)"),
+    "prsi_a_weekly_exemption": _fixed("prsi_a_weekly_exemption", 352, "SWCA s.21 (SW(MP)A 2024 s.3)"),
     # Corporation tax (TCA s.21, s.21A)
     "ct_rate_trading": _fixed("ct_rate_trading", 12.5, "TCA s.21"),
     "ct_rate_non_trading": _fixed("ct_rate_non_trading", 25.0, "TCA s.21A"),

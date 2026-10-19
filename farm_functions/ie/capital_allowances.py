@@ -21,7 +21,7 @@ RULES: dict[str, tuple[Rule, ...]] = {
     ),
     "farm_safety": (
         Rule("ca_farm_safety", 50.0, date(2021, 1, 1), date(2026, 12, 31), "TCA s.285D", "enacted"),
-        Rule("ca_farm_safety", 50.0, date(2027, 1, 1), date(2029, 12, 31), "Budget 2027 §4.10", "announced"),
+        Rule("ca_farm_safety", 50.0, date(2027, 1, 1), date(2029, 12, 31), "Finance (No. 2) Bill 2026 s.22", "announced"),
     ),
 }
 # Yearly rates (% of qualifying cost) from the tax year of the spend.

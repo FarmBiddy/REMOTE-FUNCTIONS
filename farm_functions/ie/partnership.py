@@ -14,7 +14,7 @@ from farm_functions.ie.rules import Rule
 
 SUCCESSION_CREDIT: tuple[Rule, ...] = (
     Rule("sfp_credit", 5_000.0, date(2017, 5, 31), date(2026, 12, 31), "TCA s.667D", "enacted"),
-    Rule("sfp_credit", 10_000.0, date(2027, 1, 1), None, "Budget 2027 §4.11", "announced"),
+    Rule("sfp_credit", 10_000.0, date(2027, 1, 1), None, "Finance (No. 2) Bill 2026 s.23", "announced"),
 )
 SUCCESSION_CREDIT_YEARS = 5
 SUCCESSOR_AGE_LIMIT = 40  # no credit in a year the successor is 40 or over on 1 January

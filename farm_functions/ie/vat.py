@@ -22,7 +22,7 @@ FLAT_RATE_ADDITION: tuple[Rule, ...] = (
     Rule(_ID, 4.8, date(2024, 1, 1), date(2024, 12, 31), "F(No.2)A2023 s.62", "enacted"),
     Rule(_ID, 5.1, date(2025, 1, 1), date(2025, 12, 31), "FA2024 s.83", "enacted"),
     Rule(_ID, 4.5, date(2026, 1, 1), date(2026, 12, 31), "FA2025 s.73", "enacted"),
-    Rule(_ID, 4.8, date(2027, 1, 1), None, "Budget 2027 §4.9", "announced"),
+    Rule(_ID, 4.8, date(2027, 1, 1), None, "Finance (No. 2) Bill 2026 s.52", "announced"),
 )
 
 

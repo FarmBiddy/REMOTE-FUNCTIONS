@@ -77,4 +77,44 @@ def dairy_kpis(
     }
 
 
-__all__ = ["dairy_kpis"]
+def teagasc_view(
+    *,
+    milk_litres: float,
+    revenue: float,
+    schemes: float,
+    costs: float,
+    cost_lines: dict[str, float],
+    depreciation: float,
+    interest: float,
+    valuation_change: float,
+) -> dict:
+    """Figures on Teagasc National Farm Survey terms, to compare with its benchmarks.
+
+    Whole farm: gross output (sales, grants and the herd / stock value change) −
+    direct costs − overheads (incl. depreciation and interest) = family farm
+    income. Dairy per litre: gross output without decoupled payments (schemes),
+    total costs = direct + fixed incl. depreciation, net margin = the difference.
+    Depreciation is the Platform's register figure, not the NFS replacement-cost
+    basis.
+    """
+    direct = sum_amounts(*(cost_lines[c] for c in VARIABLE_COST_CATEGORIES))
+    fixed = costs - direct + depreciation
+    gross_output = revenue + valuation_change
+    overheads = fixed + interest
+    dairy_output = gross_output - schemes
+    return {
+        "family_farm_income": round_money(gross_output - direct - overheads),
+        "gross_output": round_money(gross_output),
+        "direct_costs": round_money(direct),
+        "overhead_costs": round_money(overheads),
+        "per_litre_c": {
+            "gross_output": _cents_per_litre(dairy_output, milk_litres),
+            "direct_costs": _cents_per_litre(direct, milk_litres),
+            "fixed_costs": _cents_per_litre(fixed, milk_litres),
+            "total_costs": _cents_per_litre(direct + fixed, milk_litres),
+            "net_margin": _cents_per_litre(dairy_output - direct - fixed, milk_litres),
+        },
+    }
+
+
+__all__ = ["dairy_kpis", "teagasc_view"]

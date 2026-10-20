@@ -56,6 +56,8 @@ Accepted decisions for this repository. See `docs/development.md` for when to ad
 | [0050](0050-contract-hardening.md) | Contract hardening: limits, version meta, examples, naming |
 | [0051](0051-typed-response-schemas.md) | Typed response schemas in OpenAPI and discovery |
 | [0052](0052-milk-quality.md) | Milk quality and its value (`milk.quality`) |
+| [0053](0053-irish-rules-layer.md) | Irish rules layer: tax estimates by jurisdiction (`farm_functions.ie`) |
+| [0054](0054-teagasc-nfs-alignment.md) | Teagasc National Farm Survey alignment (casual labour, family farm income) |
 
 ## Not yet decided (candidates — do not invent ADRs until decided)
 

@@ -64,6 +64,20 @@ PAYLOADS = {
     "pl.net": {"months": joe.ACTUAL, "interest": 12 * 330, **{k: joe.VALUES[k] for k in (
         "livestock_opening_value", "stock_opening_value")},
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
+    "vat.flat_rate": {"months": joe.ACTUAL},
+    "tax.capital_allowances": {"tax_year": 2026, "period_end_month": 9, "assets": joe.ASSETS},
+    "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married"},
+    "tax.company_extraction": {"tax_year": 2026, "trading_profit": 60_000, "salary": 30_000, "dividends": 15_000,
+                               "marital_status": "married", "spouse_paye_income": 32_000},
+    "tax.partnership": {"tax_year": 2026, "period_end_month": 9, "trading_profit": 60_000,
+                        "partners": [{"label": "Joe", "profit_share_pct": 70, "marital_status": "married"},
+                                     {"label": "Mark", "profit_share_pct": 30, "young_trained_farmer_first_year": 2026}],
+                        "succession": {"registered_year": 2026, "successor_birth_year": 2001, "successor": 1},
+                        **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
+                        "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
+    "tax.stock_relief": {"business_type": "sole_trader", "period_end_year": 2026, "period_end_month": 9,
+                         "trading_profit": 60_000, **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
+                         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "milk.quality": {
         "months": joe.STATEMENTS, "milking_cows": joe.COWS, "hectares": joe.HECTARES,
         # Platform-style: seasonal monthly averages (CSO fat / protein, ICBF SCC), fixed TBC,
@@ -235,3 +249,93 @@ def test_milk_quality_feeds_the_kpis(results):
     assert quality["compliance"]["scc_breach_months"] == []  # late-lactation peak stays under the EU limit
     assert quality["value"]["gain_to_average_eur"] > 0  # fat below average
     assert quality["vs_benchmarks"]["protein_pct"]["position"] == "about"
+
+
+def test_flat_rate_addition_is_on_the_pl_milk_and_cattle(results):
+    """Same months as the P&L; Oct–Dec 2025 at 5.1%, 2026 at 4.5% (ADR-0053)."""
+    vat = results["vat.flat_rate"]
+    milk = sum(m["milk_litres"] * m["milk_price"] for m in joe.ACTUAL)
+    assert vat["total"]["milk"] == pytest.approx(milk, abs=CENT)
+    assert [r["value"] for r in vat["rules_applied"]] == [5.1, 4.5]
+    assert vat["total"]["addition"] == pytest.approx(sum(m["addition"] for m in vat["months"]), abs=CENT)
+
+
+def test_stock_relief_on_the_pl_net_valuations(results):
+    """Herd 330k → 342k and feed 9k → 11k: 25% of the 14,000 increase (ADR-0053).
+
+    pl.net profit stands in for taxable profit until capital allowances land.
+    """
+    profit = results["pl.net"]["net_profit_before_tax"]
+    relief = run_function("tax.stock_relief", {**PAYLOADS["tax.stock_relief"], "trading_profit": profit})["result"]
+    assert (relief["stock_increase"], relief["relief"]) == (14_000, 3_500)
+    assert relief["profit_after_relief"] == pytest.approx(profit - 3_500, abs=CENT)
+
+
+def test_taxable_profit_chains_into_stock_relief(results):
+    """Accounting profit → taxable profit → stock relief, engine outputs only (ADR-0053).
+
+    Tax year to Sep 2026: 2018 shed written off after 7 years; 2024 loader 95,000 × 12.5%
+    = 11,875 (year 3); 2026 topper 6,000 × 12.5% = 750 → allowances 12,625.
+    """
+    assert results["tax.capital_allowances"]["total"]["allowance"] == 12_625
+    depreciation = results["assets.schedule"]["total"]["depreciation"]
+    net = run_function("pl.net", {**PAYLOADS["pl.net"], "depreciation": depreciation})["result"]
+    allowances = run_function("tax.capital_allowances", {
+        **PAYLOADS["tax.capital_allowances"],
+        "accounting_profit": net["net_profit_before_tax"],
+        "depreciation": depreciation,
+    })["result"]
+    taxable = allowances["profit_bridge"]["taxable_profit"]
+    # Depreciation added back, so taxable = profit before depreciation − allowances.
+    assert taxable == pytest.approx(results["pl.net"]["net_profit_before_tax"] - 12_625, abs=CENT)
+    relief = run_function("tax.stock_relief", {**PAYLOADS["tax.stock_relief"], "trading_profit": taxable})["result"]
+    assert relief["relief"] == 3_500
+
+
+def test_full_tax_chain_into_debt_capacity(results):
+    """pl.net → capital allowances → stock relief → tax estimate → debt capacity,
+    each step fed only with the previous engine output (ADR-0053)."""
+    depreciation = results["assets.schedule"]["total"]["depreciation"]
+    net = run_function("pl.net", {**PAYLOADS["pl.net"], "depreciation": depreciation})["result"]
+    taxable = run_function("tax.capital_allowances", {
+        **PAYLOADS["tax.capital_allowances"],
+        "accounting_profit": net["net_profit_before_tax"], "depreciation": depreciation,
+    })["result"]["profit_bridge"]["taxable_profit"]
+    relief = run_function("tax.stock_relief", {**PAYLOADS["tax.stock_relief"], "trading_profit": taxable})["result"]
+    tax = run_function("tax.estimate", {
+        **PAYLOADS["tax.estimate"], "taxable_profit": relief["profit_after_relief"], "stock_relief": relief["relief"],
+    })["result"]
+    assert tax["assessment"] == "joint" and 0 < tax["total_tax"] < relief["profit_after_relief"]
+    capacity = run_function("debt.capacity", {**PAYLOADS["debt.capacity"], "tax": tax["total_tax"]})["result"]
+    assert capacity["tax"] == tax["total_tax"]
+
+
+def test_projection_estimates_tax_each_year():
+    """Joe and his wife, jointly assessed, averaging with four past years (ADR-0053)."""
+    profile = {"business_type": "sole_trader", "marital_status": "married", "spouse_paye_income": 32_000,
+               "income_averaging": True, "prior_farming_profits": [41_000, 38_000, 62_000, 55_000]}
+    years = run_function("plan.projection", {**PAYLOADS["plan.projection"], "tax_profile": profile})["result"]["years"]
+    assert [y["tax"]["tax_year"] for y in years] == [2027, 2028, 2029, 2030, 2031]
+    assert {y["tax"]["averaging"] for y in years} == {"applied"}
+    assert [y["tax"]["rules_basis"] for y in years][:2] == ["in_force", "latest_held_constant"]
+    assert all(y["cash"]["tax"] == y["tax"]["total_tax"] > 0 for y in years)
+
+
+def test_succession_partnership_with_his_son(results):
+    """Joe 70% / Mark 30%, succession partnership from 2026 (ADR-0053): the 14,000 stock
+    increase splits 9,800 / 4,200; Joe gets 50% relief, Mark 100% as a young trained farmer."""
+    body = results["tax.partnership"]
+    joe_row, mark = body["partners"]
+    assert (joe_row["stock_relief"], mark["stock_relief"]) == (4_900, 4_200)
+    assert (joe_row["succession_credit"], mark["succession_credit"]) == (3_500, 1_500)
+    assert body["total"]["total_tax"] == pytest.approx(sum(p["tax"]["total_tax"] for p in body["partners"]), abs=CENT)
+
+
+def test_company_route_compared_with_sole_trader(results):
+    """Same 60,000 profit through a company (30,000 salary + 15,000 dividends) vs as a
+    sole trader: the engine gives both totals; which is better is the advisor's call."""
+    company = results["tax.company_extraction"]
+    assert company["company"]["retained"] == pytest.approx(30_000 * 0.875 - 15_000, abs=CENT)
+    sole = results["tax.estimate"]
+    assert company["director"]["assessment"] == sole["assessment"] == "joint"
+    assert company["household"]["total_tax"] > 0 and sole["total_tax"] > 0

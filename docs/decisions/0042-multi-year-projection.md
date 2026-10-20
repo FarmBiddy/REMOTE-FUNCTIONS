@@ -62,4 +62,5 @@ net worth develop? The monthly forecast (ADR-0026) covers 12 months only.
 
 ## Related
 
-ADR-0025, ADR-0026, ADR-0031, ADR-0033, ADR-0036, ADR-0037, ADR-0038, ADR-0039
+ADR-0025, ADR-0026, ADR-0031, ADR-0033, ADR-0036, ADR-0037, ADR-0038, ADR-0039,
+ADR-0053 (Irish tax per year via `tax_profile`)

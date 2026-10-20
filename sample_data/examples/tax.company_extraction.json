@@ -1,0 +1,10 @@
+{
+  "tax_year": 2026,
+  "trading_profit": 120000,
+  "non_trading_income": 12000,
+  "salary": 45000,
+  "dividends": 20000,
+  "marital_status": "married",
+  "spouse_paye_income": 32000,
+  "other_income": 0
+}

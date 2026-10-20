@@ -38,6 +38,12 @@ EXPECTED_PUBLIC_IDS = (
     "pl.net",
     "bs.summary",
     "milk.quality",
+    "vat.flat_rate",
+    "tax.stock_relief",
+    "tax.capital_allowances",
+    "tax.estimate",
+    "tax.partnership",
+    "tax.company_extraction",
     "pl.compare",
     "cf.compare",
     "risk.sensitivity",
@@ -145,6 +151,18 @@ def _happy_payload(calculation_id: str) -> dict:
             "opening_cash": 0,
             "milking_cows": 100,
         }
+    if calculation_id == "tax.company_extraction":
+        return {"tax_year": 2026, "trading_profit": 80_000, "salary": 30_000}
+    if calculation_id == "tax.partnership":
+        return {"tax_year": 2026, "trading_profit": 60_000, "partners": [{"profit_share_pct": 60}, {"profit_share_pct": 40}]}
+    if calculation_id == "tax.estimate":
+        return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 40_000}
+    if calculation_id == "tax.capital_allowances":
+        return {"tax_year": 2026, "assets": [{"cost": 8_000, "year": 2026, "month": 2, "life_months": 96}]}
+    if calculation_id == "tax.stock_relief":
+        return {"business_type": "sole_trader", "period_end_year": 2026, "trading_profit": 10_000}
+    if calculation_id == "vat.flat_rate":
+        return {"months": [{"year": 2026, "month": 3, "milk_litres": 1_000, "milk_price": 0.5}]}
     if calculation_id == "milk.quality":
         return {"months": [{"year": 2026, "month": 3, "milk_litres": 1_000, "fat_pct": 4.2,
                             "protein_pct": 3.5, "scc_k": 120, "tbc_k": 10}]}
@@ -170,10 +188,10 @@ def _happy_payload(calculation_id: str) -> dict:
     raise AssertionError(f"No happy payload for {calculation_id}")
 
 
-def test_exactly_thirty_one_unique_public_calculation_ids() -> None:
+def test_exactly_thirty_seven_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 31
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 31
+    assert len(PUBLIC_CALCULATION_IDS) == 37
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 37
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

@@ -33,7 +33,7 @@ Body: flat JSON numbers (Phase 1 Dairy Operating Statement drivers).
 
 - Schemes: `biss`, `acres`, `other_grants`
 - Other income: `cattle_sales`, `land_leasing_income`, `other`
-- Operating costs: `feed`, `fertiliser`, `vet`, `contractor`, `labour`, `insurance`, `fuel`, `electricity`, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`, `other_operating_costs`
+- Operating costs: `feed`, `fertiliser`, `vet`, `contractor`, `casual_labour`, `labour`, `insurance`, `fuel`, `electricity`, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`, `other_operating_costs`
 - Finance: `loan_repayments` (does **not** reduce Operating Surplus)
 
 Unknown field names, `null`, negatives, and non-numbers are rejected.
@@ -163,7 +163,7 @@ Body: flat JSON — period identity plus monthly financial drivers. The client m
 
 - Schemes: `biss`, `acres`, `other_grants` (EUR for the statement month)
 - Other income: `cattle_sales`, `land_leasing_income`, `other`
-- Operating costs: `feed`, `fertiliser`, `vet`, `contractor`, `labour`, `insurance`, `fuel`, `electricity`, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`, `other_operating_costs`
+- Operating costs: `feed`, `fertiliser`, `vet`, `contractor`, `casual_labour`, `labour`, `insurance`, `fuel`, `electricity`, `water`, `repairs_maintenance`, `rent_lease`, `professional_fees`, `levies`, `other_operating_costs`
 - Finance: `loan_repayments` (does **not** reduce Operating Surplus)
 
 Unknown field names (including annual-only `milking_cows` / `litres_per_cow`), `null`,
@@ -363,7 +363,14 @@ Optional: `milk_solids_kg` (co-op statements) → `per_kg_ms`; `hectares` →
 `per_hectare`; `debt_balance` (`loan.schedule` `total_balance`) → `debt` per cow / ha
 (ADR-0032).
 Variable / fixed costs and gross margin (revenue − variable costs) follow the
-Teagasc split (ADR-0033).
+Teagasc split (ADR-0033). Ask for casual / relief labour (`casual_labour`, a
+variable cost) separately from regular hired `labour` (fixed).
+Teagasc comparison (ADR-0054): send `depreciation`, `interest` and the
+livestock / stock valuations (the same as `pl.net`) to get `teagasc`: family
+farm income and per-litre gross output, total costs and net margin on National
+Farm Survey terms. Show them next to the NFS benchmarks the Platform holds
+(2025 dairy: total costs 35.03c/L, net margin 23.13c/L); note that depreciation
+is the farm's register, not the NFS replacement-cost basis.
 
 Machinery and buildings (ADR-0037): keep the register on the Platform and call
 `assets.schedule` for the period to get depreciation and net book values (results
@@ -386,6 +393,63 @@ milk-price breakdown and `value.gain_to_average_eur` ("€ a year if your fat an
 protein reached the average"). Pass `period.milk_solids_kg` to `kpi.summary` for the
 kg MS KPIs.
 
+Flat-rate VAT addition (ADR-0053, Ireland): most dairy farmers are not
+VAT-registered and receive the flat-rate addition on top of milk and cattle
+sales (4.5% in 2026, 4.8% announced for 2027). Keep `milk_price` / `cattle_sales`
+ex-VAT and gross of co-op deductions, as today, and call `vat.flat_rate` with the
+same months plus `vat_registered` from the farm profile. Show `total.addition`
+as an income line and `rules_applied[].status` ("announced" = Budget figure, not
+yet law). The engine picks the rate for each month.
+
+Stock relief (ADR-0053, Ireland): call `tax.stock_relief` for the accounting
+period with the same opening / closing livestock and stock valuations sent to
+`pl.net`, the farm profile (`business_type`, `registered_partnership`,
+`young_trained_farmer_first_year`) and `trading_profit`. Until capital
+allowances land, `pl.net` `net_profit_before_tax` is the closest stand-in; an
+accountant's figure is better. The engine picks the relief (`regime`) and never
+lets it create a loss (`restricted_by_profit`). `caps_not_applied` lists caps the
+estimate has not checked yet (they are measured as tax saved); show them as a
+note, not a number.
+
+Capital allowances and taxable profit (ADR-0053, Ireland): send the same asset
+register as `assets.schedule`, adding `grant` (TAMS or other grant on that
+asset) and, where the default is wrong, `tax_allowance` (machinery → `plant`,
+buildings → `farm_buildings`, other → `none`; `slurry_storage` / `farm_safety`
+for the accelerated schemes, which need the DAFM certificate). Call
+`tax.capital_allowances` per tax year with `accounting_profit` = `pl.net`
+`net_profit_before_tax` **with** depreciation deducted, and that same
+`depreciation`. For a farmer who is not VAT-registered, also pass
+`flat_rate_addition` (`vat.flat_rate` `total.addition` for the period): it is
+taxable income that `pl.net` leaves out. `profit_bridge.taxable_profit` is the
+`trading_profit` for `tax.stock_relief`.
+
+Tax estimate (ADR-0053, Ireland): call `tax.estimate` with
+`taxable_profit` = `tax.stock_relief` `profit_after_relief`, and pass that
+call's `relief` / `regime` as `stock_relief` / `stock_relief_regime` so the
+caps are checked. From the farm profile: `business_type`, `marital_status`
+(married couples are jointly assessed), `spouse_paye_income`, `other_income`,
+and `state_aid_used` (young farmer aid already received, or partnership de
+minimis aid in the previous two years). Show `total_tax` with the breakdown and
+pass it as `tax` to `debt.capacity` (partnerships: see below); there `off_farm_income` should then be
+gross, since the household tax already includes the spouse's PAYE. If the
+accountant gives a tax figure, send theirs instead.
+
+Partnerships (ADR-0053, Ireland): for a registered or succession farm
+partnership call `tax.partnership` once with the partnership's
+`trading_profit` (`tax.capital_allowances` `profit_bridge.taxable_profit`),
+the stock valuations and each partner's profile and profit share (from the
+partnership agreement). Each partner comes back with their own `tax`; show the
+partner's own figures to that partner. `succession` needs the registration
+year, the successor's birth year and which partner is the successor.
+
+Farm companies (ADR-0053, Ireland): `tax.estimate` with `business_type:
+company` gives the company's corporation tax. To show what reaches the family,
+call `tax.company_extraction` with the company's taxable profit before the
+director's salary and a salary / dividend mix; call it again for each mix the
+user wants to compare and show `household.income_after_tax`,
+`household.total_tax` and `company.retained` side by side. The engine does not
+pick the best mix (that is advice), and does not model pensions.
+
 Net profit (ADR-0038): call `pl.net` with the period's months, `depreciation`
 (`assets.schedule` `total.depreciation`), `interest` (the period's `loan.schedule`
 interest) and the livestock / stock valuations at start and end.
@@ -397,6 +461,17 @@ data or the advisor (presets: cautious / base / optimistic) and the user edits;
 send nothing for "everything stays as this year". Show `assumptions_used`
 next to the figures, and `flags` for years with negative cash or DSCR below the
 lender's `min_cover`.
+
+Tax in the plan (ADR-0053, Ireland): send `tax_profile` (the farm profile used
+for `tax.estimate`, plus `income_averaging` and `prior_farming_profits`: up to
+4 past years of farming profit before capital allowances, oldest first, kept by
+the Platform) instead of `assumptions.tax`. Each year then has `tax` with the
+breakdown, and cash uses its `total_tax`. Send `vat_registered` from the farm
+profile: when false, the flat-rate addition is added to each year's cash and
+taxable profit. For a partnership send `partners` (as for `tax.partnership`):
+each year is taxed per partner and `tax.partners` shows each one. Show `rules_basis:
+latest_held_constant` as "at 2027 tax rates" and `averaging:
+insufficient_history` as "not enough history to average yet".
 
 Reports (ADR-0041): build one farm file and call `report.bank`,
 `report.advisor` or `report.accountant`. Each returns structured sections

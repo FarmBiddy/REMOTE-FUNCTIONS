@@ -27,6 +27,14 @@ from farm_functions.kpis import kpi_summary
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.quality import milk_quality
+from farm_functions.tax import (
+    tax_capital_allowances,
+    tax_company_extraction,
+    tax_estimate,
+    tax_partnership,
+    tax_stock_relief,
+)
+from farm_functions.vat import vat_flat_rate
 from farm_functions.reports import report_accountant, report_advisor, report_bank
 from farm_functions.responses import OUTPUT_MODELS
 from farm_functions.sensitivity import risk_sensitivity, risk_tornado
@@ -75,6 +83,12 @@ from farm_functions.schemas import (
     SchemeRevenueInput,
     TotalCostsInput,
     TotalRevenueInput,
+    TaxCapitalAllowancesInput,
+    TaxCompanyExtractionInput,
+    TaxEstimateInput,
+    TaxPartnershipInput,
+    TaxStockReliefInput,
+    VatFlatRateInput,
 )
 
 
@@ -405,6 +419,77 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=MilkQualityInput,
         handler=milk_quality,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="vat.flat_rate",
+        description=(
+            "Irish flat-rate farmer VAT addition: the % a farmer who is not VAT-registered "
+            "receives on top of milk and cattle sales (prices ex-VAT), month by month at "
+            "the rate in force, with the legal rule applied. None when vat_registered."
+        ),
+        input_model=VatFlatRateInput,
+        handler=vat_flat_rate,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.stock_relief",
+        description=(
+            "Irish farm stock relief: 25% general, 100% for a young trained farmer in their "
+            "first 4 tax years, 50% for a registered farm partnership partner, of the increase "
+            "in trading stock (livestock + feed / fertiliser stock), never creating a loss. "
+            "Caps measured as tax saved are listed, not yet applied."
+        ),
+        input_model=TaxStockReliefInput,
+        handler=tax_stock_relief,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.capital_allowances",
+        description=(
+            "Irish capital allowances for one tax year on the asset register: machinery "
+            "12.5% × 8 years, farm buildings 15% × 6 + 10%, slurry storage and farm safety "
+            "50% × 2 years, on cost net of grants; with accounting profit and depreciation, "
+            "the taxable profit (depreciation added back, allowances deducted)."
+        ),
+        input_model=TaxCapitalAllowancesInput,
+        handler=tax_capital_allowances,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.estimate",
+        description=(
+            "Irish tax estimate for one tax year on taxable farming profit (after capital "
+            "allowances and stock relief): income tax with joint assessment for married "
+            "couples, USC and PRSI per person, or corporation tax for a company; young "
+            "trained farmer and partnership stock relief caps applied as tax saved."
+        ),
+        input_model=TaxEstimateInput,
+        handler=tax_estimate,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.partnership",
+        description=(
+            "Irish farm partnership: taxable profit and the trading stock increase split by "
+            "profit share; per partner stock relief (50% registered partnership, 100% young "
+            "trained farmer), succession partnership credit and the partner's own tax "
+            "estimate; partnership totals."
+        ),
+        input_model=TaxPartnershipInput,
+        handler=tax_partnership,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.company_extraction",
+        description=(
+            "Irish farm company paying its director: corporation tax after the salary, "
+            "dividend withholding tax, close company surcharge on undistributed rent and "
+            "investment income, the director's income tax / USC / PRSI on salary and "
+            "dividends, household income after tax and total tax. Call per mix to compare."
+        ),
+        input_model=TaxCompanyExtractionInput,
+        handler=tax_company_extraction,
         supports_provenance=False,
     ),
     CalculationDefinition(

@@ -226,6 +226,27 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_REPORT
     if key == "plan.projection":
         return SAMPLE_PROJECTION
+    if key == "tax.company_extraction":
+        # 100,000 profit, all kept: 12.5% = 12,500 corporation tax, no director tax.
+        return {"tax_year": 2026, "trading_profit": 100_000}
+    if key == "tax.partnership":
+        # 100,000 split 50 / 50, no stock change: each partner a single farmer on 50,000.
+        return {"tax_year": 2026, "trading_profit": 100_000,
+                "partners": [{"profit_share_pct": 50}, {"profit_share_pct": 50}]}
+    if key == "tax.estimate":
+        # Company: 100,000 × 12.5% = 12,500.
+        return {"business_type": "company", "tax_year": 2026, "taxable_profit": 100_000}
+    if key == "tax.capital_allowances":
+        # 16,000 tractor − 4,000 grant = 12,000 × 12.5% = 1,500 in its second year.
+        return {"tax_year": 2026, "assets": [{"cost": 16_000, "grant": 4_000, "year": 2025, "month": 5, "life_months": 96}],
+                "accounting_profit": 20_000, "depreciation": 2_000}
+    if key == "tax.stock_relief":
+        # Stock 100,000 → 120,000: 25% of 20,000 = 5,000 relief on 30,000 profit.
+        return {"business_type": "sole_trader", "period_end_year": 2026, "trading_profit": 30_000,
+                "livestock_opening_value": 100_000, "livestock_closing_value": 120_000}
+    if key == "vat.flat_rate":
+        # 10,000 L × 0.50 + 1,000 cattle = 6,000 × 4.5% (2026) = 270.
+        return {"months": [{"year": 2026, "month": 3, "milk_litres": 10_000, "milk_price": 0.50, "cattle_sales": 1_000}]}
     if key == "milk.quality":
         # 10,000 L at 4% fat / 3.5% protein → 10,000 × 1.03 × 7.5% = 772.5 kg MS.
         return {"months": [{"year": 2026, "month": 3, "milk_litres": 10_000, "fat_pct": 4.0,
@@ -313,6 +334,18 @@ def _zero_payload(key: str) -> dict:
             "loans": [],
             "rate_step_pp": 0,
         }
+    if key == "tax.company_extraction":
+        return {"tax_year": 2026, "trading_profit": 0}
+    if key == "tax.partnership":
+        return {"tax_year": 2026, "trading_profit": 0, "partners": [{"profit_share_pct": 50}, {"profit_share_pct": 50}]}
+    if key == "tax.estimate":
+        return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 0}
+    if key == "tax.capital_allowances":
+        return {"tax_year": 2026, "assets": [{"cost": 0, "year": 2026, "month": 1, "life_months": 1}], "accounting_profit": 0}
+    if key == "tax.stock_relief":
+        return {"business_type": "sole_trader", "period_end_year": 2026, "trading_profit": 0}
+    if key == "vat.flat_rate":
+        return {"months": [{"year": 2026, "month": 1, "milk_litres": 0, "milk_price": 0}]}
     if key == "milk.quality":
         return {
             "months": [{"year": 1, "month": 1, "milk_litres": 0, "fat_pct": 0, "protein_pct": 0,
@@ -489,6 +522,24 @@ def test_happy_path(key: str) -> None:
         drivers = {d["driver"]: d["swing"]["operating_surplus"] for d in result["result"]["drivers"]}
         assert drivers["milk_price"] == 800  # ±10% of 4,000 milk revenue
         assert drivers["feed"] == 600
+    elif key == "tax.company_extraction":
+        body = result["result"]
+        assert (body["company"]["retained"], body["household"]["total_tax"]) == (87_500, 12_500)
+    elif key == "tax.partnership":
+        partners = result["result"]["partners"]
+        assert [p["taxable_profit"] for p in partners] == [50_000, 50_000]
+        assert result["result"]["total"]["total_tax"] == 2 * partners[0]["tax"]["total_tax"]
+    elif key == "tax.estimate":
+        assert result["result"]["total_tax"] == 12_500
+    elif key == "tax.capital_allowances":
+        body = result["result"]
+        assert (body["total"]["opening_twdv"], body["total"]["allowance"], body["total"]["closing_twdv"]) == (10_500, 1_500, 9_000)
+        assert body["profit_bridge"]["taxable_profit"] == 20_500
+    elif key == "tax.stock_relief":
+        body = result["result"]
+        assert (body["regime"], body["relief"], body["profit_after_relief"]) == ("general", 5_000, 25_000)
+    elif key == "vat.flat_rate":
+        assert result["result"]["total"] == {"milk": 5_000, "cattle_sales": 1_000, "base": 6_000, "addition": 270}
     elif key == "milk.quality":
         period = result["result"]["period"]
         assert (period["fat_pct"], period["scc_k"], period["milk_solids_kg"]) == (4.0, 150, 772.5)
@@ -651,6 +702,18 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["net_change"] == 0 and result["result"]["worthwhile"] is False
     elif key == "risk.tornado":
         assert result["result"]["base"]["operating_surplus"] == 0
+    elif key == "vat.flat_rate":
+        assert result["result"]["total"]["addition"] == 0
+    elif key == "tax.company_extraction":
+        assert result["result"]["household"]["total_tax"] == 0 and result["result"]["household"]["effective_rate_pct"] is None
+    elif key == "tax.partnership":
+        assert result["result"]["total"]["total_tax"] == 0
+    elif key == "tax.estimate":
+        assert result["result"]["total_tax"] == 0 and result["result"]["effective_rate_pct"] is None
+    elif key == "tax.capital_allowances":
+        assert result["result"]["total"]["allowance"] == 0 and result["result"]["profit_bridge"]["taxable_profit"] == 0
+    elif key == "tax.stock_relief":
+        assert result["result"]["relief"] == 0 and result["result"]["restricted_by_profit"] is False
     elif key == "milk.quality":
         period = result["result"]["period"]
         assert period["fat_pct"] is None and period["kg_ms_per_cow"] is None

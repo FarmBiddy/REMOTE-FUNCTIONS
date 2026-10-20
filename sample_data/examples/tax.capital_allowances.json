@@ -1,0 +1,41 @@
+{
+  "tax_year": 2026,
+  "period_end_month": 12,
+  "assets": [
+    {
+      "category": "buildings",
+      "cost": 120000,
+      "year": 2018,
+      "month": 3,
+      "life_months": 240
+    },
+    {
+      "category": "machinery",
+      "cost": 95000,
+      "year": 2024,
+      "month": 3,
+      "method": "reducing_balance",
+      "annual_rate": 0.15
+    },
+    {
+      "category": "buildings",
+      "cost": 80000,
+      "grant": 32000,
+      "year": 2025,
+      "month": 6,
+      "life_months": 300,
+      "tax_allowance": "slurry_storage"
+    },
+    {
+      "category": "other",
+      "cost": 4000,
+      "grant": 1000,
+      "year": 2026,
+      "month": 2,
+      "life_months": 120,
+      "tax_allowance": "farm_safety"
+    }
+  ],
+  "accounting_profit": 48000,
+  "depreciation": 21000
+}

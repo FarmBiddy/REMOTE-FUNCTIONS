@@ -198,6 +198,22 @@ class DebtKpis(_Out):
     per_hectare: float | None
 
 
+class TeagascPerLitre(_Out):
+    gross_output: float | None
+    direct_costs: float | None
+    fixed_costs: float | None
+    total_costs: float | None
+    net_margin: float | None
+
+
+class TeagascKpis(_Out):
+    family_farm_income: float
+    gross_output: float
+    direct_costs: float
+    overhead_costs: float
+    per_litre_c: TeagascPerLitre
+
+
 class KpiSummaryResult(Span):
     currency: Currency
     milking_cows: float
@@ -208,6 +224,7 @@ class KpiSummaryResult(Span):
     per_hectare: PerUnitWithLitres | None
     debt: DebtKpis | None
     dscr: float | None
+    teagasc: TeagascKpis | None
 
 
 class PlNetResult(Span):
@@ -564,6 +581,7 @@ class ProjectionPl(_Out):
 class ProjectionCash(_Out):
     opening: float
     operating_surplus: float
+    flat_rate_addition: float
     off_farm_income: float
     drawings: float
     tax: float
@@ -603,6 +621,34 @@ class ProjectionFlags(_Out):
     below_min_cover: bool | None
 
 
+class ProjectionPartnerTax(_Out):
+    label: str
+    profit_share_pct: float
+    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership"]
+    stock_relief: float
+    averaged_profit: float
+    assessable_profit: float
+    total_tax: float
+
+
+class ProjectionTax(_Out):
+    tax_year: int
+    rules_basis: Literal["in_force", "latest_held_constant"]
+    rules_status: Literal["enacted", "announced"]
+    flat_rate_addition: float
+    profit_before_allowances: float
+    livestock_increase: float
+    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership", "per_partner"]
+    stock_relief: float
+    capital_allowances: float
+    averaging: Literal["off", "applied", "insufficient_history"]
+    averaged_profit: float
+    assessable_profit: float
+    total_tax: float
+    effective_rate_pct: float | None
+    partners: list[ProjectionPartnerTax] | None
+
+
 class ProjectionYear(_Out):
     year: int
     period: FromTo
@@ -611,6 +657,7 @@ class ProjectionYear(_Out):
     cash: ProjectionCash
     debt: ProjectionDebt
     balance_sheet: ProjectionBalanceSheet
+    tax: ProjectionTax | None
     kpis: ProjectionKpis
     flags: ProjectionFlags
 
@@ -703,6 +750,237 @@ class MilkQualityResult(Span):
     value: QualityValue | None
 
 
+# --- Irish rules (ADR-0053) ------------------------------------------------------
+
+
+class RuleApplied(_Out):
+    rule_id: str
+    value: float
+    from_: str = Field(alias="from")
+    to: str | None
+    legal_ref: str
+    status: Literal["enacted", "announced"]
+
+
+class VatMonth(_Out):
+    period: MonthlyPeriodIdentity
+    milk: float
+    cattle_sales: float
+    base: float
+    rate_pct: float | None
+    addition: float
+
+
+class VatTotal(_Out):
+    milk: float
+    cattle_sales: float
+    base: float
+    addition: float
+
+
+class VatFlatRateResult(Span):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    vat_registered: bool
+    months: list[VatMonth]
+    total: VatTotal
+    rules_applied: list[RuleApplied]
+
+
+class TaxStockReliefResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    business_type: Literal["sole_trader", "partnership", "company"]
+    period_end: MonthlyPeriodIdentity
+    regime: Literal["general", "young_trained_farmer", "registered_partnership"]
+    opening_stock: float
+    closing_stock: float
+    stock_increase: float
+    rate_pct: float
+    relief_before_profit_limit: float
+    trading_profit: float
+    relief: float
+    profit_after_relief: float
+    restricted_by_profit: bool
+    losses_forward_restricted: bool
+    caps_not_applied: list[str]
+    rules_applied: list[RuleApplied]
+
+
+AllowanceType = Literal["plant", "farm_buildings", "slurry_storage", "farm_safety", "none"]
+
+
+class AllowanceAsset(_Out):
+    category: Literal["machinery", "buildings", "other"]
+    allowance_type: AllowanceType
+    allowance_applied: AllowanceType
+    qualifying_cost: float
+    opening_twdv: float
+    allowance: float
+    closing_twdv: float
+
+
+class AllowanceTotals(_Out):
+    opening_twdv: float
+    allowance: float
+    closing_twdv: float
+
+
+class AllowanceByType(_Out):
+    plant: float
+    farm_buildings: float
+    slurry_storage: float
+    farm_safety: float
+
+
+class ProfitBridge(_Out):
+    accounting_profit: float
+    add_back_depreciation: float
+    flat_rate_addition: float
+    capital_allowances: float
+    taxable_profit: float
+
+
+class TaxCapitalAllowancesResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    tax_year: int
+    period_end_month: int
+    assets: list[AllowanceAsset]
+    by_type: AllowanceByType
+    total: AllowanceTotals
+    profit_bridge: ProfitBridge | None
+    caps_not_applied: list[str]
+    rules_applied: list[RuleApplied]
+
+
+class TaxIncome(_Out):
+    farm_profit: float
+    other_income: float
+    spouse_paye_income: float
+    total: float
+
+
+class IncomeTaxLines(_Out):
+    standard_rate_band: float
+    at_standard_rate: float
+    at_higher_rate: float
+    gross: float
+    credits: float
+    net: float
+
+
+class PerPerson(_Out):
+    farmer: float
+    spouse: float
+    total: float
+
+
+class CorporationTaxLines(_Out):
+    trading: float
+    non_trading: float
+    total: float
+
+
+class StockReliefCap(_Out):
+    regime: Literal["young_trained_farmer", "registered_partnership"]
+    relief: float
+    tax_value: float
+    cap: float
+    clawback: float
+
+
+class TaxEstimateResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    business_type: Literal["sole_trader", "partnership", "company"]
+    tax_year: int
+    assessment: Literal["single", "joint", "company"]
+    income: TaxIncome
+    income_tax: IncomeTaxLines | None
+    usc: PerPerson | None
+    prsi: PerPerson | None
+    corporation_tax: CorporationTaxLines | None
+    stock_relief_cap: StockReliefCap | None
+    total_tax: float
+    effective_rate_pct: float | None
+    rules_applied: list[RuleApplied]
+
+
+class ExtractionCompany(_Out):
+    trading_profit: float
+    salary: float
+    taxable_trading_profit: float
+    non_trading_income: float
+    corporation_tax: float
+    profit_after_tax: float
+    dividends: float
+    dwt_withheld: float
+    close_company_surcharge: float
+    retained: float
+
+
+class ExtractionDirector(_Out):
+    salary: float
+    dividends: float
+    other_income: float
+    spouse_paye_income: float
+    assessment: Literal["single", "joint"]
+    income_tax: IncomeTaxLines
+    usc: PerPerson
+    prsi: PerPerson
+    total_tax: float
+    dwt_credit: float
+    balance_due: float
+
+
+class ExtractionHousehold(_Out):
+    income_after_tax: float
+    total_tax: float
+    effective_rate_pct: float | None
+
+
+class TaxCompanyExtractionResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    tax_year: int
+    company: ExtractionCompany
+    director: ExtractionDirector
+    household: ExtractionHousehold
+    rules_applied: list[RuleApplied]
+
+
+class PartnerResult(_Out):
+    label: str
+    profit_share_pct: float
+    profit_share: float
+    stock_increase_share: float
+    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership"]
+    stock_relief: float
+    taxable_profit: float
+    succession_credit: float
+    tax: TaxEstimateResult
+
+
+class PartnershipTotals(_Out):
+    stock_relief: float
+    succession_credit: float
+    total_tax: float
+
+
+class TaxPartnershipResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    tax_year: int
+    registered_partnership: bool
+    succession_credit_total: float
+    trading_profit: float
+    stock_increase: float
+    partners: list[PartnerResult]
+    total: PartnershipTotals
+    rules_applied: list[RuleApplied]
+
+
 # --- reports ---------------------------------------------------------------------
 
 
@@ -791,6 +1069,12 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "kpi.summary": KpiSummaryResult,
     "pl.net": PlNetResult,
     "milk.quality": MilkQualityResult,
+    "vat.flat_rate": VatFlatRateResult,
+    "tax.stock_relief": TaxStockReliefResult,
+    "tax.capital_allowances": TaxCapitalAllowancesResult,
+    "tax.estimate": TaxEstimateResult,
+    "tax.partnership": TaxPartnershipResult,
+    "tax.company_extraction": TaxCompanyExtractionResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

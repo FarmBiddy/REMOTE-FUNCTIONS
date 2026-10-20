@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 from farm_functions.core.aggregate import sum_amounts
 from farm_functions.core.rounding import round_money
-from farm_functions.dairy.kpis import dairy_kpis
+from farm_functions.dairy.kpis import dairy_kpis, teagasc_view
 from farm_functions.domain import (
     MonthlyDairyStatementModel,
     MonthlyPeriodIdentity,
@@ -27,8 +27,17 @@ def kpi_summary(
     milk_solids_kg: float | None = None,
     hectares: float | None = None,
     debt_balance: float | None = None,
+    depreciation: float | None = None,
+    interest: float = 0.0,
+    livestock_opening_value: float = 0.0,
+    livestock_closing_value: float = 0.0,
+    stock_opening_value: float = 0.0,
+    stock_closing_value: float = 0.0,
 ) -> dict[str, Any]:
-    """Run the monthly statements, total them, then derive Dairy KPIs (ADR-0028)."""
+    """Run the monthly statements, total them, then derive Dairy KPIs (ADR-0028).
+
+    With ``depreciation`` (as sent to ``pl.net``) the Teagasc NFS view is added.
+    """
     statements = calculate_multi_month_dairy_statements(
         MultiMonthDairyStatementModel(
             months=[
@@ -71,5 +80,20 @@ def kpi_summary(
             hectares=hectares,
             debt_balance=debt_balance,
             **totals,
+        ),
+        "teagasc": (
+            None
+            if depreciation is None
+            else teagasc_view(
+                milk_litres=totals["milk_litres"],
+                revenue=totals["revenue"],
+                schemes=total(lambda s: s["revenue"]["schemes"]),
+                costs=totals["costs"],
+                cost_lines=cost_lines,
+                depreciation=depreciation,
+                interest=interest,
+                valuation_change=(livestock_closing_value - livestock_opening_value)
+                + (stock_closing_value - stock_opening_value),
+            )
         ),
     }

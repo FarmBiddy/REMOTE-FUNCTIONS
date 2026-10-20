@@ -1,0 +1,11 @@
+{
+  "business_type": "sole_trader",
+  "tax_year": 2026,
+  "taxable_profit": 58000,
+  "other_income": 0,
+  "marital_status": "married",
+  "spouse_paye_income": 32000,
+  "stock_relief": 3500,
+  "stock_relief_regime": "general",
+  "state_aid_used": 0
+}

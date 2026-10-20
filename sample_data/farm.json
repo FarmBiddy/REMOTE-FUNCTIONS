@@ -18,6 +18,7 @@
     "fertiliser": 15000,
     "vet": 5000,
     "contractor": 10000,
+    "casual_labour": 0,
     "labour": 40000,
     "insurance": 4000,
     "fuel": 6000,

@@ -1,0 +1,12 @@
+{
+  "business_type": "sole_trader",
+  "period_end_year": 2026,
+  "period_end_month": 12,
+  "trading_profit": 62000,
+  "livestock_opening_value": 330000,
+  "livestock_closing_value": 342000,
+  "stock_opening_value": 9000,
+  "stock_closing_value": 11000,
+  "registered_partnership": false,
+  "young_trained_farmer_first_year": 2024
+}

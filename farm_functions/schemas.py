@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from math import isfinite
 from typing import Annotated, Any, Literal
 
@@ -13,6 +14,11 @@ from farm_functions.dairy.cash_flow import (
     OPERATING_CASH_INFLOW_CATEGORIES,
     OPERATING_CASH_OUTFLOW_CATEGORIES,
 )
+from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
+from farm_functions.ie.capital_allowances import DEFAULT_FOR_CATEGORY
+from farm_functions.ie.partnership import MIN_SUCCESSOR_SHARE_PCT
+from farm_functions.ie.taxes import LAST_TAX_YEAR, year_rules
+from farm_functions.tax import resolve_allowance, stock_relief_regime
 
 
 def _parse_finite_number(value: Any) -> float:
@@ -111,6 +117,7 @@ class TotalCostsInput(_StrictModel):
     fertiliser: NonNegativeNumber = 0
     vet: NonNegativeNumber = 0
     contractor: NonNegativeNumber = 0
+    casual_labour: NonNegativeNumber = 0
     labour: NonNegativeNumber = 0
     insurance: NonNegativeNumber = 0
     fuel: NonNegativeNumber = 0
@@ -381,9 +388,15 @@ class AssetInput(_StrictModel):
     life_months: Annotated[int, BeforeValidator(_parse_loan_months)] | None = None
     residual_value: NonNegativeNumber = 0.0
     annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)] | None = None
+    # Tax only (ADR-0053): grants reduce the cost allowances are given on;
+    # tax_allowance overrides the default type for the category.
+    grant: NonNegativeNumber = 0.0
+    tax_allowance: Literal["plant", "farm_buildings", "slurry_storage", "farm_safety", "none"] | None = None
 
     @model_validator(mode="after")
     def _method_fields(self) -> "AssetInput":
+        if self.grant > self.cost:
+            raise ValueError("grant must not exceed cost")
         if self.method == "straight_line" and self.life_months is None:
             raise ValueError("life_months is required for straight_line")
         if self.method == "reducing_balance" and self.annual_rate is None:
@@ -438,6 +451,14 @@ class KpiSummaryInput(_StrictModel):
     milk_solids_kg: NonNegativeNumber | None = None
     hectares: NonNegativeNumber | None = None
     debt_balance: NonNegativeNumber | None = None
+    # Teagasc NFS view (sent only together with depreciation): the same period
+    # totals pl.net takes.
+    depreciation: NonNegativeNumber | None = None
+    interest: NonNegativeNumber = 0.0
+    livestock_opening_value: NonNegativeNumber = 0.0
+    livestock_closing_value: NonNegativeNumber = 0.0
+    stock_opening_value: NonNegativeNumber = 0.0
+    stock_closing_value: NonNegativeNumber = 0.0
 
 
 def _parse_pct_change(value: Any) -> float:
@@ -764,6 +785,82 @@ class ProjectionInvestmentInput(_StrictModel):
         return self
 
 
+class PartnerInput(_StrictModel):
+    """One partner (an individual) in ``tax.partnership`` (ADR-0053)."""
+
+    label: str = Field("", max_length=80)
+    profit_share_pct: Annotated[float, BeforeValidator(_parse_non_negative_number)]
+    marital_status: Literal["single", "married"] = "single"
+    spouse_paye_income: NonNegativeNumber = 0.0
+    other_income: NonNegativeNumber = 0.0
+    young_trained_farmer_first_year: CalendarYear | None = None
+    state_aid_used: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _spouse(self) -> "PartnerInput":
+        if self.spouse_paye_income and self.marital_status != "married":
+            raise ValueError("spouse_paye_income needs marital_status married")
+        return self
+
+
+def _check_shares(partners: list["PartnerInput"]) -> None:
+    if abs(sum(p.profit_share_pct for p in partners) - 100) > 0.01:
+        raise ValueError("partner profit shares must add up to 100")
+
+
+def _check_allowance_rules(assets: list["AssetInput"]) -> None:
+    for i, a in enumerate(assets):
+        kind = a.tax_allowance or DEFAULT_FOR_CATEGORY[a.category]
+        if kind != "none" and resolve_allowance(kind, a.year, a.month, a.category)[1] is None:
+            raise ValueError(f"no capital allowance rule for assets[{i}] ({kind}) bought {a.year}-{a.month:02d}")
+
+
+class ProjectionTaxProfileInput(_StrictModel):
+    """Irish tax profile for ``plan.projection`` (ADR-0053): tax per year is
+    estimated from it. ``prior_farming_profits``: up to 4 past years of farming
+    profit before capital allowances, oldest first (Platform history, needed for
+    income averaging)."""
+
+    business_type: Literal["sole_trader", "partnership", "company"]
+    marital_status: Literal["single", "married"] = "single"
+    spouse_paye_income: NonNegativeNumber = 0.0
+    other_income: NonNegativeNumber = 0.0
+    registered_partnership: bool = False
+    young_trained_farmer_first_year: CalendarYear | None = None
+    state_aid_used: NonNegativeNumber = 0.0
+    income_averaging: bool = False
+    prior_farming_profits: list[SignedNumber] = Field(default_factory=list, max_length=4)
+    # Flat-rate (unregistered) farmers receive the VAT addition: income in cash and tax.
+    vat_registered: bool = False
+    # Partnerships: one entry per partner (2–10, shares add up to 100) with their own
+    # personal details; the profile's own personal fields stay unset.
+    partners: list[PartnerInput] = Field(default_factory=list, max_length=10)
+
+    @model_validator(mode="after")
+    def _profile(self) -> "ProjectionTaxProfileInput":
+        if self.business_type == "partnership":
+            own = (
+                self.marital_status == "married" or self.spouse_paye_income or self.other_income
+                or self.young_trained_farmer_first_year is not None or self.state_aid_used
+            )
+            if len(self.partners) < 2 or own:
+                raise ValueError("a partnership tax_profile needs 2 or more partners, each with their own details")
+            _check_shares(self.partners)
+        elif self.partners:
+            raise ValueError("partners are only for business_type partnership")
+        personal = (
+            self.marital_status == "married" or self.registered_partnership or self.state_aid_used
+            or self.young_trained_farmer_first_year is not None or self.income_averaging
+        )
+        if self.business_type == "company" and personal:
+            raise ValueError("marital status, enhanced stock relief, State aid and averaging are for individuals")
+        if self.registered_partnership and self.business_type != "partnership":
+            raise ValueError("registered_partnership needs business_type partnership")
+        if self.spouse_paye_income and self.marital_status != "married":
+            raise ValueError("spouse_paye_income needs marital_status married")
+        return self
+
+
 class PlanProjectionInput(_StrictModel):
     """HTTP / runner input for ``plan.projection`` (ADR-0042)."""
 
@@ -778,9 +875,12 @@ class PlanProjectionInput(_StrictModel):
     land: NonNegativeNumber = 0.0
     livestock: NonNegativeNumber = 0.0
     min_cover: Annotated[float, BeforeValidator(_parse_cover)] | None = None
+    tax_profile: ProjectionTaxProfileInput | None = None
 
     @model_validator(mode="after")
     def _consistent(self) -> "PlanProjectionInput":
+        if self.tax_profile and self.assumptions.tax:
+            raise ValueError("send assumptions.tax or tax_profile, not both")
         _reject_duplicate_months(self.base_pl_months)
         keys = sorted((m.year, m.month) for m in self.base_pl_months)
         first = keys[0][0] * 12 + keys[0][1]
@@ -790,6 +890,11 @@ class PlanProjectionInput(_StrictModel):
             raise ValueError("assumption lists must not be longer than years")
         if any(inv.year > self.years for inv in self.investments):
             raise ValueError("investment year must be within years")
+        # First projected year ends 12 months after the base: its calendar year is the tax year.
+        if self.tax_profile and year_rules(keys[-1][0] + 1) is None and keys[-1][0] + 1 < LAST_TAX_YEAR:
+            raise ValueError(f"no tax rules for the first projected tax year {keys[-1][0] + 1}")
+        if self.tax_profile:
+            _check_allowance_rules(self.assets)
         return self
 
 
@@ -889,6 +994,179 @@ class MilkQualityInput(_StrictModel):
             missing = [f"{y}-{m:02d}" for y, m in shipped if (y, m) not in covered]
             if missing:
                 raise ValueError(f"{metric} monthly_average has no value for {', '.join(missing)}")
+        return self
+
+
+class VatFlatRateInput(_StrictModel):
+    """HTTP / runner input for ``vat.flat_rate`` (ADR-0053): pl.months items with
+    prices ex-VAT. Flat-rate (unregistered) farmers get the addition."""
+
+    months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    vat_registered: bool = False
+
+    @model_validator(mode="after")
+    def _rules(self) -> "VatFlatRateInput":
+        _reject_duplicate_months(self.months)
+        if not self.vat_registered:
+            for m in self.months:
+                if rule_at(FLAT_RATE_ADDITION, date(m.year, m.month, 1)) is None:
+                    raise ValueError(f"no flat-rate addition rule for {m.year}-{m.month:02d}")
+        return self
+
+
+class TaxStockReliefInput(_StrictModel):
+    """HTTP / runner input for ``tax.stock_relief`` (ADR-0053). Stock values as in
+    ``pl.net``; ``trading_profit`` is the period's taxable farming profit before
+    stock relief. Partners send their own share."""
+
+    business_type: Literal["sole_trader", "partnership", "company"]
+    period_end_year: CalendarYear
+    period_end_month: CalendarMonth = 12
+    trading_profit: SignedNumber
+    livestock_opening_value: NonNegativeNumber = 0.0
+    livestock_closing_value: NonNegativeNumber = 0.0
+    stock_opening_value: NonNegativeNumber = 0.0
+    stock_closing_value: NonNegativeNumber = 0.0
+    registered_partnership: bool = False
+    young_trained_farmer_first_year: CalendarYear | None = None
+
+    @model_validator(mode="after")
+    def _regime(self) -> "TaxStockReliefInput":
+        first = self.young_trained_farmer_first_year
+        if self.business_type == "company" and (self.registered_partnership or first is not None):
+            raise ValueError("young trained farmer and partnership stock relief are for individuals")
+        if self.registered_partnership and self.business_type != "partnership":
+            raise ValueError("registered_partnership needs business_type partnership")
+        if first is not None and first > self.period_end_year:
+            raise ValueError("young_trained_farmer_first_year is after the period")
+        _, rules = stock_relief_regime(self.period_end_year, self.registered_partnership, first)
+        if rule_at(rules, date(self.period_end_year, self.period_end_month, 1)) is None:
+            raise ValueError(
+                f"no stock relief rule for period ending {self.period_end_year}-{self.period_end_month:02d}"
+            )
+        return self
+
+
+class TaxEstimateInput(_StrictModel):
+    """HTTP / runner input for ``tax.estimate`` (ADR-0053). ``taxable_profit`` is
+    after capital allowances and stock relief (``tax.stock_relief``
+    ``profit_after_relief``); partners send their share. Married couples are
+    jointly assessed; ``spouse_paye_income`` is the spouse's employment income."""
+
+    business_type: Literal["sole_trader", "partnership", "company"]
+    tax_year: CalendarYear
+    taxable_profit: SignedNumber
+    other_income: NonNegativeNumber = 0.0
+    marital_status: Literal["single", "married"] = "single"
+    spouse_paye_income: NonNegativeNumber = 0.0
+    stock_relief: NonNegativeNumber = 0.0
+    stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership"] = "general"
+    state_aid_used: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _profile(self) -> "TaxEstimateInput":
+        personal = self.marital_status == "married" or self.stock_relief_regime != "general" or self.state_aid_used
+        if self.business_type == "company" and personal:
+            raise ValueError("marital status, enhanced stock relief and State aid are for individuals")
+        if self.stock_relief_regime == "registered_partnership" and self.business_type != "partnership":
+            raise ValueError("registered_partnership needs business_type partnership")
+        if self.spouse_paye_income and self.marital_status != "married":
+            raise ValueError("spouse_paye_income needs marital_status married")
+        if year_rules(self.tax_year) is None:
+            raise ValueError(f"no tax rules for tax year {self.tax_year}")
+        return self
+
+
+class TaxCompanyExtractionInput(_StrictModel):
+    """HTTP / runner input for ``tax.company_extraction`` (ADR-0053): a farm
+    company's taxable trading profit before the director's salary (after capital
+    allowances and stock relief), its non-trading income, and how the director
+    is paid. The director is a proprietary director (Class S PRSI)."""
+
+    tax_year: CalendarYear
+    trading_profit: SignedNumber
+    non_trading_income: NonNegativeNumber = 0.0
+    salary: NonNegativeNumber = 0.0
+    dividends: NonNegativeNumber = 0.0
+    marital_status: Literal["single", "married"] = "single"
+    spouse_paye_income: NonNegativeNumber = 0.0
+    other_income: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _profile(self) -> "TaxCompanyExtractionInput":
+        if self.spouse_paye_income and self.marital_status != "married":
+            raise ValueError("spouse_paye_income needs marital_status married")
+        if year_rules(self.tax_year) is None:
+            raise ValueError(f"no tax rules for tax year {self.tax_year}")
+        return self
+
+
+class SuccessionInput(_StrictModel):
+    """Succession farm partnership: year registered and the successor's birth year."""
+
+    registered_year: CalendarYear
+    successor_birth_year: CalendarYear
+    successor: Annotated[int, BeforeValidator(_parse_non_negative_number)]
+
+
+class TaxPartnershipInput(_StrictModel):
+    """HTTP / runner input for ``tax.partnership`` (ADR-0053): partnership taxable
+    profit after capital allowances, before stock relief (``tax.capital_allowances``
+    ``profit_bridge.taxable_profit``), stock valuations as in ``pl.net``, and the
+    partners (2–10 individuals) with profit shares summing to 100."""
+
+    tax_year: CalendarYear
+    period_end_month: CalendarMonth = 12
+    trading_profit: SignedNumber
+    partners: list[PartnerInput] = Field(..., min_length=2, max_length=10)
+    registered_partnership: bool = True
+    succession: SuccessionInput | None = None
+    livestock_opening_value: NonNegativeNumber = 0.0
+    livestock_closing_value: NonNegativeNumber = 0.0
+    stock_opening_value: NonNegativeNumber = 0.0
+    stock_closing_value: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _partners(self) -> "TaxPartnershipInput":
+        _check_shares(self.partners)
+        if self.succession:
+            s = self.succession
+            if not self.registered_partnership:
+                raise ValueError("a succession partnership must be a registered partnership")
+            if s.successor >= len(self.partners):
+                raise ValueError("succession.successor must be the index of a partner")
+            if self.partners[s.successor].profit_share_pct < MIN_SUCCESSOR_SHARE_PCT:
+                raise ValueError("the successor needs at least a 20% profit share")
+        if year_rules(self.tax_year) is None:
+            raise ValueError(f"no tax rules for tax year {self.tax_year}")
+        for p in self.partners:
+            first = p.young_trained_farmer_first_year
+            if first is not None and first > self.tax_year:
+                raise ValueError("young_trained_farmer_first_year is after the period")
+            _, rules = stock_relief_regime(self.tax_year, self.registered_partnership, first)
+            if rule_at(rules, date(self.tax_year, self.period_end_month, 1)) is None:
+                raise ValueError(f"no stock relief rule for tax year {self.tax_year}")
+        return self
+
+
+class TaxCapitalAllowancesInput(_StrictModel):
+    """HTTP / runner input for ``tax.capital_allowances`` (ADR-0053): the
+    ``assets.schedule`` register for one tax year. ``accounting_profit``
+    (``pl.net`` net profit before tax) with the period's ``depreciation``
+    (``assets.schedule``) and, for flat-rate farmers, the ``flat_rate_addition``
+    gives taxable profit."""
+
+    tax_year: CalendarYear
+    period_end_month: CalendarMonth = 12
+    assets: list[AssetInput] = Field(..., min_length=1, max_length=200)
+    accounting_profit: SignedNumber | None = None
+    depreciation: NonNegativeNumber = 0.0
+    # vat.flat_rate total.addition for the period: taxable income pl.net leaves out.
+    flat_rate_addition: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _rules(self) -> "TaxCapitalAllowancesInput":
+        _check_allowance_rules(self.assets)
         return self
 
 
@@ -1122,6 +1400,18 @@ INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         description="Annual contractor / contract-services operating cost",
     ),
     InputFieldMetadata(
+        name="casual_labour",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR/year",
+        description=(
+            "Annual casual / relief labour (relief milkers, calving help): a variable "
+            "(direct) cost, as in the Teagasc NFS; regular hired labour goes in labour"
+        ),
+    ),
+    InputFieldMetadata(
         name="labour",
         type="number",
         required=False,
@@ -1332,7 +1622,9 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "amount", "annual_benefit", "cash", "cost", "creditors", "debt_balance", "debtors",
             "depreciation", "drawings", "interest", "land", "livestock", "livestock_closing_value",
             "livestock_opening_value", "off_farm_income", "other_long_term_liabilities",
-            "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax",
+            "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax", "trading_profit",
+            "grant", "accounting_profit", "taxable_profit", "other_income", "spouse_paye_income",
+            "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
         ),
         _EUR,
     ),
@@ -1374,20 +1666,27 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "actual", "added_costs", "added_income", "assets", "base_pl_months", "cash_flows",
             "cf_months", "comparison", "forecast", "history", "investments", "loans", "months",
             "pl_months", "prior_pl_months", "projected_cf_months", "projected_pl_months",
-            "reduced_costs", "reduced_income", "scenarios",
+            "reduced_costs", "reduced_income", "scenarios", "prior_farming_profits", "partners",
         ),
         "list",
     ),
     **dict.fromkeys(
         (
             "annual_effects", "assumptions", "capital", "lines_amount", "lines_inflation_pct",
-            "lines_pct", "loan", "monthly_effects", "new_loan", "ytd",
+            "lines_pct", "loan", "monthly_effects", "new_loan", "ytd", "tax_profile", "succession",
         ),
         "object",
     ),
     **dict.fromkeys(("label", "name"), "text"),
     **dict.fromkeys(("cash_line", "category", "method", "rank_by"), "choice"),
-    "variable": "boolean",
+    **dict.fromkeys(("variable", "vat_registered", "registered_partnership", "income_averaging"), "boolean"),
+    "period_end_year": "year",
+    "period_end_month": "month",
+    "young_trained_farmer_first_year": "year",
+    **dict.fromkeys(("tax_year", "registered_year", "successor_birth_year"), "year"),
+    "profit_share_pct": "%",
+    "successor": "index",
+    **dict.fromkeys(("business_type", "tax_allowance", "marital_status", "stock_relief_regime"), "choice"),
 }
 
 
@@ -1522,13 +1821,22 @@ MONTHLY_DAIRY_INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         description="Contractor operating cost in the statement month",
     ),
     InputFieldMetadata(
+        name="casual_labour",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description="Casual / relief labour in the statement month (variable cost)",
+    ),
+    InputFieldMetadata(
         name="labour",
         type="number",
         required=False,
         minimum=0,
         maximum=None,
         unit="EUR",
-        description="Labour operating cost in the statement month",
+        description="Regular hired labour in the statement month (fixed cost)",
     ),
     InputFieldMetadata(
         name="insurance",

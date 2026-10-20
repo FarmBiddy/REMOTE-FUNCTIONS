@@ -33,7 +33,10 @@ report audit trails.
 6. **Examples:** one real payload per ID (Joe Bloggs' farm) in
    `sample_data/examples/<id>.json`, published as the OpenAPI example and
    run by a test so it never goes stale. Regenerate from
-   `tests/test_end_to_end_joe.py` payloads after contract changes.
+   `tests/test_end_to_end_joe.py` payloads after contract changes. An ID may
+   add named variants, `sample_data/examples/<id>.<name>.json` (e.g.
+   `plan.projection.partnership`): OpenAPI then lists them under `examples`
+   with the main one as `default`, and every variant is run by the same test.
 
 ## Consequences
 

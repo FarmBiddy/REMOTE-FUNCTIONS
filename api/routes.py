@@ -25,6 +25,23 @@ def load_example(key: str) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
 
 
+def load_example_variants(key: str) -> dict[str, dict[str, Any]]:
+    """Extra named examples, ``<key>.<name>.json`` (e.g. ``plan.projection.partnership``)."""
+    return {
+        path.name[len(key) + 1 : -len(".json")]: json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(EXAMPLES_DIR.glob(f"{key}.*.json"))
+        if path.name.count(".") == key.count(".") + 2
+    }
+
+
+def _openapi_examples(key: str) -> dict[str, Any]:
+    """OpenAPI ``example``, or ``examples`` when an ID has named variants."""
+    example, variants = load_example(key), load_example_variants(key)
+    if not variants:
+        return {"example": example}
+    return {"examples": {"default": {"value": example}, **{name: {"value": v} for name, v in variants.items()}}}
+
+
 _INVALID_JSON = object()
 
 
@@ -49,7 +66,6 @@ def _register_function_routes() -> None:
     for spec in CALCULATION_CATALOGUE:
         key = spec.id
         model = spec.input_model
-        example = load_example(key)
         schema = model.model_json_schema()
 
         def make_handler(function_key: str, description: str):
@@ -78,7 +94,7 @@ def _register_function_routes() -> None:
                     "content": {
                         "application/json": {
                             "schema": schema,
-                            "example": example,
+                            **_openapi_examples(key),
                         }
                     },
                 }

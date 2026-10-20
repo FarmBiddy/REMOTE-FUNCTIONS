@@ -35,6 +35,8 @@ _APPLICATION_MODULES = (
     FARM / "projections.py",
     FARM / "decisions.py",
     FARM / "quality.py",
+    FARM / "vat.py",
+    FARM / "tax.py",
     FARM / "errors.py",
     FARM / "schemas.py",
     FARM / "loaders" / "json_loader.py",
@@ -140,6 +142,13 @@ def test_agriculture_has_no_monthly_envelope_coupling() -> None:
 
 def test_dairy_does_not_import_orchestration() -> None:
     _assert_no_forbidden(FARM / "dairy", _ORCHESTRATION_FORBIDDEN)
+
+
+def test_only_application_imports_jurisdiction_rules() -> None:
+    """ADR-0053: Core, Agriculture and Dairy stay country-neutral; ie uses only Core / Agriculture."""
+    for package in ("core", "agriculture", "dairy"):
+        _assert_no_forbidden(FARM / package, ("farm_functions.ie",))
+    _assert_no_forbidden(FARM / "ie", ("farm_functions.dairy", *_ORCHESTRATION_FORBIDDEN))
 
 
 def test_application_does_not_import_calcs_facade() -> None:

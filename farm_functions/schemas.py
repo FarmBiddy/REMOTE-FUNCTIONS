@@ -877,8 +877,9 @@ class ProjectionTaxProfileInput(_StrictModel):
     registered_partnership: bool = False
     young_trained_farmer_first_year: CalendarYear | None = None
     state_aid_used: NonNegativeNumber = 0.0
-    income_averaging: bool = False
-    prior_farming_profits: list[SignedNumber] = Field(default_factory=list, max_length=4)
+    # Individuals must answer (ADR-0055); companies leave it unset.
+    income_averaging: bool | None = None
+    prior_farming_profits: list[SignedNumber] = Field(default_factory=list, max_length=MAX_PRIOR_FARMING_PROFITS)
     # Flat-rate (unregistered) farmers receive the VAT addition: income in cash and tax.
     vat_registered: bool = False
     # Partnerships: one entry per partner (2–10, shares add up to 100) with their own
@@ -907,6 +908,8 @@ class ProjectionTaxProfileInput(_StrictModel):
             raise ValueError("registered_partnership needs business_type partnership")
         if self.spouse_paye_income and self.marital_status != "married":
             raise ValueError("spouse_paye_income needs marital_status married")
+        if self.business_type != "company" and self.income_averaging is None:
+            raise missing_inputs("income_averaging")
         return self
 
 

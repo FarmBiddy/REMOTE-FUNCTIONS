@@ -22,7 +22,7 @@ BASE = {
     "opening_cash": 0,
     "milking_cows": 100,
     "years": 3,
-    "tax_profile": {"business_type": "sole_trader", "vat_registered": True},
+    "tax_profile": {"business_type": "sole_trader", "vat_registered": True, "income_averaging": False},
 }
 TRACTOR = {"category": "machinery", "cost": 40_000, "year": 2024, "month": 4, "life_months": 120}
 
@@ -38,7 +38,7 @@ def _years(**overrides):
 
 
 def _profile(**fields):
-    return {"tax_profile": {"business_type": "sole_trader", "vat_registered": True, **fields}}
+    return {"tax_profile": {"business_type": "sole_trader", "vat_registered": True, "income_averaging": False, **fields}}
 
 
 def test_tax_per_year_with_rules_in_force_then_held_constant():
@@ -105,7 +105,7 @@ def test_errors():
 
 def test_flat_rate_farmers_get_the_vat_addition_in_profit_and_cash():
     """Not VAT-registered: 192,000 milk × 4.5% (2026) = 8,640, then × 4.8% (2027) = 9,216."""
-    years = _years(tax_profile={"business_type": "sole_trader"})
+    years = _years(tax_profile={"business_type": "sole_trader", "income_averaging": False})
     assert [y["tax"]["flat_rate_addition"] for y in years[:2]] == [8_640, 9_216]
     assert years[0]["tax"]["profit_before_allowances"] == 68_640
     assert years[0]["cash"]["flat_rate_addition"] == 8_640
@@ -117,7 +117,7 @@ def test_partnership_is_taxed_per_partner():
     """60,000 split 60 / 40, single partners, 2026:
     36,000 → IT 3,200 + USC 612.82 + PRSI 1,525.50 = 5,338.32
     24,000 → IT 800 + USC 299.82 + PRSI 1,017 = 2,116.82  → 7,455.14, not 15,075.32."""
-    profile = {"business_type": "partnership", "vat_registered": True,
+    profile = {"business_type": "partnership", "vat_registered": True, "income_averaging": False,
                "partners": [{"label": "Joe", "profit_share_pct": 60}, {"label": "Mark", "profit_share_pct": 40}]}
     tax = _years(tax_profile=profile)[0]["tax"]
     assert [p["total_tax"] for p in tax["partners"]] == [5_338.32, 2_116.82]
@@ -161,7 +161,7 @@ def test_projection_rejects_assets_without_an_allowance_rule():
 
 
 def test_partnership_profile_errors_name_the_field():
-    single_partner = {"business_type": "partnership", "partners": [{"profit_share_pct": 100}]}
+    single_partner = {"business_type": "partnership", "income_averaging": False, "partners": [{"profit_share_pct": 100}]}
     result = _run(tax_profile=single_partner)
     assert (result["errors"][0]["details"]["reason"], result["errors"][0]["field"]) == ("partners_invalid", "tax_profile.partners")
     old = [{**m, "year": 2020} for m in BASE["base_pl_months"]]
@@ -176,7 +176,15 @@ def test_rules_status_counts_every_rule_the_year_used(monkeypatch):
     import farm_functions.tax as tax
     from farm_functions.ie.rules import Rule
 
-    assert _years(tax_profile={"business_type": "sole_trader"})[0]["tax"]["rules_status"] == "enacted"  # 2026
+    assert _years(tax_profile={"business_type": "sole_trader", "income_averaging": False})[0]["tax"]["rules_status"] == "enacted"  # 2026
     announced = (Rule("vat_fra", 4.5, date(2026, 1, 1), None, "test", "announced"),)
     monkeypatch.setattr(tax, "FLAT_RATE_ADDITION", announced)
-    assert _years(tax_profile={"business_type": "sole_trader"})[0]["tax"]["rules_status"] == "announced"
+    assert _years(tax_profile={"business_type": "sole_trader", "income_averaging": False})[0]["tax"]["rules_status"] == "announced"
+
+
+def test_individuals_must_answer_averaging():
+    """ADR-0055: no default; companies leave it unset."""
+    result = _run(tax_profile={"business_type": "sole_trader", "vat_registered": True})
+    assert result["status"] == "needs_input"
+    assert [m["path"] for m in result["missing"]] == ["tax_profile.income_averaging"]
+    assert _years(tax_profile={"business_type": "company", "vat_registered": True})[0]["tax"]["averaging"] == "off"

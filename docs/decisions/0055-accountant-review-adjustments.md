@@ -48,10 +48,19 @@ where the Engine's Irish layer differs from practice.
 - `plan.projection` partners keep the profile-level averaging flag (their
   history is the profile's split by share): a separate input model, unchanged.
 
+### 1c. `plan.projection`: averaging answer required, one rule
+
+- `tax_profile.income_averaging` has no default for individuals any more
+  (`needs_input` at `tax_profile.income_averaging`); companies leave it unset.
+- The projection reads the averaging period from `income_averaging_years`
+  (same rule as `tax.estimate`), so a change in law is one edit. Figures are
+  unchanged.
+
 ## Consequences
 
 - Breaking for callers of `tax.estimate` that are individuals and of
-  `tax.partnership`: they must send `income_averaging`. Engine 1.11.0.
+  `tax.partnership`, and `plan.projection` tax profiles of individuals: they
+  must send `income_averaging`. Engine 1.11.0.
 
 ## Related
 

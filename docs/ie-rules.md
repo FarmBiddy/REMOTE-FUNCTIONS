@@ -222,8 +222,8 @@ SW(MP)A 2024)
 - Engine (`tax.partnership`, ADR-0055): each partner answers averaging and,
   if in it, sends their own share of the previous 4 years; the partnership's
   allowances are split by share and deducted after averaging.
-- Engine (`plan.projection` `tax_profile`): the farmer opts in with
-  `income_averaging`; the window is the Platform's `prior_farming_profits`
+- Engine (`plan.projection` `tax_profile`): individuals must answer
+  `income_averaging` (ADR-0055); the period length comes from the same rule; the window is the Platform's `prior_farming_profits`
   (before capital allowances) followed by projected years; until 5 years are
   known the year is taxed on actual profit (`insufficient_history`). Not
   modelled: exit top-up, step-out year, and the 4-year eligibility test.

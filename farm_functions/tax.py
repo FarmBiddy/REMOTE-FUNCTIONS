@@ -431,9 +431,10 @@ def projected_tax(
         history.append(own_profit - relief)
         averaged, relief_effect = history[-1], relief
         if profile["income_averaging"]:
-            if len(history) >= 5:
-                # This year's relief moves the 5-year average by a fifth only.
-                averaged, averaging, relief_effect = sum(history[-5:]) / 5, "applied", relief / 5
+            years = int(averaging_rule(basis_year).value)
+            if len(history) >= years:
+                # This year's relief moves the average by 1/years only.
+                averaged, averaging, relief_effect = averaged_profit(history, years), "applied", relief / years
             else:
                 averaging = "insufficient_history"
         given = state["given"][i]

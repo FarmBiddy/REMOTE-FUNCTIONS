@@ -10,6 +10,7 @@ from pydantic import BaseModel, ValidationError
 from farm_functions.errors import (
     MISSING_REQUIRED,
     attach_issues,
+    expand_missing,
     invalid_inputs_envelope,
     issue,
     map_validation_error,
@@ -62,8 +63,9 @@ def _path(loc: tuple[Any, ...]) -> str:
 def _nested_needs_input(
     name: str, payload: dict[str, Any], known: tuple[str, ...], exc: ValidationError
 ) -> dict[str, Any] | None:
-    """ADR-0027: when the only problems are missing nested fields, ask for them."""
-    errors = exc.errors()
+    """ADR-0027: when the only problems are missing nested fields, ask for them
+    (including fields a validator requires only in some cases, ADR-0055)."""
+    errors = expand_missing(exc.errors())
     if not errors or any(err["type"] != "missing" for err in errors):
         return None
     missing = []

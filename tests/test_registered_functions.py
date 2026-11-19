@@ -339,7 +339,7 @@ def _zero_payload(key: str) -> dict:
     if key == "tax.partnership":
         return {"tax_year": 2026, "trading_profit": 0, "partners": [{"profit_share_pct": 50}, {"profit_share_pct": 50}]}
     if key == "tax.estimate":
-        return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 0}
+        return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 0, "income_averaging": False}
     if key == "tax.capital_allowances":
         return {"tax_year": 2026, "assets": [{"cost": 0, "year": 2026, "month": 1, "life_months": 1}], "accounting_profit": 0}
     if key == "tax.stock_relief":

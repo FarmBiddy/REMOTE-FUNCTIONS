@@ -7,5 +7,6 @@
   "spouse_paye_income": 32000,
   "stock_relief": 3500,
   "stock_relief_regime": "general",
-  "state_aid_used": 0
+  "state_aid_used": 0,
+  "income_averaging": false
 }

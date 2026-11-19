@@ -66,7 +66,7 @@ PAYLOADS = {
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "vat.flat_rate": {"months": joe.ACTUAL},
     "tax.capital_allowances": {"tax_year": 2026, "period_end_month": 9, "assets": joe.ASSETS},
-    "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married"},
+    "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married", "income_averaging": False},
     "tax.company_extraction": {"tax_year": 2026, "trading_profit": 60_000, "salary": 30_000, "dividends": 15_000,
                                "marital_status": "married", "spouse_paye_income": 32_000},
     "tax.partnership": {"tax_year": 2026, "period_end_month": 9, "trading_profit": 60_000,

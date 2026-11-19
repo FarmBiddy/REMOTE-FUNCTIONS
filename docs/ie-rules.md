@@ -209,6 +209,16 @@ SW(MP)A 2024)
   deferred tax paid in 4 equal instalments (all due on permanent exit).
   Re-entry after 4 years on the normal basis.
 - A sole trade moving into an RFP continues for averaging (s.657(10A)).
+| rule_id | value | base | applies | from / to | ref | status |
+|---|---|---|---|---|---|---|
+| income_averaging_years | 5 | this year + previous 4, farming profit before capital allowances | individuals | 2024-01-01 → 2027-12-31 (researched window) | s.657; TDM 23-01-34 | enacted |
+
+- Engine (`tax.estimate`, ADR-0055): individuals must say whether they are in
+  averaging (accountant review, Nov 2026: nearly every dairy farmer is). With
+  it on, the Platform sends the previous 4 years' profit before capital
+  allowances (after stock relief) and this year's allowances; the result shows
+  the 5 profits, the average and the assessable profit. Module:
+  `farm_functions/ie/averaging.py`.
 - Engine (`plan.projection` `tax_profile`): the farmer opts in with
   `income_averaging`; the window is the Platform's `prior_farming_profits`
   (before capital allowances) followed by projected years; until 5 years are

@@ -11,6 +11,7 @@ from math import isfinite
 from typing import Any
 
 from pydantic import ValidationError
+from pydantic_core import PydanticCustomError
 
 MISSING_REQUIRED = "missing_required"
 UNKNOWN_FIELD = "unknown_field"
@@ -142,6 +143,25 @@ def _ctx_error_text(err: dict[str, Any]) -> str:
     return str(raw)
 
 
+def missing_inputs(*fields: str) -> PydanticCustomError:
+    """Raise from a model validator when inputs required only in some cases
+    (e.g. averaging history) are absent: the runner answers needs_input."""
+    return PydanticCustomError("missing", "required: {fields}", {"fields": list(fields)})
+
+
+def expand_missing(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One ``missing`` error per field: conditional ones (``missing_inputs``)
+    carry their fields in ctx, under the location of the model that raised them."""
+    out = []
+    for err in errors:
+        fields = (err.get("ctx") or {}).get("fields") if err.get("type") == "missing" else None
+        if fields:
+            out += [{**err, "loc": (*err.get("loc", ()), f), "ctx": None} for f in fields]
+        else:
+            out.append(err)
+    return out
+
+
 def _field_from_loc(loc: tuple[Any, ...] | list[Any]) -> str | None:
     parts = [str(part) for part in loc if part != "body"]
     return parts[-1] if parts else None
@@ -156,7 +176,7 @@ def _json_safe_value(value: Any) -> Any:
 def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
     """Map Pydantic errors to stable codes (including nested / period-set)."""
     issues: list[dict[str, Any]] = []
-    for err in exc.errors():
+    for err in expand_missing(exc.errors()):
         field = _field_from_loc(err.get("loc") or ())
         # Whole-model checks report the field they are about, under the model's own path
         # (e.g. partners.1.spouse_paye_income, tax_profile.partners).
@@ -393,6 +413,18 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             "marital status, enhanced stock relief, State aid and averaging are for individuals",
         ):
             issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
+        elif text == "income averaging is for individuals, not companies":
+            issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
+        elif text.endswith("only used with income_averaging"):
+            issues.append(
+                issue(INVALID_TYPE, text, field=at("income_averaging"), details={"reason": "needs_income_averaging"})
+            )
+        elif text.startswith("prior_farming_profits needs the"):
+            issues.append(
+                issue(INVALID_TYPE, text, field=at("prior_farming_profits"), details={"reason": "averaging_years_invalid"})
+            )
+        elif text.startswith("no income averaging rule for tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
         elif text == "spouse_paye_income needs marital_status married":
             issues.append(issue(INVALID_TYPE, text, field=at("spouse_paye_income"), details={"reason": "spouse_needs_married"}))
         elif text.startswith("no capital allowance rule for"):

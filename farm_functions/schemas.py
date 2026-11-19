@@ -14,7 +14,9 @@ from farm_functions.dairy.cash_flow import (
     OPERATING_CASH_INFLOW_CATEGORIES,
     OPERATING_CASH_OUTFLOW_CATEGORIES,
 )
+from farm_functions.errors import missing_inputs
 from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
+from farm_functions.ie.averaging import AVERAGING_YEARS, averaging_rule
 from farm_functions.ie.capital_allowances import DEFAULT_FOR_CATEGORY
 from farm_functions.ie.partnership import MIN_SUCCESSOR_SHARE_PCT
 from farm_functions.ie.taxes import LAST_TAX_YEAR, year_rules
@@ -808,6 +810,39 @@ def _check_shares(partners: list["PartnerInput"]) -> None:
         raise ValueError("partner profit shares must add up to 100")
 
 
+# Longest averaging window in the rule table, less this year (s.657, ADR-0055).
+MAX_PRIOR_FARMING_PROFITS = int(max(r.value for r in AVERAGING_YEARS)) - 1
+
+
+def _check_averaging_answer(individual: bool, averaging: bool | None, averaging_inputs: dict[str, Any]) -> None:
+    """Individuals must say whether they are in income averaging (no default:
+    nearly every dairy farmer is); companies cannot average. ``averaging_inputs``
+    (None / empty = not sent) are needed with averaging on and refused with it off."""
+    sent = [k for k, v in averaging_inputs.items() if v is not None and v != []]
+    if not individual:
+        if averaging or sent:
+            raise ValueError("income averaging is for individuals, not companies")
+        return
+    if averaging is None:
+        raise missing_inputs("income_averaging")
+    if averaging:
+        absent = [k for k in averaging_inputs if k not in sent]
+        if absent:
+            raise missing_inputs(*absent)
+    elif sent:
+        raise ValueError(f"{', '.join(sent)} only used with income_averaging")
+
+
+def _check_averaging_window(tax_year: int, prior: list[float], label: str = "prior_farming_profits") -> None:
+    """One profit for each previous year of the averaging period in force."""
+    rule = averaging_rule(tax_year)
+    if rule is None:
+        raise ValueError(f"no income averaging rule for tax year {tax_year}")
+    need = int(rule.value) - 1
+    if len(prior) != need:
+        raise ValueError(f"{label} needs the {need} previous years, oldest first")
+
+
 def _check_allowance_rules(assets: list["AssetInput"]) -> None:
     for i, a in enumerate(assets):
         kind = a.tax_allowance or DEFAULT_FOR_CATEGORY[a.category]
@@ -1051,7 +1086,12 @@ class TaxEstimateInput(_StrictModel):
     """HTTP / runner input for ``tax.estimate`` (ADR-0053). ``taxable_profit`` is
     after capital allowances and stock relief (``tax.stock_relief``
     ``profit_after_relief``); partners send their share. Married couples are
-    jointly assessed; ``spouse_paye_income`` is the spouse's employment income."""
+    jointly assessed; ``spouse_paye_income`` is the spouse's employment income.
+
+    Individuals must answer ``income_averaging`` (ADR-0055). With it on:
+    ``prior_farming_profits`` (the previous 4 years, oldest first, before
+    capital allowances and after stock relief; partners their own share) and
+    this year's ``capital_allowances`` (the amount in ``taxable_profit``)."""
 
     business_type: Literal["sole_trader", "partnership", "company"]
     tax_year: CalendarYear
@@ -1062,6 +1102,9 @@ class TaxEstimateInput(_StrictModel):
     stock_relief: NonNegativeNumber = 0.0
     stock_relief_regime: Literal["general", "young_trained_farmer", "registered_partnership"] = "general"
     state_aid_used: NonNegativeNumber = 0.0
+    income_averaging: bool | None = None
+    prior_farming_profits: list[SignedNumber] = Field(default_factory=list, max_length=MAX_PRIOR_FARMING_PROFITS)
+    capital_allowances: NonNegativeNumber | None = None
 
     @model_validator(mode="after")
     def _profile(self) -> "TaxEstimateInput":
@@ -1074,6 +1117,13 @@ class TaxEstimateInput(_StrictModel):
             raise ValueError("spouse_paye_income needs marital_status married")
         if year_rules(self.tax_year) is None:
             raise ValueError(f"no tax rules for tax year {self.tax_year}")
+        _check_averaging_answer(
+            self.business_type != "company",
+            self.income_averaging,
+            {"prior_farming_profits": self.prior_farming_profits, "capital_allowances": self.capital_allowances},
+        )
+        if self.income_averaging:
+            _check_averaging_window(self.tax_year, self.prior_farming_profits)
         return self
 
 
@@ -1625,6 +1675,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax", "trading_profit",
             "grant", "accounting_profit", "taxable_profit", "other_income", "spouse_paye_income",
             "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
+            "capital_allowances",
         ),
         _EUR,
     ),

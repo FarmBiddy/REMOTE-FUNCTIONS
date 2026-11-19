@@ -890,6 +890,17 @@ class StockReliefCap(_Out):
     clawback: float
 
 
+class AveragingDetail(_Out):
+    """Income averaging for the year (s.657, ADR-0055): the profits averaged
+    (oldest first, before capital allowances), then this year's allowances."""
+
+    years: int
+    profits_before_allowances: list[float]
+    averaged_profit: float
+    capital_allowances: float
+    assessable_profit: float
+
+
 class TaxEstimateResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -905,6 +916,7 @@ class TaxEstimateResult(_Out):
     total_tax: float
     effective_rate_pct: float | None
     rules_applied: list[RuleApplied]
+    averaging: AveragingDetail | None
 
 
 class ExtractionCompany(_Out):

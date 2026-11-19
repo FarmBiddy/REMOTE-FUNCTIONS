@@ -22,6 +22,7 @@ from typing import Any
 from farm_functions.core.ratios import per_unit
 from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.ie import capital_allowances as ca
+from farm_functions.ie.averaging import averaged_profit, averaging_rule
 from farm_functions.ie.partnership import (
     SUCCESSION_CREDIT,
     SUCCESSION_CREDIT_YEARS,
@@ -236,10 +237,54 @@ def _rounded(lines: dict[str, float]) -> dict[str, float]:
     return {**out, "total": round_money(sum(out.values()))}
 
 
-def tax_estimate(*, tax_year: int, **inputs: Any) -> dict[str, Any]:
+def averaging_view(
+    tax_year: int, profit_before_allowances: float, prior_farming_profits: list[float], capital_allowances: float
+) -> tuple[float, dict[str, Any], Rule]:
+    """Income averaging for one year (s.657, ADR-0055): this year's profit before
+    capital allowances joins the previous years, the average is assessed and the
+    year's own allowances are then deducted. Returns the assessable profit, the
+    published view and the rule."""
+    rule = averaging_rule(tax_year)
+    years = int(rule.value)
+    profits = [*prior_farming_profits, profit_before_allowances]
+    averaged = averaged_profit(profits, years)
+    assessable = averaged - capital_allowances
+    view = {
+        "years": years,
+        "profits_before_allowances": [round_money(p) for p in profits[-years:]],
+        "averaged_profit": round_money(averaged),
+        "capital_allowances": round_money(capital_allowances),
+        "assessable_profit": round_money(assessable),
+    }
+    return assessable, view, rule
+
+
+def tax_estimate(
+    *,
+    tax_year: int,
+    taxable_profit: float,
+    stock_relief: float = 0.0,
+    income_averaging: bool | None = None,
+    prior_farming_profits: list[float] | None = None,
+    capital_allowances: float | None = None,
+    **inputs: Any,
+) -> dict[str, Any]:
     """``tax.estimate``: tax for one year on taxable farming profit (after capital
-    allowances and stock relief), applying the stock relief caps on tax value."""
-    return estimate_with_rules(year_rules(tax_year), tax_year=tax_year, **inputs)
+    allowances and stock relief), applying the stock relief caps on tax value.
+    With income averaging the averaged profit is assessed, and this year's stock
+    relief counts a fifth towards its cap (it moves the average by a fifth)."""
+    averaging = rule = None
+    if income_averaging:
+        taxable_profit, averaging, rule = averaging_view(
+            tax_year, taxable_profit + capital_allowances, prior_farming_profits, capital_allowances
+        )
+        stock_relief /= averaging["years"]
+    result = estimate_with_rules(
+        year_rules(tax_year), tax_year=tax_year, taxable_profit=taxable_profit, stock_relief=stock_relief, **inputs
+    )
+    if rule is not None:
+        result["rules_applied"].append(rule.as_dict())
+    return {**result, "averaging": averaging}
 
 
 def estimate_with_rules(
@@ -313,6 +358,7 @@ def estimate_with_rules(
         "total_tax": total_tax,
         "effective_rate_pct": None if rate is None else round_margin_pct(rate * 100),
         "rules_applied": [rules[k].as_dict() for k in used],
+        "averaging": None,
     }
 
 

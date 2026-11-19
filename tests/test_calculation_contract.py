@@ -156,7 +156,7 @@ def _happy_payload(calculation_id: str) -> dict:
     if calculation_id == "tax.partnership":
         return {"tax_year": 2026, "trading_profit": 60_000, "partners": [{"profit_share_pct": 60}, {"profit_share_pct": 40}]}
     if calculation_id == "tax.estimate":
-        return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 40_000}
+        return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 40_000, "income_averaging": False}
     if calculation_id == "tax.capital_allowances":
         return {"tax_year": 2026, "assets": [{"cost": 8_000, "year": 2026, "month": 2, "life_months": 96}]}
     if calculation_id == "tax.stock_relief":

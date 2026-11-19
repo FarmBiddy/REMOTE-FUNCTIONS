@@ -56,6 +56,19 @@ where the Engine's Irish layer differs from practice.
   (same rule as `tax.estimate`), so a change in law is one edit. Figures are
   unchanged.
 
+### 2a. `tax_payments` cash line
+
+- Tax time (31 October, or the ROS date in mid-November) is the farm's
+  largest single payment and causes cash problems, mostly after a good year
+  followed by a bad one. The monthly cash flow had no line for it.
+- New financing outflow `tax_payments`, next to `household_drawings`: the
+  gross amount paid to Revenue in the month (preliminary tax plus last year's
+  balance). Cash only, never on the P&L (`pl.*` rejects it). Optional, 0 by
+  default, so existing calls are unchanged.
+- `cf.forecast` does **not** project it from last year: scaling one payment a
+  year by a run-rate would be a guess. The Platform sends the expected
+  payment (from `tax.payments`) and labels it approximate.
+
 ## Consequences
 
 - Breaking for callers of `tax.estimate` that are individuals and of

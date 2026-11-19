@@ -348,6 +348,12 @@ for % repaid). Use `total_balance` / `total_monthly_payment` for the card header
 Family living money taken from the farm account goes in `household_drawings`
 (cash only, financing outflow; recurs in `cf.forecast`; ADR-0030).
 
+Money paid to Revenue (preliminary tax and last year's balance, usually
+October / November) goes in `tax_payments`: the gross amount paid that month,
+cash only, financing outflow, never on the P&L. `cf.forecast` never projects it:
+send the expected payment for the forecast month (from `tax.payments`) and show
+it as approximate (ADR-0055).
+
 Projected months (ADR-0026): call `pl.forecast` / `cf.forecast` with the actual
 months (incl. the same months last year) and the months to project, adding any
 known values (co-op price, scheme payments, `loan.schedule` rows). Chart the

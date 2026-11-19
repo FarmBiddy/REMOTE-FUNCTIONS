@@ -517,9 +517,12 @@ def tax_partnership(
     livestock_closing_value: float = 0.0,
     stock_opening_value: float = 0.0,
     stock_closing_value: float = 0.0,
+    capital_allowances: float | None = None,
 ) -> dict[str, Any]:
     """``tax.partnership``: split taxable profit and the stock increase by profit
-    share, then stock relief, succession credit and tax for each partner."""
+    share, then stock relief, succession credit and tax for each partner. A
+    partner in income averaging is assessed on the average of their own share
+    (before their share of the allowances) over the averaging period (ADR-0055)."""
     rules = year_rules(tax_year)
     increase = (livestock_closing_value + stock_closing_value) - (livestock_opening_value + stock_opening_value)
     credit_total, credit_rule = succession_credit_amount(succession, tax_year)
@@ -532,20 +535,29 @@ def tax_partnership(
         rule = rule_at(table, date(tax_year, period_end_month, 1))
         relief = stock_relief(increase * pct / 100, rule.value, profit)
         taxable = profit - relief
-        credit = succession_credit(credit_total, pct, taxable)
+        assessable, relief_effect, averaging, averaging_rule_used = taxable, relief, None, None
+        if partner["income_averaging"]:
+            own_allowances = capital_allowances * pct / 100
+            assessable, averaging, averaging_rule_used = averaging_view(
+                tax_year, taxable + own_allowances, partner["prior_farming_profits"], own_allowances
+            )
+            relief_effect = relief / averaging["years"]
+        credit = succession_credit(credit_total, pct, assessable)
         tax = estimate_with_rules(
             rules,
             business_type="partnership",
             tax_year=tax_year,
-            taxable_profit=taxable,
+            taxable_profit=assessable,
             other_income=partner["other_income"],
             marital_status=partner["marital_status"],
             spouse_paye_income=partner["spouse_paye_income"],
-            stock_relief=relief,
+            stock_relief=relief_effect,
             stock_relief_regime=regime,
             state_aid_used=partner["state_aid_used"],
             extra_credit=credit,
         )
+        if averaging_rule_used is not None:
+            tax = {**tax, "averaging": averaging, "rules_applied": [*tax["rules_applied"], averaging_rule_used.as_dict()]}
         for r in [rule.as_dict(), *tax["rules_applied"]]:
             applied[(r["rule_id"], r["from"])] = r
         rows.append(

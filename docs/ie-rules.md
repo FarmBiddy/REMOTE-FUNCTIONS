@@ -219,6 +219,9 @@ SW(MP)A 2024)
   allowances (after stock relief) and this year's allowances; the result shows
   the 5 profits, the average and the assessable profit. Module:
   `farm_functions/ie/averaging.py`.
+- Engine (`tax.partnership`, ADR-0055): each partner answers averaging and,
+  if in it, sends their own share of the previous 4 years; the partnership's
+  allowances are split by share and deducted after averaging.
 - Engine (`plan.projection` `tax_profile`): the farmer opts in with
   `income_averaging`; the window is the Platform's `prior_farming_profits`
   (before capital allowances) followed by projected years; until 5 years are

@@ -843,6 +843,20 @@ def _check_averaging_window(tax_year: int, prior: list[float], label: str = "pri
         raise ValueError(f"{label} needs the {need} previous years, oldest first")
 
 
+class TaxPartnerInput(PartnerInput):
+    """A partner in ``tax.partnership``: also whether they are in income
+    averaging and, if so, their own share of farming profit (before capital
+    allowances, after stock relief) for each previous year, oldest first (ADR-0055)."""
+
+    income_averaging: bool | None = None
+    prior_farming_profits: list[SignedNumber] = Field(default_factory=list, max_length=MAX_PRIOR_FARMING_PROFITS)
+
+    @model_validator(mode="after")
+    def _averaging(self) -> "TaxPartnerInput":
+        _check_averaging_answer(True, self.income_averaging, {"prior_farming_profits": self.prior_farming_profits})
+        return self
+
+
 def _check_allowance_rules(assets: list["AssetInput"]) -> None:
     for i, a in enumerate(assets):
         kind = a.tax_allowance or DEFAULT_FOR_CATEGORY[a.category]
@@ -1163,22 +1177,33 @@ class TaxPartnershipInput(_StrictModel):
     """HTTP / runner input for ``tax.partnership`` (ADR-0053): partnership taxable
     profit after capital allowances, before stock relief (``tax.capital_allowances``
     ``profit_bridge.taxable_profit``), stock valuations as in ``pl.net``, and the
-    partners (2–10 individuals) with profit shares summing to 100."""
+    partners (2–10 individuals) with profit shares summing to 100. Each partner
+    answers ``income_averaging``; when any averages, ``capital_allowances`` (the
+    partnership's allowances in ``trading_profit``) is needed (ADR-0055)."""
 
     tax_year: CalendarYear
     period_end_month: CalendarMonth = 12
     trading_profit: SignedNumber
-    partners: list[PartnerInput] = Field(..., min_length=2, max_length=10)
+    partners: list[TaxPartnerInput] = Field(..., min_length=2, max_length=10)
     registered_partnership: bool = True
     succession: SuccessionInput | None = None
     livestock_opening_value: NonNegativeNumber = 0.0
     livestock_closing_value: NonNegativeNumber = 0.0
     stock_opening_value: NonNegativeNumber = 0.0
     stock_closing_value: NonNegativeNumber = 0.0
+    capital_allowances: NonNegativeNumber | None = None
 
     @model_validator(mode="after")
     def _partners(self) -> "TaxPartnershipInput":
         _check_shares(self.partners)
+        averaging = [i for i, p in enumerate(self.partners) if p.income_averaging]
+        if averaging and self.capital_allowances is None:
+            raise missing_inputs("capital_allowances")
+        if not averaging and self.capital_allowances is not None:
+            raise ValueError("capital_allowances only used with income_averaging")
+        for i in averaging:
+            prior = self.partners[i].prior_farming_profits
+            _check_averaging_window(self.tax_year, prior, f"partners.{i}.prior_farming_profits")
         if self.succession:
             s = self.succession
             if not self.registered_partnership:

@@ -232,7 +232,7 @@ def _happy_payload(key: str) -> dict:
     if key == "tax.partnership":
         # 100,000 split 50 / 50, no stock change: each partner a single farmer on 50,000.
         return {"tax_year": 2026, "trading_profit": 100_000,
-                "partners": [{"profit_share_pct": 50}, {"profit_share_pct": 50}]}
+                "partners": [{"profit_share_pct": 50, "income_averaging": False}, {"profit_share_pct": 50, "income_averaging": False}]}
     if key == "tax.estimate":
         # Company: 100,000 × 12.5% = 12,500.
         return {"business_type": "company", "tax_year": 2026, "taxable_profit": 100_000}
@@ -337,7 +337,7 @@ def _zero_payload(key: str) -> dict:
     if key == "tax.company_extraction":
         return {"tax_year": 2026, "trading_profit": 0}
     if key == "tax.partnership":
-        return {"tax_year": 2026, "trading_profit": 0, "partners": [{"profit_share_pct": 50}, {"profit_share_pct": 50}]}
+        return {"tax_year": 2026, "trading_profit": 0, "partners": [{"profit_share_pct": 50, "income_averaging": False}, {"profit_share_pct": 50, "income_averaging": False}]}
     if key == "tax.estimate":
         return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 0, "income_averaging": False}
     if key == "tax.capital_allowances":

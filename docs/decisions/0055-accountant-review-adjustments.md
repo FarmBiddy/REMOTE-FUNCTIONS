@@ -35,10 +35,23 @@ where the Engine's Irish layer differs from practice.
 - `tax.estimate` results gain `averaging` (`null` when off). Partner rows in
   `tax.partnership` carry the same key.
 
+### 1b. Income averaging per partner in `tax.partnership`
+
+- Each partner answers `income_averaging` (`partners[i].income_averaging` →
+  `needs_input` when missing) and, if in averaging, sends their own share of
+  the previous 4 years (`prior_farming_profits`, before allowances, after
+  stock relief). Shares can change between years, so the history is theirs,
+  not the partnership's split.
+- When any partner averages, the partnership's `capital_allowances` is
+  needed; each partner's share is deducted after averaging. The succession
+  credit is limited by the partner's assessable (averaged) profit.
+- `plan.projection` partners keep the profile-level averaging flag (their
+  history is the profile's split by share): a separate input model, unchanged.
+
 ## Consequences
 
-- Breaking for callers of `tax.estimate` that are individuals: they must send
-  `income_averaging`. Engine 1.11.0.
+- Breaking for callers of `tax.estimate` that are individuals and of
+  `tax.partnership`: they must send `income_averaging`. Engine 1.11.0.
 
 ## Related
 

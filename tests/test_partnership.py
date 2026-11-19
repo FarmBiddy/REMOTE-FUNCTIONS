@@ -17,8 +17,8 @@ from farm_functions.runner import run_function
 
 client = TestClient(app)
 
-FATHER = {"label": "Joe", "profit_share_pct": 60}
-SON = {"label": "Mark", "profit_share_pct": 40, "young_trained_farmer_first_year": 2025}
+FATHER = {"label": "Joe", "profit_share_pct": 60, "income_averaging": False}
+SON = {"label": "Mark", "profit_share_pct": 40, "young_trained_farmer_first_year": 2025, "income_averaging": False}
 BASE = {
     "tax_year": 2026,
     "trading_profit": 120_000,
@@ -94,3 +94,48 @@ def test_errors_name_the_partner_field():
     result = _run(partners=[FATHER, {**SON, "spouse_paye_income": 10_000}])
     assert result["errors"][0]["field"] == "partners.1.spouse_paye_income"
     assert _run(tax_year=2028, succession=None)["errors"][0]["field"] == "tax_year"
+
+
+# Income averaging per partner (ADR-0055): BASE with 10,000 partnership allowances,
+# the father in averaging, prior shares 50,000 / 54,000 / 58,000 / 62,000.
+#   Father: 72,000 − 12,000 relief = 60,000 + 6,000 own allowances = 66,000 before
+#   allowances; average 290,000 / 5 = 58,000 − 6,000 = 52,000 assessable
+#   IT 8,800 + 8,000 × 40% = 12,000 − 4,000 − credit 3,000 = 5,000
+#   USC 60.06 + 333.76 + 23,300 × 3% = 1,092.82; PRSI 52,000 × 4.2375% = 2,203.50 → 8,296.32
+#   Son (actual basis) unchanged 2,248.82 → partnership 10,545.14
+AVERAGING_FATHER = {**FATHER, "income_averaging": True, "prior_farming_profits": [50_000, 54_000, 58_000, 62_000]}
+
+
+def test_partner_in_averaging_is_taxed_on_their_average():
+    body = _ok(partners=[AVERAGING_FATHER, SON], capital_allowances=10_000)
+    father, son = body["partners"]
+    assert father["taxable_profit"] == 60_000
+    assert father["tax"]["averaging"] == {
+        "years": 5,
+        "profits_before_allowances": [50_000, 54_000, 58_000, 62_000, 66_000],
+        "averaged_profit": 58_000,
+        "capital_allowances": 6_000,
+        "assessable_profit": 52_000,
+    }
+    assert (father["succession_credit"], father["tax"]["income_tax"]["net"], father["tax"]["total_tax"]) == (3_000, 5_000, 8_296.32)
+    assert son["tax"]["averaging"] is None and son["tax"]["total_tax"] == 2_248.82
+    assert body["total"]["total_tax"] == 10_545.14
+    assert "income_averaging_years" in {r["rule_id"] for r in body["rules_applied"]}
+
+
+def test_partners_must_answer_averaging():
+    result = _run(partners=[{"label": "Joe", "profit_share_pct": 60}, SON])
+    assert result["status"] == "needs_input"
+    assert [m["path"] for m in result["missing"]] == ["partners[0].income_averaging"]
+    result = _run(partners=[{**FATHER, "income_averaging": True}, SON])
+    assert [m["path"] for m in result["missing"]] == ["partners[0].prior_farming_profits"]
+    result = _run(partners=[AVERAGING_FATHER, SON])
+    assert [m["path"] for m in result["missing"]] == ["capital_allowances"]
+
+
+def test_partner_averaging_errors():
+    short = {**SON, "income_averaging": True, "prior_farming_profits": [1, 2]}
+    result = _run(partners=[FATHER, short], capital_allowances=0, succession=None)
+    assert result["errors"][0]["details"]["reason"] == "averaging_years_invalid"
+    assert result["errors"][0]["field"] == "partners.1.prior_farming_profits"
+    assert _reason(capital_allowances=0) == "needs_income_averaging"

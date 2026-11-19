@@ -419,9 +419,10 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(
                 issue(INVALID_TYPE, text, field=at("income_averaging"), details={"reason": "needs_income_averaging"})
             )
-        elif text.startswith("prior_farming_profits needs the"):
+        elif "prior_farming_profits needs the" in text:
+            # The message starts with the list's own path (e.g. partners.1.prior_farming_profits).
             issues.append(
-                issue(INVALID_TYPE, text, field=at("prior_farming_profits"), details={"reason": "averaging_years_invalid"})
+                issue(INVALID_TYPE, text, field=at(text.split(" needs the")[0]), details={"reason": "averaging_years_invalid"})
             )
         elif text.startswith("no income averaging rule for tax year"):
             issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))

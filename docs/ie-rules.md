@@ -233,6 +233,34 @@ SW(MP)A 2024)
   are projected per partner (share of profit, relief, averaging, aid). The
   flat-rate addition (unless `vat_registered`) is taxable income and cash.
 
+## 6A. Preliminary tax and pay dates (Part 41A; checked 2026-11-19)
+
+| rule_id | value | base | from / to | ref | status |
+|---|---|---|---|---|---|
+| prelim_current_year_pct | 90% | this year's tax | 2024 → 2027 (researched window) | s.959AO(3)(b)(i) | enacted |
+| prelim_prior_year_pct | 100% | last year's tax | 2024 → 2027 | s.959AO(3)(b)(ii) | enacted |
+| prelim_pre_preceding_year_dd_pct | 105% | tax of the year before last; direct debit only, not if that tax was nil | 2024 → 2027 | s.959AO(3)(b)(iii), s.959AP | enacted |
+
+- Preliminary tax for year Y and the balance of Y−1 are both due on
+  **31 October of Y** (s.959AO(1), (2)(a)). Paying less than the least of the
+  options makes the whole year's tax due on 31 October of Y, with interest
+  at 0.0219% a day (s.1080(2)(c)).
+- **ROS pay-and-file date** (Revenue practice, announced each year, filing
+  *and* paying through ROS): 19 Nov 2025 (eBrief 088/25), 18 Nov 2026
+  (eBrief 034/26). 2027 not announced yet.
+- Revenue's page treats income tax, USC and PRSI together; s.959AO itself
+  says "income tax". The Engine applies the options to `total_tax`.
+- Direct debit: taken on the 9th of each month within the tax year, deemed
+  paid on 31 October (s.959AP; Revenue DD guidelines, Oct 2025). The minimum
+  number of instalments (3 first year, 8 later) may have been removed by
+  Finance Act 2025: not checked by the Engine.
+- Under averaging, "this year's tax" is the averaged liability (s.657(6)).
+- Accountant review (Nov 2026): most farmers pay on the 100% basis, and tax
+  time causes cash problems; DAFM pays most of the BISS / CRISS / Eco-scheme
+  advance (70–75%) in mid / late October, just before the pay date, and the
+  balance from 1 December (2026 BISS T&Cs v6). Payment dates are Platform data.
+- Engine: `tax.payments` (ADR-0055); module `farm_functions/ie/preliminary.py`.
+
 ## 7. Partnerships
 
 - Transparent: profit computed as a sole trader (no deduction for partner

@@ -22,6 +22,7 @@ from typing import Any
 from farm_functions.core.ratios import per_unit
 from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.ie import capital_allowances as ca
+from farm_functions.ie import preliminary as prelim
 from farm_functions.ie.averaging import averaged_profit, averaging_rule
 from farm_functions.ie.partnership import (
     SUCCESSION_CREDIT,
@@ -493,6 +494,89 @@ def projected_tax(
     }
 
 
+def tax_payments(
+    *,
+    tax_year: int,
+    current_year_tax: float,
+    preceding_year_tax: float,
+    preceding_year_preliminary_paid: float,
+    preliminary_basis: str,
+    pre_preceding_year_tax: float | None = None,
+    direct_debit: bool = False,
+    direct_debit_start_month: int | None = None,
+) -> dict[str, Any]:
+    """``tax.payments`` (ADR-0055): what is paid to Revenue for a tax year and
+    when. Preliminary tax on each safe-harbour basis (the Platform chooses one),
+    last year's balance, and the gross total due on the pay date (31 October,
+    or the ROS date Revenue announced). By direct debit the preliminary tax is
+    paid in monthly instalments instead, so only the balance is due that day."""
+    bases = {
+        "current_90": current_year_tax,
+        "prior_100": preceding_year_tax,
+        "pre_preceding_105_dd": pre_preceding_year_tax,
+    }
+    options, rules = [], []
+    for basis in prelim.BASES:
+        rule = prelim.safe_harbour_rule(basis, tax_year)
+        rules.append(rule.as_dict())
+        base = bases[basis]
+        dd_only = basis == prelim.DIRECT_DEBIT_BASIS
+        # The 105% basis: direct debit only, and not when that year's tax was nil.
+        available = base is not None and (not dd_only or (direct_debit and base > 0))
+        options.append(
+            {
+                "basis": basis,
+                "rate_pct": rule.value,
+                "base_tax": None if base is None else round_money(base),
+                "amount": None if base is None else round_money(base * rule.value / 100),
+                "requires_direct_debit": dd_only,
+                "available": available,
+            }
+        )
+    safe = [o for o in options if o["available"]]
+    lowest = min(safe, key=lambda o: o["amount"])
+    chosen = next(o for o in options if o["basis"] == preliminary_basis)
+    preliminary = chosen["amount"]
+
+    balance = round_money(preceding_year_tax - preceding_year_preliminary_paid)
+    balance_due, overpaid = max(balance, 0.0), max(-balance, 0.0)
+    ros = prelim.ROS_PAY_AND_FILE.get(tax_year)
+    plan = None
+    if direct_debit:
+        months = list(range(direct_debit_start_month, 13))
+        cents = prelim.instalments(round(preliminary * 100), len(months))
+        plan = [
+            {"year": tax_year, "month": m, "day": prelim.DIRECT_DEBIT_DAY, "amount": c / 100}
+            for m, c in zip(months, cents)
+        ]
+    return {
+        "currency": "EUR",
+        "jurisdiction": "IE",
+        "tax_year": tax_year,
+        "options": options,
+        "lowest_safe": {"basis": lowest["basis"], "amount": lowest["amount"]},
+        "preliminary": {"basis": preliminary_basis, "amount": preliminary},
+        "preceding_year": {
+            "tax_year": tax_year - 1,
+            "liability": round_money(preceding_year_tax),
+            "preliminary_paid": round_money(preceding_year_preliminary_paid),
+            "balance_due": round_money(balance_due),
+            "overpaid": round_money(overpaid),
+        },
+        "pay_date": {
+            "statutory": date(tax_year, 10, prelim.STATUTORY_DAY_OF_OCTOBER).isoformat(),
+            "ros": None if ros is None else ros[0].isoformat(),
+            "ros_source": None if ros is None else ros[1],
+        },
+        # Gross: an overpayment of last year is shown, never netted here.
+        "due_on_pay_date": round_money(balance_due + (0.0 if direct_debit else preliminary)),
+        "direct_debit_instalments": plan,
+        # This year's tax not covered by the preliminary: due with next year's return.
+        "balance_next_year": round_money(current_year_tax - preliminary),
+        "rules_applied": rules,
+    }
+
+
 def succession_credit_amount(succession: dict[str, Any] | None, tax_year: int) -> tuple[float, Rule | None]:
     """Total succession partnership credit for the year (0 outside its 5 years or
     once the successor is 40 on 1 January), with the rule fixed at registration."""
@@ -689,5 +773,6 @@ __all__ = [
     "stock_relief_regime",
     "tax_capital_allowances",
     "tax_estimate",
+    "tax_payments",
     "tax_stock_relief",
 ]

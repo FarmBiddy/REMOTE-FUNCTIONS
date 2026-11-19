@@ -32,6 +32,7 @@ from farm_functions.tax import (
     tax_company_extraction,
     tax_estimate,
     tax_partnership,
+    tax_payments,
     tax_stock_relief,
 )
 from farm_functions.vat import vat_flat_rate
@@ -85,6 +86,7 @@ from farm_functions.schemas import (
     TotalRevenueInput,
     TaxCapitalAllowancesInput,
     TaxCompanyExtractionInput,
+    TaxPaymentsInput,
     TaxEstimateInput,
     TaxPartnershipInput,
     TaxStockReliefInput,
@@ -490,6 +492,18 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=TaxCompanyExtractionInput,
         handler=tax_company_extraction,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.payments",
+        description=(
+            "Irish preliminary tax and pay date for a tax year: the safe-harbour options "
+            "(90% of this year, 100% of last year, 105% of the year before by direct debit), "
+            "the lowest safe amount, last year's balance and the gross total due on 31 October "
+            "or the ROS date; monthly direct debit instalments."
+        ),
+        input_model=TaxPaymentsInput,
+        handler=tax_payments,
         supports_provenance=False,
     ),
     CalculationDefinition(

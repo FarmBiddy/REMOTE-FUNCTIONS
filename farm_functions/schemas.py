@@ -16,6 +16,7 @@ from farm_functions.dairy.cash_flow import (
 )
 from farm_functions.errors import missing_inputs
 from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
+from farm_functions.ie import preliminary as prelim
 from farm_functions.ie.averaging import AVERAGING_YEARS, averaging_rule
 from farm_functions.ie.capital_allowances import DEFAULT_FOR_CATEGORY
 from farm_functions.ie.partnership import MIN_SUCCESSOR_SHARE_PCT
@@ -1144,6 +1145,38 @@ class TaxEstimateInput(_StrictModel):
         return self
 
 
+class TaxPaymentsInput(_StrictModel):
+    """HTTP / runner input for ``tax.payments`` (ADR-0055). Liabilities are the
+    year's total tax (income tax, USC, PRSI: ``tax.estimate`` ``total_tax`` or
+    the accountant's figure). The Platform chooses ``preliminary_basis``."""
+
+    tax_year: CalendarYear
+    current_year_tax: NonNegativeNumber
+    preceding_year_tax: NonNegativeNumber
+    preceding_year_preliminary_paid: NonNegativeNumber
+    preliminary_basis: Literal["current_90", "prior_100", "pre_preceding_105_dd"]
+    pre_preceding_year_tax: NonNegativeNumber | None = None
+    direct_debit: bool = False
+    direct_debit_start_month: CalendarMonth | None = None
+
+    @model_validator(mode="after")
+    def _payments(self) -> "TaxPaymentsInput":
+        if any(prelim.safe_harbour_rule(b, self.tax_year) is None for b in prelim.BASES):
+            raise ValueError(f"no preliminary tax rules for tax year {self.tax_year}")
+        if self.direct_debit and self.direct_debit_start_month is None:
+            raise missing_inputs("direct_debit_start_month")
+        if not self.direct_debit and self.direct_debit_start_month is not None:
+            raise ValueError("direct_debit_start_month needs direct_debit")
+        if self.preliminary_basis == prelim.DIRECT_DEBIT_BASIS:
+            if not self.direct_debit:
+                raise ValueError("the 105% basis is only for direct debit")
+            if self.pre_preceding_year_tax is None:
+                raise missing_inputs("pre_preceding_year_tax")
+            if self.pre_preceding_year_tax == 0:
+                raise ValueError("the 105% basis is not available when that year's tax was nil")
+        return self
+
+
 class TaxCompanyExtractionInput(_StrictModel):
     """HTTP / runner input for ``tax.company_extraction`` (ADR-0053): a farm
     company's taxable trading profit before the director's salary (after capital
@@ -1703,7 +1736,8 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "residual_value", "stock", "stock_closing_value", "stock_opening_value", "tax", "trading_profit",
             "grant", "accounting_profit", "taxable_profit", "other_income", "spouse_paye_income",
             "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
-            "capital_allowances",
+            "capital_allowances", "current_year_tax", "preceding_year_tax", "pre_preceding_year_tax",
+            "preceding_year_preliminary_paid",
         ),
         _EUR,
     ),
@@ -1758,14 +1792,15 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     ),
     **dict.fromkeys(("label", "name"), "text"),
     **dict.fromkeys(("cash_line", "category", "method", "rank_by"), "choice"),
-    **dict.fromkeys(("variable", "vat_registered", "registered_partnership", "income_averaging"), "boolean"),
+    **dict.fromkeys(("variable", "vat_registered", "registered_partnership", "income_averaging", "direct_debit"), "boolean"),
     "period_end_year": "year",
     "period_end_month": "month",
+    "direct_debit_start_month": "month",
     "young_trained_farmer_first_year": "year",
     **dict.fromkeys(("tax_year", "registered_year", "successor_birth_year"), "year"),
     "profit_share_pct": "%",
     "successor": "index",
-    **dict.fromkeys(("business_type", "tax_allowance", "marital_status", "stock_relief_regime"), "choice"),
+    **dict.fromkeys(("business_type", "tax_allowance", "marital_status", "stock_relief_regime", "preliminary_basis"), "choice"),
 }
 
 

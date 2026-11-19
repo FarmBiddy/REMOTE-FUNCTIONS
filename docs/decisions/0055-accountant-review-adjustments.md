@@ -69,7 +69,20 @@ where the Engine's Irish layer differs from practice.
   year by a run-rate would be a guess. The Platform sends the expected
   payment (from `tax.payments`) and labels it approximate.
 
-## Consequences
+### 2b. `tax.payments`: preliminary tax and the pay date
+
+- New ID. From this year's total tax (estimate or the accountant's figure),
+  last year's (and the preliminary paid for it) and optionally the year
+  before's, it returns the three safe-harbour options, the lowest safe
+  amount, last year's balance and the **gross** total due on 31 October (and
+  the ROS date where Revenue announced one).
+- The Platform chooses `preliminary_basis` (required): the Engine has no
+  opinion on which basis a farmer uses; it shows which one is lowest.
+- Direct debit: equal monthly instalments from the start month to December
+  (cents in December); only last year's balance is then due on the pay date.
+- An overpayment of last year is reported, never netted against this year.
+- Rules (90 / 100 / 105%) and ROS dates live in `farm_functions/ie/preliminary.py`.
+
 
 - Breaking for callers of `tax.estimate` that are individuals and of
   `tax.partnership`, and `plan.projection` tax profiles of individuals: they

@@ -952,6 +952,56 @@ class ExtractionHousehold(_Out):
     effective_rate_pct: float | None
 
 
+class PaymentOption(_Out):
+    basis: Literal["current_90", "prior_100", "pre_preceding_105_dd"]
+    rate_pct: float
+    base_tax: float | None
+    amount: float | None
+    requires_direct_debit: bool
+    available: bool
+
+
+class ChosenPayment(_Out):
+    basis: Literal["current_90", "prior_100", "pre_preceding_105_dd"]
+    amount: float
+
+
+class PrecedingYearTax(_Out):
+    tax_year: int
+    liability: float
+    preliminary_paid: float
+    balance_due: float
+    overpaid: float
+
+
+class PayDate(_Out):
+    statutory: str
+    ros: str | None
+    ros_source: str | None
+
+
+class DirectDebitInstalment(_Out):
+    year: int
+    month: int
+    day: int
+    amount: float
+
+
+class TaxPaymentsResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    tax_year: int
+    options: list[PaymentOption]
+    lowest_safe: ChosenPayment
+    preliminary: ChosenPayment
+    preceding_year: PrecedingYearTax
+    pay_date: PayDate
+    due_on_pay_date: float
+    direct_debit_instalments: list[DirectDebitInstalment] | None
+    balance_next_year: float
+    rules_applied: list[RuleApplied]
+
+
 class TaxCompanyExtractionResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -1087,6 +1137,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "tax.estimate": TaxEstimateResult,
     "tax.partnership": TaxPartnershipResult,
     "tax.company_extraction": TaxCompanyExtractionResult,
+    "tax.payments": TaxPaymentsResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

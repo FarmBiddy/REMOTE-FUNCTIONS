@@ -354,6 +354,12 @@ cash only, financing outflow, never on the P&L. `cf.forecast` never projects it:
 send the expected payment for the forecast month (from `tax.payments`) and show
 it as approximate (ADR-0055).
 
+`tax.payments` gives that payment: send this year's `total_tax` (or the
+accountant's figure), last year's and the preliminary paid for it, and the
+basis the farmer uses (`preliminary_basis`). Put `due_on_pay_date` in October
+(or November when filing on ROS) and, by direct debit, each instalment in its
+month. Label it approximate until the accountant confirms the figure.
+
 Projected months (ADR-0026): call `pl.forecast` / `cf.forecast` with the actual
 months (incl. the same months last year) and the months to project, adding any
 known values (co-op price, scheme payments, `loan.schedule` rows). Chart the

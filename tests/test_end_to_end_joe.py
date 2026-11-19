@@ -67,6 +67,8 @@ PAYLOADS = {
     "vat.flat_rate": {"months": joe.ACTUAL},
     "tax.capital_allowances": {"tax_year": 2026, "period_end_month": 9, "assets": joe.ASSETS},
     "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married", "income_averaging": False},
+    "tax.payments": {"tax_year": 2026, "current_year_tax": 12_000, "preceding_year_tax": 15_000,
+                     "preceding_year_preliminary_paid": 13_500, "preliminary_basis": "prior_100"},
     "tax.company_extraction": {"tax_year": 2026, "trading_profit": 60_000, "salary": 30_000, "dividends": 15_000,
                                "marital_status": "married", "spouse_paye_income": 32_000},
     "tax.partnership": {"tax_year": 2026, "period_end_month": 9, "trading_profit": 60_000,
@@ -308,6 +310,12 @@ def test_full_tax_chain_into_debt_capacity(results):
     assert tax["assessment"] == "joint" and 0 < tax["total_tax"] < relief["profit_after_relief"]
     capacity = run_function("debt.capacity", {**PAYLOADS["debt.capacity"], "tax": tax["total_tax"]})["result"]
     assert capacity["tax"] == tax["total_tax"]
+    # The same estimate sets this year's preliminary tax (ADR-0055): paid with last year's balance.
+    payments = run_function("tax.payments", {
+        **PAYLOADS["tax.payments"], "current_year_tax": tax["total_tax"], "preliminary_basis": "current_90",
+    })["result"]
+    assert payments["preliminary"]["amount"] == round(tax["total_tax"] * 0.9, 2)
+    assert payments["due_on_pay_date"] == round(payments["preliminary"]["amount"] + 1_500, 2)
 
 
 def test_projection_estimates_tax_each_year():

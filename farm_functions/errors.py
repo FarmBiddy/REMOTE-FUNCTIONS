@@ -424,6 +424,18 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(
                 issue(INVALID_TYPE, text, field=at(text.split(" needs the")[0]), details={"reason": "averaging_years_invalid"})
             )
+        elif text.startswith("no preliminary tax rules for tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
+        elif text == "direct_debit_start_month needs direct_debit":
+            issues.append(
+                issue(INVALID_TYPE, text, field=at("direct_debit_start_month"), details={"reason": "needs_direct_debit"})
+            )
+        elif text == "the 105% basis is only for direct debit":
+            issues.append(issue(INVALID_TYPE, text, field=at("preliminary_basis"), details={"reason": "needs_direct_debit"}))
+        elif text == "the 105% basis is not available when that year's tax was nil":
+            issues.append(
+                issue(INVALID_TYPE, text, field=at("preliminary_basis"), details={"reason": "basis_not_available"})
+            )
         elif text.startswith("no income averaging rule for tax year"):
             issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
         elif text == "spouse_paye_income needs marital_status married":

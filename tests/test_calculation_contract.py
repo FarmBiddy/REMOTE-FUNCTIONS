@@ -44,6 +44,7 @@ EXPECTED_PUBLIC_IDS = (
     "tax.estimate",
     "tax.partnership",
     "tax.company_extraction",
+    "tax.payments",
     "pl.compare",
     "cf.compare",
     "risk.sensitivity",
@@ -151,6 +152,8 @@ def _happy_payload(calculation_id: str) -> dict:
             "opening_cash": 0,
             "milking_cows": 100,
         }
+    if calculation_id == "tax.payments":
+        return {"tax_year": 2026, "current_year_tax": 20_000, "preceding_year_tax": 30_000, "preceding_year_preliminary_paid": 25_000, "preliminary_basis": "current_90"}
     if calculation_id == "tax.company_extraction":
         return {"tax_year": 2026, "trading_profit": 80_000, "salary": 30_000}
     if calculation_id == "tax.partnership":
@@ -190,8 +193,8 @@ def _happy_payload(calculation_id: str) -> dict:
 
 def test_exactly_thirty_seven_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 37
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 37
+    assert len(PUBLIC_CALCULATION_IDS) == 38
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 38
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

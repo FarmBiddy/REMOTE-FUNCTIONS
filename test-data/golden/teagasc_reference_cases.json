@@ -1,0 +1,266 @@
+{
+  "_note": "Published Teagasc figures run through kpi.summary / pl.net. Inputs are ANNUAL amounts; the test spreads each one over 12 calendar months in whole cents, remainder in December (the engine sums months back, ADR-0021). For every published figure the test asserts: engine result - published = the sum of `known_differences` for that figure, to the cent. Each difference names why the engine does not land on the published number (a definition the engine does not have yet, or a source table that does not add up). Changing a difference must be deliberate: it means the engine's definition, or the reading of the source, changed.",
+  "nfs_whole_farm_cases": [
+    {
+      "name": "nfs_2025_average_dairy_farm",
+      "source": {
+        "title": "Teagasc National Farm Survey 2025 - Preliminary Results, Appendix 1, Dairying column",
+        "url": "https://teagasc.ie/wp-content/uploads/National-Farm-Survey-2025.pdf",
+        "tables": "Table 4 (printed p.12); Table 8C gross output (p.37); Table 8D direct and overhead costs (p.38); Table 8B resources (p.36)"
+      },
+      "mapping": {
+        "milk": "8C 'of which milk' 311,767 = milk_litres x milk_price. Litres per farm are not published: milk_price is the published 54 c/l and milk_litres is chosen so the product is the published milk value. Per-litre results are therefore not asserted for this case.",
+        "cattle_sales": "8C Dairying livestock other than milk (337,883 - 311,767 = 26,116) + Cattle 53,215 + Sheep & wool 413 + Horses 222 = 79,966. NFS livestock output is sales - purchases +/- inventory change; the engine has no purchases or inventory lines here, so the net NFS figure is sent as sales.",
+        "other": "8C Crops 1,426 + Machinery hire revenue 3 + Other current receipts 790 = 2,219",
+        "biss": "8C Pillar I payment CAP 16,927",
+        "other_grants": "8C All other payments 8,065",
+        "land_leasing_income": "8C Income from land let 138",
+        "feed": "8D Purchased concentrates 60,868 + Purchased bulky feed 8,698",
+        "fertiliser": "8D Fertiliser 19,687",
+        "contractor": "8D Hire of machinery 21,371",
+        "vet": "8D Livestock (A.I., vet etc.) 19,068",
+        "casual_labour": "8D Casual labour 2,516",
+        "levies": "8D Transport 216 (Profit Monitor 'Levies & Transport')",
+        "labour": "8D Current hired labour 10,971",
+        "rent_lease": "8D Rent of conacre 13,049",
+        "electricity": "8D Car, electricity, phone 12,256",
+        "fuel": "8D Machinery operating, of which fuel & lub 6,251",
+        "repairs_maintenance": "8D Machinery operating other than fuel (14,181 - 6,251 = 7,930) + Buildings maintenance 4,366 + Land improvement maintenance 3,842",
+        "other_operating_costs": "8D direct Crop protection 1,162 + Purchased seed 1,324 + Other direct 16,791, and overhead Other 10,151",
+        "depreciation": "8D Machinery 14,479 + Buildings 13,279 + Land improvement 2,102",
+        "interest": "8D Interest charges 5,172",
+        "stock_closing_value": "8D Fodder crop adjustment -1,570 (closing fodder above opening): sent as a stock value increase of 1,570"
+      },
+      "input": {
+        "year": 2025,
+        "milk_price": 0.54,
+        "milk_value": 311767,
+        "milking_cows": 97.2,
+        "hectares": 69.2,
+        "annual": {
+          "cattle_sales": 79966,
+          "other": 2219,
+          "biss": 16927,
+          "other_grants": 8065,
+          "land_leasing_income": 138,
+          "feed": 69566,
+          "fertiliser": 19687,
+          "contractor": 21371,
+          "vet": 19068,
+          "casual_labour": 2516,
+          "levies": 216,
+          "labour": 10971,
+          "rent_lease": 13049,
+          "electricity": 12256,
+          "fuel": 6251,
+          "repairs_maintenance": 16138,
+          "other_operating_costs": 29428
+        },
+        "period_totals": {
+          "depreciation": 29860,
+          "interest": 5172,
+          "stock_opening_value": 0,
+          "stock_closing_value": 1570
+        }
+      },
+      "published": {
+        "gross_output": 407372,
+        "direct_costs": 150160,
+        "overhead_costs": 103894,
+        "family_farm_income": 153319
+      },
+      "known_differences": {
+        "gross_output": [
+          {"amount": 8325, "reason": "Inter-enterprise transfers (8C) are deducted by the NFS to avoid double counting (e.g. milk fed to calves); the engine has no such line."},
+          {"amount": 3385, "reason": "Source: the 8C gross output lines less transfers add to 410,757, not the published 407,372; the report does not explain the gap."},
+          {"amount": 1570, "reason": "Fodder crop adjustment: the NFS deducts it from direct costs, the engine adds it to gross output as a stock value change (same family farm income)."}
+        ],
+        "direct_costs": [
+          {"amount": -19277, "reason": "Crop protection 1,162, purchased seed 1,324 and other direct costs 16,791 have no variable line in the engine and sit in other_operating_costs, a fixed cost (proposal E4: seed_spray, ai_breeding, milk_recording_parlour lines)."},
+          {"amount": 1570, "reason": "Fodder crop adjustment reduces NFS direct costs; the engine carries it in gross output instead."},
+          {"amount": -29, "reason": "Source: the ten published direct cost lines add to 151,701, the published sub-total is 151,730."}
+        ],
+        "overhead_costs": [
+          {"amount": 19277, "reason": "The NFS direct costs the engine counts as fixed (see direct_costs)."},
+          {"amount": -46, "reason": "Source: the published overhead lines add to 103,848, the published total is 103,894."}
+        ],
+        "family_farm_income": [
+          {"amount": 8325, "reason": "Inter-enterprise transfers (see gross_output)."},
+          {"amount": 3385, "reason": "Unexplained gap in the published gross output lines (see gross_output)."},
+          {"amount": 29, "reason": "Direct cost lines add to 29 less than the published sub-total."},
+          {"amount": 46, "reason": "Overhead lines add to 46 less than the published total."},
+          {"amount": -1, "reason": "Source rounding: published direct 150,160 + overheads 103,894 = 254,054, published total costs 254,053."}
+        ]
+      }
+    }
+  ],
+  "nfs_per_litre_cases": [
+    {
+      "name": "nfs_2024_average",
+      "source": {
+        "title": "Teagasc NFS 2024 Dairy Enterprise Factsheet, Table 1",
+        "url": "https://teagasc.ie/wp-content/uploads/uploads/media/website/publications/2025/National-Farm-Survey-2024-Dairy.pdf"
+      },
+      "milk_price_c": 51.50,
+      "lines_c": {
+        "gross_output": 52.90,
+        "concentrates": 8.78,
+        "pasture_forage": 6.53,
+        "other_direct": 5.41,
+        "electricity_fuel": 3.02,
+        "hired_labour": 1.03,
+        "rent": 1.53,
+        "depreciation": 4.22,
+        "remaining_fixed": 4.98
+      },
+      "published": {"direct_costs": 20.72, "fixed_costs": 14.78, "total_costs": 35.50, "net_margin": 17.40, "gross_margin": 32.19},
+      "known_differences": {
+        "gross_margin": [{"amount": -0.01, "reason": "Source rounding: 52.90 - 20.72 = 32.18, published 32.19."}]
+      }
+    },
+    {
+      "name": "nfs_2023_average",
+      "source": {
+        "title": "Teagasc NFS 2024 Dairy Enterprise Factsheet, Table 1 (2023 column)",
+        "url": "https://teagasc.ie/wp-content/uploads/uploads/media/website/publications/2025/National-Farm-Survey-2024-Dairy.pdf"
+      },
+      "milk_price_c": 42.79,
+      "lines_c": {
+        "gross_output": 43.95,
+        "concentrates": 9.21,
+        "pasture_forage": 6.94,
+        "other_direct": 5.21,
+        "electricity_fuel": 3.00,
+        "hired_labour": 1.08,
+        "rent": 1.33,
+        "depreciation": 5.27,
+        "remaining_fixed": 4.75
+      },
+      "published": {"direct_costs": 21.35, "fixed_costs": 15.44, "total_costs": 36.80, "net_margin": 7.15, "gross_margin": 22.59},
+      "known_differences": {
+        "direct_costs": [{"amount": 0.01, "reason": "Source rounding: 9.21 + 6.94 + 5.21 = 21.36, published 21.35."}],
+        "fixed_costs": [{"amount": -0.01, "reason": "Source rounding: 3.00 + 1.08 + 1.33 + 3.19 + 2.08 + 4.75 = 15.43, published 15.44."}],
+        "total_costs": [
+          {"amount": 0.01, "reason": "Direct cost rounding (see direct_costs)."},
+          {"amount": -0.01, "reason": "Fixed cost rounding (see fixed_costs)."},
+          {"amount": -0.01, "reason": "Source rounding: published 21.35 + 15.44 = 36.79, published total 36.80."}
+        ],
+        "net_margin": [{"amount": 0.01, "reason": "Follows total costs: engine 43.95 - 36.79 = 7.16, published 7.15."}]
+      }
+    },
+    {
+      "name": "outlook_2025_estimate",
+      "source": {
+        "title": "Teagasc Annual Review and Outlook 2026, Table A5 (2025e)",
+        "url": "https://teagasc.ie/wp-content/uploads/uploads/media/website/publications/2025/Outlook2026.pdf"
+      },
+      "milk_price_c": null,
+      "lines_c": {
+        "gross_output": 57.00,
+        "concentrates": 8.94,
+        "pasture_forage": 6.75,
+        "other_direct": 5.25,
+        "electricity_fuel": 2.92,
+        "hired_labour": 1.00,
+        "rent": 0,
+        "depreciation": 0,
+        "remaining_fixed": 10.85
+      },
+      "published": {"direct_costs": 20.94, "fixed_costs": 14.77, "total_costs": 35.71, "net_margin": 21.29, "gross_margin": 36.06},
+      "known_differences": {}
+    },
+    {
+      "name": "outlook_2026_forecast",
+      "source": {
+        "title": "Teagasc Annual Review and Outlook 2026, Table A5 (2026f)",
+        "url": "https://teagasc.ie/wp-content/uploads/uploads/media/website/publications/2025/Outlook2026.pdf"
+      },
+      "milk_price_c": null,
+      "lines_c": {
+        "gross_output": 47.31,
+        "concentrates": 8.85,
+        "pasture_forage": 7.09,
+        "other_direct": 5.30,
+        "electricity_fuel": 2.63,
+        "hired_labour": 1.03,
+        "rent": 0,
+        "depreciation": 0,
+        "remaining_fixed": 10.92
+      },
+      "published": {"direct_costs": 21.24, "fixed_costs": 14.58, "total_costs": 35.82, "net_margin": 11.49, "gross_margin": 26.07},
+      "known_differences": {}
+    },
+    {
+      "name": "nfs_2024_top_third",
+      "source": {
+        "title": "Teagasc NFS 2024 Dairy Enterprise Factsheet, Table 3 (thirds by gross margin per ha)",
+        "url": "https://teagasc.ie/wp-content/uploads/uploads/media/website/publications/2025/National-Farm-Survey-2024-Dairy.pdf"
+      },
+      "milk_price_c": null,
+      "lines_c": {
+        "gross_output": 54.36,
+        "concentrates": 8.21,
+        "pasture_forage": 5.79,
+        "other_direct": 5.14,
+        "electricity_fuel": 2.63,
+        "hired_labour": 1.75,
+        "rent": 1.62,
+        "depreciation": 4.23,
+        "remaining_fixed": 5.04
+      },
+      "published": {"direct_costs": 19.14, "fixed_costs": 15.27, "total_costs": 34.21, "net_margin": 20.15},
+      "known_differences": {
+        "total_costs": [{"amount": 0.20, "reason": "Source: Table 3 total costs is not direct + fixed (19.14 + 15.27 = 34.41, published 34.21); Outlook 2026 Table A3 repeats it."}],
+        "net_margin": [{"amount": -0.20, "reason": "Follows the source total costs inconsistency."}]
+      }
+    },
+    {
+      "name": "nfs_2024_middle_third",
+      "source": {
+        "title": "Teagasc NFS 2024 Dairy Enterprise Factsheet, Table 3",
+        "url": "https://teagasc.ie/wp-content/uploads/uploads/media/website/publications/2025/National-Farm-Survey-2024-Dairy.pdf"
+      },
+      "milk_price_c": null,
+      "lines_c": {
+        "gross_output": 52.74,
+        "concentrates": 8.57,
+        "pasture_forage": 6.12,
+        "other_direct": 5.40,
+        "electricity_fuel": 2.81,
+        "hired_labour": 0.92,
+        "rent": 1.58,
+        "depreciation": 4.32,
+        "remaining_fixed": 5.02
+      },
+      "published": {"direct_costs": 20.09, "fixed_costs": 14.65, "total_costs": 34.55, "net_margin": 18.19},
+      "known_differences": {
+        "total_costs": [{"amount": 0.19, "reason": "Source: 20.09 + 14.65 = 34.74, published 34.55."}],
+        "net_margin": [{"amount": -0.19, "reason": "Follows the source total costs inconsistency."}]
+      }
+    },
+    {
+      "name": "nfs_2024_bottom_third",
+      "source": {
+        "title": "Teagasc NFS 2024 Dairy Enterprise Factsheet, Table 3",
+        "url": "https://teagasc.ie/wp-content/uploads/uploads/media/website/publications/2025/National-Farm-Survey-2024-Dairy.pdf"
+      },
+      "milk_price_c": null,
+      "lines_c": {
+        "gross_output": 51.62,
+        "concentrates": 9.55,
+        "pasture_forage": 7.67,
+        "other_direct": 5.68,
+        "electricity_fuel": 3.61,
+        "hired_labour": 0.43,
+        "rent": 1.39,
+        "depreciation": 4.12,
+        "remaining_fixed": 5.30
+      },
+      "published": {"direct_costs": 22.90, "fixed_costs": 14.85, "total_costs": 37.70, "net_margin": 13.92},
+      "known_differences": {
+        "total_costs": [{"amount": 0.05, "reason": "Source: 22.90 + 14.85 = 37.75, published 37.70."}],
+        "net_margin": [{"amount": -0.05, "reason": "Follows the source total costs inconsistency."}]
+      }
+    }
+  ]
+}

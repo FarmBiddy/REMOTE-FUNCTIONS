@@ -167,7 +167,13 @@ class MonthlyDairyFinancialInput(
     Period identity (``year`` / ``month``) is **not** on this model — it belongs
     on the Domain envelope (ADR-0018). No annual milk fields
     (``milking_cows``, ``litres_per_cow``).
+
+    ``flat_rate_addition``: the flat-rate VAT addition received on the month's
+    sales by an unregistered farmer (``vat.flat_rate`` month ``addition``),
+    farm income in the accounts (ADR-0055). Monthly path only.
     """
+
+    flat_rate_addition: NonNegativeNumber = 0
 
 
 # ---------------------------------------------------------------------------
@@ -959,6 +965,8 @@ class PlanProjectionInput(_StrictModel):
     def _consistent(self) -> "PlanProjectionInput":
         if self.tax_profile and self.assumptions.tax:
             raise ValueError("send assumptions.tax or tax_profile, not both")
+        if self.tax_profile and any(m.flat_rate_addition for m in self.base_pl_months):
+            raise ValueError("send flat_rate_addition in base_pl_months or a tax_profile, not both")
         _reject_duplicate_months(self.base_pl_months)
         keys = sorted((m.year, m.month) for m in self.base_pl_months)
         first = keys[0][0] * 12 + keys[0][1]
@@ -1299,16 +1307,14 @@ class TaxCapitalAllowancesInput(_StrictModel):
     """HTTP / runner input for ``tax.capital_allowances`` (ADR-0053): the
     ``assets.schedule`` register for one tax year. ``accounting_profit``
     (``pl.net`` net profit before tax) with the period's ``depreciation``
-    (``assets.schedule``) and, for flat-rate farmers, the ``flat_rate_addition``
-    gives taxable profit."""
+    (``assets.schedule``) gives taxable profit; for flat-rate farmers the
+    flat-rate addition is already in it (a ``pl.*`` line, ADR-0055)."""
 
     tax_year: CalendarYear
     period_end_month: CalendarMonth = 12
     assets: list[AssetInput] = Field(..., min_length=1, max_length=200)
     accounting_profit: SignedNumber | None = None
     depreciation: NonNegativeNumber = 0.0
-    # vat.flat_rate total.addition for the period: taxable income pl.net leaves out.
-    flat_rate_addition: NonNegativeNumber = 0.0
 
     @model_validator(mode="after")
     def _rules(self) -> "TaxCapitalAllowancesInput":
@@ -1932,6 +1938,18 @@ MONTHLY_DAIRY_INPUT_FIELD_METADATA: tuple[InputFieldMetadata, ...] = (
         maximum=None,
         unit="EUR",
         description="Other operating income in the statement month",
+    ),
+    InputFieldMetadata(
+        name="flat_rate_addition",
+        type="number",
+        required=False,
+        minimum=0,
+        maximum=None,
+        unit="EUR",
+        description=(
+            "Flat-rate VAT addition received on the month's milk and cattle sales by a farmer "
+            "not registered for VAT (vat.flat_rate addition); farm income, in revenue.other"
+        ),
     ),
     InputFieldMetadata(
         name="feed",

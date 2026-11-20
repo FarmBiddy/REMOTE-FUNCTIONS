@@ -88,7 +88,8 @@ where the Engine's Irish layer differs from practice.
   `tax.partnership`, and `plan.projection` tax profiles of individuals: they
   must send `income_averaging`; individual tax profiles also `preliminary_basis`
   and `tax_history`, and projected cash / net worth change with the new
-  timing. Engine 1.11.0.
+  timing. `tax.capital_allowances` no longer takes `flat_rate_addition`.
+  Engine 1.11.0.
 
 ## Related
 

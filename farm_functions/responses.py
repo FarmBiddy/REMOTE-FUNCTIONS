@@ -852,7 +852,6 @@ class AllowanceByType(_Out):
 class ProfitBridge(_Out):
     accounting_profit: float
     add_back_depreciation: float
-    flat_rate_addition: float
     capital_allowances: float
     taxable_profit: float
 

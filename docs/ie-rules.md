@@ -45,6 +45,13 @@ credit and USC rate pages; Teagasc NFS 2025 report and dairy factsheet.
   farmer** (s.4 "a person"; Teagasc — `unverified` against Revenue).
 - Registration only for intra-EU acquisitions (> €41,000) or foreign services
   is ring-fenced: flat-rate status kept.
+- **In the accounts** the FRA is farm income (trading receipt, taxable): the
+  farmer keeps it and it is not VAT due (Revenue scheme TDM; IFAC accountant,
+  Nov 2026). No Revenue text says "taxable" outright — inference, confirmed in
+  practice. Engine: a monthly `pl.*` / `cf.*` line `flat_rate_addition`
+  (ADR-0055); annual Phase 1 IDs (`pl.summary`, `revenue.*`) stay ex-FRA.
+- Teagasc NFS: no VAT statement in the 2024 report; the milk prices it quotes
+  match the CSO VAT-inclusive series. Likely VAT-inclusive, **unconfirmed**.
 - Input VAT for flat-rate farmers is a cost (the FRA compensates it), except
   **VAT 58 refunds** (S.I. 201/2012) on farm buildings, fencing, drainage, land
   reclamation, micro-generation — not machinery.

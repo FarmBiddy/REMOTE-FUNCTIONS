@@ -176,6 +176,14 @@ def plan_projection(
                 value = max(0.0, value + effects[y][k])
             drivers[k] = value
         drivers["milk_litres"] = base["milk_litres"] * herd[y] * yield_[y]
+        if base.get("flat_rate_addition") and "flat_rate_addition" not in amounts:
+            # The flat-rate addition follows milk and cattle sales (ADR-0055). With a tax
+            # profile the engine computes it instead (the base months cannot carry it);
+            # an amount the Platform sets for the year wins.
+            base_sales = base_milk + base.get("cattle_sales", 0.0)
+            sales = price[y] * drivers["milk_litres"] + drivers.get("cattle_sales", 0.0)
+            if base_sales:
+                drivers["flat_rate_addition"] = base["flat_rate_addition"] * sales / base_sales
         debt_service = debt[y]["interest"] + debt[y]["principal"]
         pl = monthly_pl_summary(milk_price=price[y], loan_repayments=debt_service, **drivers)
         surplus = pl["profit"]["net"]

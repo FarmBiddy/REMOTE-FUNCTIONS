@@ -31,6 +31,8 @@ CASH_FLOW_CATALOGUE: dict[tuple[CashActivity, CashDirection], tuple[str, ...]] =
         "cattle_sales",
         "land_leasing_income",
         "other",
+        # Flat-rate VAT addition paid with the milk / cattle cheque (ADR-0055).
+        "flat_rate_addition",
     ),
     ("operating", "out"): OPERATING_COST_CATEGORIES,
     ("investing", "in"): ("asset_disposal_proceeds",),

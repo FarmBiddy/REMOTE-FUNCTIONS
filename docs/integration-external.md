@@ -414,9 +414,13 @@ Flat-rate VAT addition (ADR-0053, Ireland): most dairy farmers are not
 VAT-registered and receive the flat-rate addition on top of milk and cattle
 sales (4.5% in 2026, 4.8% announced for 2027). Keep `milk_price` / `cattle_sales`
 ex-VAT and gross of co-op deductions, as today, and call `vat.flat_rate` with the
-same months plus `vat_registered` from the farm profile. Show `total.addition`
-as an income line and `rules_applied[].status` ("announced" = Budget figure, not
-yet law). The engine picks the rate for each month.
+same months plus `vat_registered` from the farm profile. Then send each
+month's `addition` as `flat_rate_addition` on the same `pl.*` months (it is farm
+income in the accounts and lands in `revenue.other`) and on the `cf.*` months
+when the co-op / mart pays it (ADR-0055). Show `rules_applied[].status`
+("announced" = Budget figure, not yet law). The engine picks the rate for each
+month. In `plan.projection`, send it in `base_pl_months` only without a
+`tax_profile`; with one, the engine adds it itself (`fra_conflict` otherwise).
 
 Stock relief (ADR-0053, Ireland): call `tax.stock_relief` for the accounting
 period with the same opening / closing livestock and stock valuations sent to
@@ -435,9 +439,8 @@ buildings → `farm_buildings`, other → `none`; `slurry_storage` / `farm_safet
 for the accelerated schemes, which need the DAFM certificate). Call
 `tax.capital_allowances` per tax year with `accounting_profit` = `pl.net`
 `net_profit_before_tax` **with** depreciation deducted, and that same
-`depreciation`. For a farmer who is not VAT-registered, also pass
-`flat_rate_addition` (`vat.flat_rate` `total.addition` for the period): it is
-taxable income that `pl.net` leaves out. `profit_bridge.taxable_profit` is the
+`depreciation`. The flat-rate addition is already in `pl.net` (a P&L line,
+ADR-0055): the bridge no longer takes it. `profit_bridge.taxable_profit` is the
 `trading_profit` for `tax.stock_relief`.
 
 Tax estimate (ADR-0053, Ireland): call `tax.estimate` with

@@ -221,6 +221,7 @@ def test_cash_and_pnl_share_category_ids():
     """ADR-0023: one invoice category ID feeds both statements."""
     pnl_costs = set(TotalCostsInput.model_fields)
     pnl_income = set(SchemeRevenueInput.model_fields) | set(OtherRevenueInput.model_fields)
+    pnl_income |= {"flat_rate_addition"}  # monthly P&L income line (ADR-0055)
     assert set(OPERATING_CASH_OUTFLOW_CATEGORIES) == pnl_costs
     assert set(OPERATING_CASH_INFLOW_CATEGORIES) == pnl_income | {"milk"}
     assert set(CASH_FLOW_LINES) == set(MonthlyDairyCashFlowInput.model_fields)

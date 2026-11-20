@@ -123,9 +123,9 @@ def tax_capital_allowances(
     period_end_month: int = 12,
     accounting_profit: float | None = None,
     depreciation: float = 0.0,
-    flat_rate_addition: float = 0.0,
 ) -> dict[str, Any]:
-    """``tax.capital_allowances``: allowances for one tax year per asset (input order)."""
+    """``tax.capital_allowances``: allowances for one tax year per asset (input order).
+    The flat-rate VAT addition is already in ``accounting_profit`` (a P&L line, ADR-0055)."""
     rows, rules, caps = [], {}, set()
     for asset in assets:
         requested = asset.get("tax_allowance") or ca.DEFAULT_FOR_CATEGORY[asset["category"]]
@@ -155,9 +155,8 @@ def tax_capital_allowances(
         bridge = {
             "accounting_profit": round_money(accounting_profit),
             "add_back_depreciation": round_money(depreciation),
-            "flat_rate_addition": round_money(flat_rate_addition),
             "capital_allowances": total,
-            "taxable_profit": round_money(accounting_profit + depreciation + flat_rate_addition - total),
+            "taxable_profit": round_money(accounting_profit + depreciation - total),
         }
     return {
         "currency": "EUR",

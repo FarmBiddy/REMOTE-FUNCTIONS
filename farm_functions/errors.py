@@ -423,6 +423,10 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             )
         elif text in ("birth_year only used with pension_contributions", "birth_year is after the tax year"):
             issues.append(issue(INVALID_TYPE, text, field=at("birth_year"), details={"reason": "birth_year_invalid"}))
+        elif text == "home_carer needs marital_status married":
+            issues.append(issue(INVALID_TYPE, text, field=at("home_carer"), details={"reason": "spouse_needs_married"}))
+        elif text.startswith("no home carer credit rule for tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
         elif text == "income averaging is for individuals, not companies":
             issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
         elif text.endswith("only used with income_averaging"):

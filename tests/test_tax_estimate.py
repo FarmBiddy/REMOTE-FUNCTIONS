@@ -270,3 +270,38 @@ def test_pension_inputs():
     assert _reason(**SINGLE, birth_year=1981) == "birth_year_invalid"
     assert _reason(business_type="company", tax_year=2026, taxable_profit=1, pension_contributions=1, birth_year=1980) == "regime_not_available"
     assert _ok(**SINGLE)["pension"] is None
+
+
+# Home carer credit (s.466A, ADR-0055 §5c), married 2026, farm profit 60,000.
+#   Spouse no income: credit 1,950 (no band increase to lose):
+#     IT 53,000 × 20% + 7,000 × 40% = 13,400 − (4,000 + 2,000 + 1,950) = 5,450 (7,400 without)
+#   Spouse PAYE 9,000: credit 1,950 − (9,000 − 7,200) / 2 = 1,050
+#     band increase: 62,000 band → 15,200 − (4,000 + 2,000 + 1,800) = 7,400
+#     credit:        53,000 band → 17,000 − (7,800 + 1,050) = 8,150 → band increase is better
+MARRIED = {**SINGLE, "marital_status": "married"}
+
+
+def test_home_carer_credit_with_no_second_income():
+    body = _ok(**MARRIED, home_carer=True)
+    assert body["home_carer"] == {"credit_after_taper": 1_950, "applied": "credit"}
+    assert body["income_tax"]["net"] == 5_450
+    assert _ok(**MARRIED)["income_tax"]["net"] == 7_400 and _ok(**MARRIED)["home_carer"] is None
+
+
+def test_home_carer_or_band_increase_whichever_is_better():
+    body = _ok(**MARRIED, spouse_paye_income=9_000, home_carer=True)
+    assert body["home_carer"] == {"credit_after_taper": 1_050, "applied": "band_increase"}
+    assert body["income_tax"]["net"] == 7_400 and body["income_tax"]["standard_rate_band"] == 62_000
+
+
+def test_home_carer_credit_tapers_to_nil():
+    body = _ok(**MARRIED, spouse_paye_income=12_000, home_carer=True)
+    assert body["home_carer"] == {"credit_after_taper": 0, "applied": "band_increase"}
+
+
+def test_home_carer_rules_and_eligibility():
+    rules = {r["rule_id"]: r["value"] for r in _ok(**MARRIED, home_carer=True)["rules_applied"]}
+    assert (rules["home_carer_credit"], rules["home_carer_income_limit"]) == (1_950, 7_200)
+    assert _ok(**{**MARRIED, "tax_year": 2024}, home_carer=True)["home_carer"]["credit_after_taper"] == 1_800
+    assert _reason(**{**MARRIED, "tax_year": 2027}, home_carer=True) == "rule_not_available"
+    assert _reason(**SINGLE, home_carer=True) == "spouse_needs_married"

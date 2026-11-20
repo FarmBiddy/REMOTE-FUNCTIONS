@@ -22,6 +22,7 @@ from typing import Any
 from farm_functions.core.ratios import per_unit
 from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.ie import capital_allowances as ca
+from farm_functions.ie import home_carer as carer
 from farm_functions.ie import pensions
 from farm_functions.ie import preliminary as prelim
 from farm_functions.ie.averaging import averaged_profit, averaging_rule
@@ -196,39 +197,54 @@ def _individual(
     extra_credit: float = 0.0,
     paye: float = 0.0,
     it_deduction: float = 0.0,
+    home_carer_credit: float = 0.0,
 ) -> dict:
     """Joint assessment when married: one band and credit set for the couple;
     USC and PRSI per person. Farm losses count as nil (no loss relief).
-    ``it_deduction`` (pension relief) reduces income for income tax only."""
+    ``it_deduction`` (pension relief) reduces income for income tax only.
+    ``home_carer_credit`` (already tapered) replaces the second-earner band
+    increase when that gives less tax, as Revenue applies it (s.466A)."""
     earned = max(farm_profit, 0.0)
     farmer = earned + other_income
     if married:
-        band = v["it_band_married_one_income"] + min(v["it_band_married_second_income_max"], farmer, spouse)
+        one_income = v["it_band_married_one_income"]
+        band = one_income + min(v["it_band_married_second_income_max"], farmer, spouse)
         personal = v["it_credit_personal_married"]
     else:
         band, personal = v["it_band_single"], v["it_credit_personal_single"]
     total = farmer + spouse
     it_income = max(total - it_deduction, 0.0)
-    at_standard = min(it_income, band)
-    gross = banded(it_income, (band,), (v["it_rate_standard"], v["it_rate_higher"]))
     credits = (
         personal
         + min(v["it_credit_earned_income"], earned * v["it_rate_standard"] / 100)
         + min(v["it_credit_employee"], spouse * v["it_rate_standard"] / 100)
         + extra_credit
     )
-    prsi_farmer = 0.0 if farmer < v["prsi_s_threshold"] else max(farmer * v["prsi_s_rate"] / 100, v["prsi_s_minimum"])
-    prsi_spouse = 0.0 if spouse / 52 <= v["prsi_a_weekly_exemption"] else spouse * v["prsi_a_rate"] / 100
-    return {
-        "income": {"farmer": farmer, "spouse": spouse, "total": total},
-        "income_tax": {
+
+    def income_tax(band: float, credits: float) -> dict[str, float]:
+        at_standard = min(it_income, band)
+        gross = banded(it_income, (band,), (v["it_rate_standard"], v["it_rate_higher"]))
+        return {
             "standard_rate_band": band,
             "at_standard_rate": at_standard,
             "at_higher_rate": it_income - at_standard,
             "gross": gross,
             "credits": credits,
             "net": max(gross - credits, 0.0),
-        },
+        }
+
+    it, home_carer = income_tax(band, credits), None
+    if married and home_carer_credit:
+        with_credit = income_tax(one_income, credits + home_carer_credit)
+        home_carer = "credit" if with_credit["net"] < it["net"] else "band_increase"
+        if home_carer == "credit":
+            it = with_credit
+    prsi_farmer = 0.0 if farmer < v["prsi_s_threshold"] else max(farmer * v["prsi_s_rate"] / 100, v["prsi_s_minimum"])
+    prsi_spouse = 0.0 if spouse / 52 <= v["prsi_a_weekly_exemption"] else spouse * v["prsi_a_rate"] / 100
+    return {
+        "income": {"farmer": farmer, "spouse": spouse, "total": total},
+        "income_tax": it,
+        "home_carer": home_carer,
         "usc": {"farmer": _usc(v, farmer, farmer - paye), "spouse": _usc(v, spouse, 0.0)},
         "prsi": {"farmer": prsi_farmer, "spouse": prsi_spouse},
     }
@@ -276,6 +292,7 @@ def tax_estimate(
     losses_forward: float = 0.0,
     pension_contributions: float = 0.0,
     birth_year: int | None = None,
+    home_carer: bool = False,
     **inputs: Any,
 ) -> dict[str, Any]:
     """``tax.estimate``: tax for one year on taxable farming profit (after capital
@@ -313,10 +330,20 @@ def tax_estimate(
             "unrelieved": round_money(pension_contributions - relieved),
         }
         pension_rules = [pct_rule.as_dict(), cap_rule.as_dict()]
+    carer_credit, carer_rules = 0.0, []
+    if home_carer:
+        credit_rule, limit_rule = carer.home_carer_rules(tax_year)
+        carer_income = inputs.get("spouse_paye_income", 0.0)
+        carer_credit = carer.home_carer_credit(credit_rule.value, limit_rule.value, carer_income)
+        carer_rules = [credit_rule.as_dict(), limit_rule.as_dict()]
     result = estimate_with_rules(
         year_rules(tax_year), tax_year=tax_year, taxable_profit=taxable_profit, stock_relief=relief_effect,
-        pension_relief=0.0 if pension is None else pension["relief"], **inputs,
+        pension_relief=0.0 if pension is None else pension["relief"], home_carer_credit=carer_credit, **inputs,
     )
+    if home_carer:
+        result["home_carer"] = {"credit_after_taper": round_money(carer_credit),
+                                "applied": (result["home_carer"] or {}).get("applied", "band_increase")}
+        result["rules_applied"] += carer_rules
     if rule is not None:
         result["rules_applied"].append(rule.as_dict())
     result["rules_applied"] += pension_rules
@@ -337,6 +364,7 @@ def estimate_with_rules(
     state_aid_used: float = 0.0,
     extra_credit: float = 0.0,
     pension_relief: float = 0.0,
+    home_carer_credit: float = 0.0,
 ) -> dict[str, Any]:
     v = {k: r.value for k, r in rules.items()}
     used: list[str]
@@ -353,13 +381,14 @@ def estimate_with_rules(
         used = [k for k in RULES if k.startswith(("it_", "usc_", "prsi_"))]
         married = marital_status == "married"
         person = _individual(
-            v, taxable_profit, other_income, married, spouse_paye_income, extra_credit, it_deduction=pension_relief
+            v, taxable_profit, other_income, married, spouse_paye_income, extra_credit,
+            it_deduction=pension_relief, home_carer_credit=home_carer_credit,
         )
         clawback = 0.0
         if stock_relief_regime != "general" and stock_relief > 0:
             without = _individual(
                 v, taxable_profit + stock_relief, other_income, married, spouse_paye_income, extra_credit,
-                it_deduction=pension_relief,
+                it_deduction=pension_relief, home_carer_credit=home_carer_credit,
             )
             tax_value = _it_usc(without) - _it_usc(person)
             if stock_relief_regime == "young_trained_farmer":
@@ -382,6 +411,12 @@ def estimate_with_rules(
         prsi = _rounded(person["prsi"])
         income = {"farm_profit": taxable_profit, "other_income": other_income, "spouse_paye_income": spouse_paye_income}
         total_tax = round_money(income_tax["net"] + usc["total"] + prsi["total"] + round_money(clawback))
+    home_carer_view = None
+    if business_type != "company" and home_carer_credit:
+        home_carer_view = {
+            "credit_after_taper": round_money(home_carer_credit),
+            "applied": person["home_carer"],
+        }
     income = {k: round_money(x) for k, x in income.items()}
     income["total"] = round_money(max(income["farm_profit"], 0.0) + income["other_income"] + income["spouse_paye_income"])
     rate = per_unit(total_tax, income["total"])
@@ -403,6 +438,7 @@ def estimate_with_rules(
         "averaging": None,
         "losses": None,
         "pension": None,
+        "home_carer": None if income_tax is None else home_carer_view,
     }
 
 

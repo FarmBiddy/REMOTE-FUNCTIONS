@@ -122,6 +122,29 @@ SW(MP)A 2024)
   rate) above a weekly threshold of €552 (2026), €600 (2027, announced).
   Wages are already an operating cost; employer PRSI is reference only.
 
+## 2A. Home carer credit (s.466A; TDM 15-01-29; checked 2026-11-20)
+
+| rule_id | 2024 | 2025 | 2026 | 2027 | ref | status |
+|---|---|---|---|---|---|---|
+| home_carer_credit | 1,800 | 1,950 | 1,950 | 2,050 announced — **not in the Engine** | s.466A | enacted 2024–26 |
+| home_carer_income_limit | 7,200 | 7,200 | 7,200 | not confirmed | s.466A(3) | enacted 2024–26 |
+
+- Jointly assessed; the carer cares for a dependant (child, person over 65,
+  or permanently incapacitated) at home. Eligibility is the Platform's answer
+  (`home_carer`); the carer's income is the spouse's (Carer's Allowance /
+  Benefit excluded).
+- Full credit up to the limit, reduced by half the excess: nil at 10,800 (2024)
+  and 11,100 (2025–26). Revenue's rates page says 11,100 for 2024 — a year
+  mix-up; TDM 15-01-29 gives 10,800.
+- Not with the second-earner band increase in the same year: Revenue gives
+  whichever is better; so does the Engine (`applied`).
+- 2027: only the credit is announced (CAI, KPMG); no source confirms the
+  7,200 limit, so a 2027 claim is `rule_not_available` until the Bill text is
+  checked (decided with the user). Module `farm_functions/ie/home_carer.py`
+  (kept apart from the yearly table so 2027 estimates without a claim work).
+- Not modelled: single person child carer credit (1,750 / 1,900 / 1,900 +
+  4,000 band, s.462B), age credit (245 / 490, s.464), rent credit.
+
 ## 3. Companies
 
 | rule_id | value | ref | status |

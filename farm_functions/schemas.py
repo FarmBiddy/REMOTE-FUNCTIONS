@@ -18,6 +18,7 @@ from farm_functions.errors import missing_inputs
 from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
 from farm_functions.ie import preliminary as prelim
 from farm_functions.ie.averaging import AVERAGING_YEARS, averaging_rule
+from farm_functions.ie.home_carer import home_carer_rules
 from farm_functions.ie.capital_allowances import DEFAULT_FOR_CATEGORY
 from farm_functions.ie.partnership import MIN_SUCCESSOR_SHARE_PCT
 from farm_functions.ie.taxes import LAST_TAX_YEAR, year_rules
@@ -1208,9 +1209,17 @@ class TaxEstimateInput(_StrictModel):
     # birth year that sets the age % (ADR-0055).
     pension_contributions: NonNegativeNumber = 0.0
     birth_year: CalendarYear | None = None
+    # Married couples: the Platform confirms the spouse cares for a dependant at home
+    # (s.466A); the spouse's own income is the carer's income (ADR-0055).
+    home_carer: bool = False
 
     @model_validator(mode="after")
     def _profile(self) -> "TaxEstimateInput":
+        if self.home_carer:
+            if self.marital_status != "married":
+                raise ValueError("home_carer needs marital_status married")
+            if home_carer_rules(self.tax_year) is None:
+                raise ValueError(f"no home carer credit rule for tax year {self.tax_year}")
         if self.business_type == "company" and self.losses_forward:
             raise ValueError("losses_forward is for individuals (company losses are not modelled)")
         if self.business_type == "company" and (self.pension_contributions or self.birth_year is not None):
@@ -1886,7 +1895,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     ),
     **dict.fromkeys(("label", "name"), "text"),
     **dict.fromkeys(("cash_line", "category", "method", "rank_by"), "choice"),
-    **dict.fromkeys(("variable", "vat_registered", "registered_partnership", "income_averaging", "direct_debit"), "boolean"),
+    **dict.fromkeys(("variable", "vat_registered", "registered_partnership", "income_averaging", "direct_debit", "home_carer"), "boolean"),
     "period_end_year": "year",
     "period_end_month": "month",
     "direct_debit_start_month": "month",

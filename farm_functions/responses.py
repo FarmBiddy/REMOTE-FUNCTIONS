@@ -953,6 +953,14 @@ class PensionRelief(_Out):
     unrelieved: float
 
 
+class HomeCarer(_Out):
+    """Home carer credit (s.466A, ADR-0055): after the income taper, and whether
+    it or the second-earner band increase was given (the better one)."""
+
+    credit_after_taper: float
+    applied: Literal["credit", "band_increase"]
+
+
 class TaxEstimateResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -971,6 +979,7 @@ class TaxEstimateResult(_Out):
     averaging: AveragingDetail | None
     losses: LossesForward | None
     pension: PensionRelief | None
+    home_carer: HomeCarer | None
 
 
 class ExtractionCompany(_Out):

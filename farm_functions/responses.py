@@ -1118,6 +1118,25 @@ class CfReconcileResult(Span):
     unexplained_pct_of_revenue: float | None
 
 
+class ExitYear(_Out):
+    tax_year: int
+    assessed: float
+    topped_up_to: float
+    additional_assessable: float
+
+
+class TaxAveragingExitResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    final_averaged_year: int
+    final_averaged_profit: float
+    years: list[ExitYear]
+    total_additional_assessable: float
+    normal_basis_from: int
+    deferred_step_out_tax_due_now: float
+    rules_applied: list[RuleApplied]
+
+
 class TaxPaymentsResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -1268,6 +1287,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "tax.estimate": TaxEstimateResult,
     "tax.partnership": TaxPartnershipResult,
     "tax.company_extraction": TaxCompanyExtractionResult,
+    "tax.averaging_exit": TaxAveragingExitResult,
     "tax.payments": TaxPaymentsResult,
     "cf.reconcile": CfReconcileResult,
     "bs.summary": BsSummaryResult,

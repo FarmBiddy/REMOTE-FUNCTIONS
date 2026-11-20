@@ -1353,6 +1353,23 @@ class TaxEstimateInput(_StrictModel):
         return self
 
 
+class TaxAveragingExitInput(_StrictModel):
+    """HTTP / runner input for ``tax.averaging_exit`` (ADR-0055): the final
+    averaged year and its averaged profit, and the profit assessed (averaged,
+    before capital allowances) for each of the years before it, oldest first.
+    ``deferred_step_out_tax``: step-out instalments not yet paid."""
+
+    final_averaged_year: CalendarYear
+    final_averaged_profit: SignedNumber
+    prior_assessed_profits: list[SignedNumber] = Field(..., min_length=1, max_length=MAX_PRIOR_FARMING_PROFITS)
+    deferred_step_out_tax: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _window(self) -> "TaxAveragingExitInput":
+        _check_averaging_window(self.final_averaged_year, self.prior_assessed_profits, "prior_assessed_profits")
+        return self
+
+
 class TaxPaymentsInput(_StrictModel):
     """HTTP / runner input for ``tax.payments`` (ADR-0055). Liabilities are the
     year's total tax (income tax, USC, PRSI: ``tax.estimate`` ``total_tax`` or
@@ -1944,7 +1961,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
             "capital_allowances", "current_year_tax", "preceding_year_tax", "pre_preceding_year_tax",
             "preceding_year_preliminary_paid", "liability", "preliminary_paid", "net_profit", "total_tax", "losses_forward", "pension_contributions", "spouse_self_employed_income", "spouse_farm_wages",
-            "milk_debtors_opening", "milk_debtors_closing", "other_debtors_opening", "other_debtors_closing", "merchant_credit_opening", "merchant_credit_closing", "unit_market_value", "unit_held_value", "other_creditors_opening", "other_creditors_closing",
+            "milk_debtors_opening", "milk_debtors_closing", "other_debtors_opening", "other_debtors_closing", "merchant_credit_opening", "merchant_credit_closing", "unit_market_value", "unit_held_value", "final_averaged_profit", "deferred_step_out_tax", "other_creditors_opening", "other_creditors_closing",
         ),
         _EUR,
     ),
@@ -1987,7 +2004,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "cf_months", "comparison", "forecast", "history", "investments", "loans", "months",
             "pl_months", "prior_pl_months", "projected_cf_months", "projected_pl_months",
             "reduced_costs", "reduced_income", "scenarios", "prior_farming_profits", "partners", "tax_history",
-            "filed_years", "groups",
+            "filed_years", "groups", "prior_assessed_profits",
         ),
         "list",
     ),
@@ -2006,7 +2023,8 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     "period_end_month": "month",
     "direct_debit_start_month": "month",
     "young_trained_farmer_first_year": "year",
-    **dict.fromkeys(("tax_year", "registered_year", "successor_birth_year", "birth_year", "last_step_out_year"), "year"),
+    **dict.fromkeys(("tax_year", "registered_year", "successor_birth_year", "birth_year", "last_step_out_year",
+                     "final_averaged_year"), "year"),
     "profit_share_pct": "%",
     "head": "head",
     "successor": "index",

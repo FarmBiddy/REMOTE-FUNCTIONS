@@ -25,7 +25,13 @@ from farm_functions.ie import capital_allowances as ca
 from farm_functions.ie import home_carer as carer
 from farm_functions.ie import pensions
 from farm_functions.ie import preliminary as prelim
-from farm_functions.ie.averaging import averaged_profit, averaging_rule, step_out_due_years, step_out_rules
+from farm_functions.ie.averaging import (
+    averaged_profit,
+    averaging_rule,
+    exit_top_ups,
+    step_out_due_years,
+    step_out_rules,
+)
 from farm_functions.ie.losses import PRSI_TREATMENT as LOSS_PRSI_TREATMENT
 from farm_functions.ie.losses import apply_losses
 from farm_functions.ie.partnership import (
@@ -639,6 +645,43 @@ def projected_tax(
     }
 
 
+def tax_averaging_exit(
+    *,
+    final_averaged_year: int,
+    final_averaged_profit: float,
+    prior_assessed_profits: list[float],
+    deferred_step_out_tax: float = 0.0,
+) -> dict[str, Any]:
+    """``tax.averaging_exit`` (s.657(8); ADR-0055): leaving averaging after the
+    final averaged year. Each of the years before it is raised to at least the
+    final averaged profit (before capital allowances); the year after is taxed
+    on the normal basis; deferred step-out tax falls due at once. The tax on
+    each top-up is ``tax.estimate`` for that year (or the accountant's)."""
+    rule = averaging_rule(final_averaged_year)
+    first = final_averaged_year - len(prior_assessed_profits)
+    extra = exit_top_ups(final_averaged_profit, prior_assessed_profits)
+    years = [
+        {
+            "tax_year": first + i,
+            "assessed": round_money(a),
+            "topped_up_to": round_money(a + e),
+            "additional_assessable": round_money(e),
+        }
+        for i, (a, e) in enumerate(zip(prior_assessed_profits, extra))
+    ]
+    return {
+        "currency": "EUR",
+        "jurisdiction": "IE",
+        "final_averaged_year": final_averaged_year,
+        "final_averaged_profit": round_money(final_averaged_profit),
+        "years": years,
+        "total_additional_assessable": round_money(sum(r["additional_assessable"] for r in years)),
+        "normal_basis_from": final_averaged_year + 1,
+        "deferred_step_out_tax_due_now": round_money(deferred_step_out_tax),
+        "rules_applied": [rule.as_dict()],
+    }
+
+
 def tax_payments(
     *,
     tax_year: int,
@@ -940,6 +983,7 @@ def tax_company_extraction(
 
 __all__ = [
     "estimate_with_rules",
+    "tax_averaging_exit",
     "tax_company_extraction",
     "succession_credit_amount",
     "tax_partnership",

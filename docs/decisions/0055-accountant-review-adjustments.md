@@ -233,13 +233,26 @@ where the Engine's Irish layer differs from practice.
 - Not modelled: step-out in `tax.partnership` and `plan.projection` (decided
   with the user: rare).
 
+### 8b. `tax.averaging_exit`: leaving averaging
+
+- The accountant: "once in income averaging it's hard to get out of it" —
+  because leaving tops up the 4 earlier years. New ID `tax.averaging_exit`:
+  from the final averaged year's averaged profit and the 4 years assessed
+  before it, the extra assessable profit per year (never lowering a year), the
+  year the normal basis starts, and deferred step-out tax due at once
+  (s.657(8)(d)–(e)); checked against Revenue's TDM Example 2.
+- Profits only (decided with the user): the Engine's tax tables start in 2024
+  and an exit reaches 4 years back, so the tax on each top-up is
+  `tax.estimate` for that year where rules exist, else the accountant's.
+- Exit inside `plan.projection` is not modelled (rare).
+
 ## Consequences
 - Breaking for callers of `tax.estimate` that are individuals and of
   `tax.partnership`, and `plan.projection` tax profiles of individuals: they
   must send `income_averaging`; individual tax profiles also `preliminary_basis`
   and `tax_history`, and projected cash / net worth change with the new
   timing. `tax.capital_allowances` no longer takes `flat_rate_addition`.
-  `debt.capacity` and the reports need `tax_source` with `tax`. 40 public IDs.
+  `debt.capacity` and the reports need `tax_source` with `tax`. 41 public IDs.
   Rule status gains `practice`. Engine 1.11.0.
 
 ## Related

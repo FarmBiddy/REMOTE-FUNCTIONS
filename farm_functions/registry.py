@@ -29,6 +29,7 @@ from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.quality import milk_quality
 from farm_functions.tax import (
+    tax_averaging_exit,
     tax_capital_allowances,
     tax_company_extraction,
     tax_estimate,
@@ -89,6 +90,7 @@ from farm_functions.schemas import (
     TotalRevenueInput,
     TaxCapitalAllowancesInput,
     TaxCompanyExtractionInput,
+    TaxAveragingExitInput,
     TaxPaymentsInput,
     TaxEstimateInput,
     TaxPartnershipInput,
@@ -508,6 +510,17 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=TaxCompanyExtractionInput,
         handler=tax_company_extraction,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.averaging_exit",
+        description=(
+            "Leaving Irish income averaging: each of the 4 years before the final averaged "
+            "year raised to at least its averaged profit (the extra assessable profit per "
+            "year), the year normal basis starts and deferred step-out tax due at once."
+        ),
+        input_model=TaxAveragingExitInput,
+        handler=tax_averaging_exit,
         supports_provenance=False,
     ),
     CalculationDefinition(

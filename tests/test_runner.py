@@ -79,6 +79,7 @@ def test_discovery_lists_core_functions_only():
     "tax.estimate",
     "tax.partnership",
     "tax.company_extraction",
+    "tax.averaging_exit",
     "tax.payments",
         "bs.summary",
         "herd.valuation",

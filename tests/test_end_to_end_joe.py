@@ -73,6 +73,9 @@ PAYLOADS = {
                      "milk_debtors_closing": round(joe.ACTUAL[-1]["milk_litres"] * joe.ACTUAL[-1]["milk_price"], 2),
                      **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
                      "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
+    # Joe leaves averaging after 2026: his four averaged years topped up to 2026's average.
+    "tax.averaging_exit": {"final_averaged_year": 2026, "final_averaged_profit": 54_000,
+                           "prior_assessed_profits": [41_000, 44_500, 50_200, 56_100]},
     "tax.payments": {"tax_year": 2026, "current_year_tax": 12_000, "preceding_year_tax": 15_000,
                      "preceding_year_preliminary_paid": 13_500, "preliminary_basis": "prior_100"},
     "tax.company_extraction": {"tax_year": 2026, "trading_profit": 60_000, "salary": 30_000, "dividends": 15_000,

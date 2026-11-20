@@ -298,8 +298,9 @@ SW(MP)A 2024)
 - Engine (`plan.projection` `tax_profile`): individuals must answer
   `income_averaging` (ADR-0055); the period length comes from the same rule; the window is the Platform's `prior_farming_profits`
   (before capital allowances) followed by projected years; until 5 years are
-  known the year is taxed on actual profit (`insufficient_history`). Not
-  modelled: exit top-up, step-out year, and the 4-year eligibility test.
+  known the year is taxed on actual profit (`insufficient_history`). Step-out
+  and exit are in `tax.estimate` / `tax.averaging_exit` (§6.1–6.2), not in
+  plans; the 4-year eligibility test is not modelled.
   Under averaging, this year's stock relief counts a fifth towards its cap (it
   moves the average by a fifth). Young farmer aid given adds up across
   projected years; partnership de minimis aid rolls over 3 years. Partnerships
@@ -321,6 +322,19 @@ SW(MP)A 2024)
   exit all deferred tax falls due at once (s.657(8)(e)).
 - Engine (`tax.estimate`, ADR-0055): `step_out` + `last_step_out_year`
   (year or "never"); USC and PRSI follow the actual year.
+
+### 6.2 Leaving averaging (s.657(7)–(8); TDM 23-01-34 Example 2)
+
+- Only after 5 years in (s.657(7)), with notice on the return. The year of
+  reversion is taxed on the normal basis.
+- Each of the 4 years before the **final averaged year** is raised by
+  additional assessment to at least that year's averaged profit
+  (s.657(8)(d)); outstanding step-out tax becomes payable (s.657(8)(e)).
+- Re-entry only after 4 years on the normal basis. On cessation the s.67 rules
+  apply instead (s.657(10)): not modelled.
+- Engine: `tax.averaging_exit` (ADR-0055) gives each year's extra assessable
+  profit; the tax on it is `tax.estimate` for that year (rules from 2024) or
+  the accountant's figure.
 
 ## 6A. Preliminary tax and pay dates (Part 41A; checked 2026-11-19)
 

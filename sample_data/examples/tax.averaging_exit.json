@@ -1,0 +1,11 @@
+{
+  "final_averaged_year": 2026,
+  "final_averaged_profit": 58600,
+  "prior_assessed_profits": [
+    44200,
+    51900,
+    57300,
+    61800
+  ],
+  "deferred_step_out_tax": 2720
+}

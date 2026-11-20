@@ -232,6 +232,9 @@ def _happy_payload(key: str) -> dict:
     if key == "cf.reconcile":
         # Surplus 400 − 100 = 300; 50 of milk still owed → 250 cash expected, 250 shown.
         return {"pl_months": [{"year": 2026, "month": 3, "milk_litres": 1_000, "milk_price": 0.40, "feed": 100}], "cf_months": [{"year": 2026, "month": 3, "milk": 350, "feed": 100}], "milk_debtors_closing": 50}
+    if key == "tax.averaging_exit":
+        # TDM 23-01-34 Example 2: four years raised to 17,380 → 19,803 extra.
+        return {"final_averaged_year": 2026, "final_averaged_profit": 17_380, "prior_assessed_profits": [12_000, 12_400, 12_467, 12_850]}
     if key == "tax.payments":
         # Preliminary 90% × 20,000 = 18,000 + last year's balance 30,000 − 25,000 = 23,000.
         return {"tax_year": 2026, "current_year_tax": 20_000, "preceding_year_tax": 30_000, "preceding_year_preliminary_paid": 25_000, "preliminary_basis": "current_90"}
@@ -345,6 +348,8 @@ def _zero_payload(key: str) -> dict:
         }
     if key == "cf.reconcile":
         return {"pl_months": [{"year": 2026, "month": 3, "milk_litres": 0, "milk_price": 0}], "cf_months": [{"year": 2026, "month": 3}]}
+    if key == "tax.averaging_exit":
+        return {"final_averaged_year": 2026, "final_averaged_profit": 0, "prior_assessed_profits": [0, 0, 0, 0]}
     if key == "tax.payments":
         return {"tax_year": 2026, "current_year_tax": 0, "preceding_year_tax": 0, "preceding_year_preliminary_paid": 0, "preliminary_basis": "prior_100"}
     if key == "tax.company_extraction":
@@ -540,6 +545,8 @@ def test_happy_path(key: str) -> None:
     elif key == "cf.reconcile":
         body = result["result"]
         assert (body["expected_operating_cash"], body["actual_operating_cash"], body["unexplained"]) == (250, 250, 0)
+    elif key == "tax.averaging_exit":
+        assert result["result"]["total_additional_assessable"] == 19_803
     elif key == "tax.payments":
         assert (result["result"]["preliminary"]["amount"], result["result"]["due_on_pay_date"]) == (18_000, 23_000)
     elif key == "tax.company_extraction":
@@ -728,6 +735,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         assert result["result"]["total"]["addition"] == 0
     elif key == "cf.reconcile":
         assert result["result"]["unexplained"] == 0 and result["result"]["unexplained_pct_of_revenue"] is None
+    elif key == "tax.averaging_exit":
+        assert result["result"]["total_additional_assessable"] == 0
     elif key == "tax.payments":
         assert result["result"]["due_on_pay_date"] == 0
     elif key == "tax.company_extraction":

@@ -46,6 +46,12 @@ def averaging_rule(tax_year: int) -> Rule | None:
     return rule_at(AVERAGING_YEARS, date(tax_year, 1, 1))
 
 
+def exit_top_ups(final_averaged: float, assessed: list[float]) -> list[float]:
+    """Leaving averaging (s.657(8)(d)): each earlier year is raised to at least
+    the final year's averaged profit; the extra assessable profit per year."""
+    return [max(final_averaged - a, 0.0) for a in assessed]
+
+
 def averaged_profit(profits: list[float], years: int) -> float:
     """Average of the last ``years`` farming profits (oldest first, before
     capital allowances). The caller checks there are enough years."""
@@ -59,6 +65,7 @@ __all__ = [
     "STEP_OUT_INSTALMENTS",
     "averaged_profit",
     "averaging_rule",
+    "exit_top_ups",
     "step_out_due_years",
     "step_out_rules",
 ]

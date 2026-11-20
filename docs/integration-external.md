@@ -514,6 +514,15 @@ years of filed accounts: send them as `filed_years` (`net_profit`,
 `filed` next to the current figures, labelled "on your filed accounts"; the
 engine does not choose between them (ADR-0055). Same in `report.bank`.
 
+Profit to cash (ADR-0055): accounts are on an accruals basis (milk paid a
+month later, merchant credit, stock), the monthly figures on cash. Before a
+bank or accountant relies on the monthly figures, call `cf.reconcile` with the
+same `pl.*` and `cf.*` months and the balances at both ends: milk / co-op money
+owed to the farm, other debtors, merchant credit (often 40–50k on a dairy
+farm), other creditors, and the herd / stock values sent to `pl.net`. Show the
+bridge and `unexplained`; the threshold that counts as "reconciled" is the
+Platform's or the accountant's.
+
 Variance (ADR-0035): "vs last year" / "vs budget" columns call `pl.compare` or
 `cf.compare` with the two sets of months. Show `milk.volume_effect` /
 `milk.price_effect` to explain a milk income change. Colour (cost up = bad) is

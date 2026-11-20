@@ -1052,6 +1052,29 @@ class DirectDebitInstalment(_Out):
     amount: float
 
 
+class ReconcileBridge(_Out):
+    herd_value_change: float
+    stock_value_change: float
+    milk_debtors: float
+    other_debtors: float
+    merchant_credit: float
+    other_creditors: float
+
+
+class CfReconcileResult(Span):
+    """Profit to cash (ADR-0055): bridge lines are signed as they move cash."""
+
+    currency: Currency
+    revenue: float
+    operating_surplus: float
+    accounts_operating_profit: float
+    bridge: ReconcileBridge
+    expected_operating_cash: float
+    actual_operating_cash: float
+    unexplained: float
+    unexplained_pct_of_revenue: float | None
+
+
 class TaxPaymentsResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -1203,6 +1226,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "tax.partnership": TaxPartnershipResult,
     "tax.company_extraction": TaxCompanyExtractionResult,
     "tax.payments": TaxPaymentsResult,
+    "cf.reconcile": CfReconcileResult,
     "bs.summary": BsSummaryResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,

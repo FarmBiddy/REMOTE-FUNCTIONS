@@ -67,6 +67,12 @@ PAYLOADS = {
     "vat.flat_rate": {"months": joe.ACTUAL},
     "tax.capital_allowances": {"tax_year": 2026, "period_end_month": 9, "assets": joe.ASSETS},
     "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married", "income_averaging": False},
+    # Milk is paid a month late: what is owed for September supply, at both ends.
+    "cf.reconcile": {"pl_months": joe.ACTUAL, "cf_months": joe.CASH,
+                     "milk_debtors_opening": round(joe.PRIOR[-1]["milk_litres"] * joe.PRIOR[-1]["milk_price"], 2),
+                     "milk_debtors_closing": round(joe.ACTUAL[-1]["milk_litres"] * joe.ACTUAL[-1]["milk_price"], 2),
+                     **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
+                     "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "tax.payments": {"tax_year": 2026, "current_year_tax": 12_000, "preceding_year_tax": 15_000,
                      "preceding_year_preliminary_paid": 13_500, "preliminary_basis": "prior_100"},
     "tax.company_extraction": {"tax_year": 2026, "trading_profit": 60_000, "salary": 30_000, "dividends": 15_000,
@@ -357,3 +363,15 @@ def test_company_route_compared_with_sole_trader(results):
     sole = results["tax.estimate"]
     assert company["director"]["assessment"] == sole["assessment"] == "joint"
     assert company["household"]["total_tax"] > 0 and sole["total_tax"] > 0
+
+
+def test_reconcile_explains_the_milk_cheque_lag(results):
+    """ADR-0055: Joe's cash months pay last month's milk; the money owed for
+    September supply at both ends explains the gap to the P&L exactly."""
+    body = results["cf.reconcile"]
+    assert body["operating_surplus"] == results["pl.net"]["operating_surplus"]
+    assert body["accounts_operating_profit"] == results["pl.net"]["adjusted_surplus"]
+    assert body["actual_operating_cash"] == pytest.approx(
+        sum(m["operating"]["net"] for m in results["cf.months"]["months"]), abs=CENT
+    )
+    assert body["unexplained"] == pytest.approx(0, abs=CENT)

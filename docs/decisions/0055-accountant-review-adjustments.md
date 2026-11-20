@@ -190,13 +190,30 @@ where the Engine's Irish layer differs from practice.
 - `income` gains `spouse_self_employed_income` and `spouse_farm_wages` (0 when
   not sent) in every tax.estimate-shaped result.
 
+### 6. `cf.reconcile`: from accounts profit to cash
+
+- The accountant: accounts and cash differ most through merchant credit
+  (40–50k outstanding is common), milk paid a month later and stock. A bank or
+  accountant needs to see the monthly figures reconcile before trusting them.
+- New ID `cf.reconcile` (same months for `pl.*` and `cf.*`): accounts
+  operating profit (Operating Surplus + herd and stock value change, as
+  `pl.net`), then the bridge — the non-cash value changes back out, the change
+  in milk / co-op and other debtors, in merchant credit and other creditors —
+  to the operating cash the months should show; `unexplained` in EUR and % of
+  revenue. The Engine does not judge the difference (decided with the user).
+- Merchant credit and milk debtors are their own inputs so the bridge names
+  them. Operating cash only: capital spending, loans, drawings and tax are
+  outside both sides (financing / investing in `cf.*`, not in the Operating
+  Surplus).
+
 ## Consequences
 - Breaking for callers of `tax.estimate` that are individuals and of
   `tax.partnership`, and `plan.projection` tax profiles of individuals: they
   must send `income_averaging`; individual tax profiles also `preliminary_basis`
   and `tax_history`, and projected cash / net worth change with the new
   timing. `tax.capital_allowances` no longer takes `flat_rate_addition`.
-  `debt.capacity` and the reports need `tax_source` with `tax`. Engine 1.11.0.
+  `debt.capacity` and the reports need `tax_source` with `tax`. 39 public IDs.
+  Engine 1.11.0.
 
 ## Related
 

@@ -337,6 +337,36 @@ class CfCompareInput(_StrictModel):
         return self
 
 
+class CfReconcileInput(_StrictModel):
+    """HTTP / runner input for ``cf.reconcile`` (ADR-0055): the same months as
+    ``pl.months`` and ``cf.months`` items, the herd / stock valuations ``pl.net``
+    takes, and the balances at the start and end of the period: milk / co-op
+    money owed to the farm, other debtors, merchant credit, other creditors."""
+
+    pl_months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    cf_months: list[CfMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
+    livestock_opening_value: NonNegativeNumber = 0.0
+    livestock_closing_value: NonNegativeNumber = 0.0
+    stock_opening_value: NonNegativeNumber = 0.0
+    stock_closing_value: NonNegativeNumber = 0.0
+    milk_debtors_opening: NonNegativeNumber = 0.0
+    milk_debtors_closing: NonNegativeNumber = 0.0
+    other_debtors_opening: NonNegativeNumber = 0.0
+    other_debtors_closing: NonNegativeNumber = 0.0
+    merchant_credit_opening: NonNegativeNumber = 0.0
+    merchant_credit_closing: NonNegativeNumber = 0.0
+    other_creditors_opening: NonNegativeNumber = 0.0
+    other_creditors_closing: NonNegativeNumber = 0.0
+
+    @model_validator(mode="after")
+    def _same_months(self) -> "CfReconcileInput":
+        _reject_duplicate_months(self.pl_months)
+        _reject_duplicate_months(self.cf_months)
+        if {(m.year, m.month) for m in self.pl_months} != {(m.year, m.month) for m in self.cf_months}:
+            raise ValueError("cf_months must cover the same months as pl_months")
+        return self
+
+
 def _parse_cover(value: Any) -> float:
     """Required debt cover multiple: 1 or more (1.25 = 25% headroom)."""
     number = _parse_finite_number(value)
@@ -1848,6 +1878,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
             "capital_allowances", "current_year_tax", "preceding_year_tax", "pre_preceding_year_tax",
             "preceding_year_preliminary_paid", "liability", "preliminary_paid", "net_profit", "total_tax", "losses_forward", "pension_contributions", "spouse_self_employed_income", "spouse_farm_wages",
+            "milk_debtors_opening", "milk_debtors_closing", "other_debtors_opening", "other_debtors_closing", "merchant_credit_opening", "merchant_credit_closing", "other_creditors_opening", "other_creditors_closing",
         ),
         _EUR,
     ),

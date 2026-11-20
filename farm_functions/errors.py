@@ -358,6 +358,8 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(
                 issue(INVALID_TYPE, text, field="shocks_from_month", details={"reason": "incomplete_period"})
             )
+        elif text == "cf_months must cover the same months as pl_months":
+            issues.append(issue(INVALID_TYPE, text, field=at("cf_months"), details={"reason": "periods_misaligned"}))
         elif text == "cf_months must end in the same month as pl_months":
             issues.append(issue(INVALID_TYPE, text, field="cf_months", details={"reason": "periods_misaligned"}))
         elif text == "projected months must be after the reporting period":

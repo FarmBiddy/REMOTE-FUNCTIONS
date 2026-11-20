@@ -18,7 +18,7 @@ from farm_functions.core.surplus import net_profit, profit_margin, profit_margin
 from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
-from farm_functions.accounts import bs_summary, pl_net
+from farm_functions.accounts import bs_summary, cf_reconcile, pl_net
 from farm_functions.assets import assets_schedule
 from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.decisions import investment_appraisal, partial_budget
@@ -57,6 +57,7 @@ from farm_functions.schemas import (
     BsSummaryInput,
     CfMonthlyInput,
     CfCompareInput,
+    CfReconcileInput,
     CfForecastInput,
     CfMonthsInput,
     FarmReportInput,
@@ -525,6 +526,18 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=CfCompareInput,
         handler=compare_cf,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="cf.reconcile",
+        description=(
+            "Profit to cash: accounts operating profit (Operating Surplus + herd and stock "
+            "value change) less those non-cash changes and the change in milk / other "
+            "debtors, plus the change in merchant credit and other creditors, against the "
+            "months' operating cash; the unexplained difference in EUR and % of revenue."
+        ),
+        input_model=CfReconcileInput,
+        handler=cf_reconcile,
         supports_provenance=False,
     ),
     CalculationDefinition(

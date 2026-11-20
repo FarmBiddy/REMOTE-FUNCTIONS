@@ -68,6 +68,7 @@ def test_discovery_lists_core_functions_only():
         "decision.investment",
         "pl.compare",
         "cf.compare",
+        "cf.reconcile",
         "debt.capacity",
         "assets.schedule",
         "pl.net",

@@ -47,6 +47,7 @@ EXPECTED_PUBLIC_IDS = (
     "tax.payments",
     "pl.compare",
     "cf.compare",
+    "cf.reconcile",
     "risk.sensitivity",
     "risk.tornado",
     "decision.partial_budget",
@@ -173,6 +174,8 @@ def _happy_payload(calculation_id: str) -> dict:
         return {"year": 2026, "month": 12, "cash": 1_000, "land": 10_000}
     if calculation_id == "pl.compare":
         return {"actual": [dict(MONTHLY_REFERENCE)], "comparison": [dict(MONTHLY_REFERENCE)]}
+    if calculation_id == "cf.reconcile":
+        return {"pl_months": [{"year": 2026, "month": 3, "milk_litres": 1_000, "milk_price": 0.4}], "cf_months": [{"year": 2026, "month": 3, "milk": 400}]}
     if calculation_id == "cf.compare":
         month = {"year": 2026, "month": 3, "milk": 1}
         return {"actual": [month], "comparison": [month]}
@@ -193,8 +196,8 @@ def _happy_payload(calculation_id: str) -> dict:
 
 def test_exactly_thirty_seven_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 38
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 38
+    assert len(PUBLIC_CALCULATION_IDS) == 39
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 39
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

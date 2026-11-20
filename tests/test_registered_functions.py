@@ -397,7 +397,7 @@ def _zero_payload(key: str) -> dict:
         month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}
         return {
             "months": [month], "annual_rate": 0, "term_months": 1,
-            "drawings": 0, "tax": 0, "off_farm_income": 0, "min_cover": 1,
+            "drawings": 0, "tax": 0, "tax_source": "estimate", "off_farm_income": 0, "min_cover": 1,
         }
     if key == "pl.compare":
         month = {"year": 1, "month": 1, "milk_litres": 0, "milk_price": 0}

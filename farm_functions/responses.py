@@ -147,17 +147,30 @@ class NewLoanResult(_Out):
     monthly_payment_at_max: float
 
 
+class FiledCapacity(_Out):
+    """Capacity on the filed accounts (ADR-0055): averages of the years sent."""
+
+    tax_years: list[int]
+    average_surplus: float
+    average_tax: float
+    repayment_capacity: float
+    repayment_cover: float | None
+    new_loan: NewLoanResult
+
+
 class DebtCapacityResult(Span):
     currency: Currency
     operating_surplus: float
     off_farm_income: float
     drawings: float
     tax: float
+    tax_source: Literal["accountant", "estimate"] | None
     repayment_capacity: float
     debt_service: float
     repayment_cover: float | None
     min_cover: float
     new_loan: NewLoanResult | None
+    filed: FiledCapacity | None
 
 
 # --- KPIs, net profit, balance sheet ----------------------------------------

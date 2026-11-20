@@ -344,24 +344,56 @@ def _parse_cover(value: Any) -> float:
     return number
 
 
+class FiledYearInput(_StrictModel):
+    """One year of filed accounts and return, as a bank reads them (ADR-0055)."""
+
+    tax_year: CalendarYear
+    net_profit: SignedNumber
+    depreciation: NonNegativeNumber
+    interest: NonNegativeNumber
+    total_tax: NonNegativeNumber
+
+
+TaxSource = Literal["accountant", "estimate"]
+
+
+def _check_tax_and_filed(tax: float | None, tax_source: str | None, filed: list[FiledYearInput], months: int) -> None:
+    """A tax figure says whose it is; filed years compare a year with a year (ADR-0055)."""
+    if tax is not None and tax_source is None:
+        raise missing_inputs("tax_source")
+    if tax is None and tax_source is not None:
+        raise ValueError("tax_source needs tax")
+    if filed:
+        if len({f.tax_year for f in filed}) != len(filed):
+            raise ValueError("filed_years must not repeat a tax year")
+        if months != 12:
+            raise ValueError("filed_years need 12 months to compare a year with a year")
+
+
 class DebtCapacityInput(_StrictModel):
     """HTTP / runner input for ``debt.capacity`` (ADR-0036).
 
     ``months``: the assessment period (pl.months items, actual or projected).
     ``drawings`` / ``tax`` / ``off_farm_income``: totals for the same period.
+    ``tax_source`` (needed with ``tax``): the accountant's figure or the engine
+    estimate. ``filed_years``: up to 3 years of filed accounts for the bank's
+    view, side by side (ADR-0055).
     """
 
     months: list[PlMonthItemInput] = Field(..., min_length=1, max_length=MAX_MONTHS)
     annual_rate: Annotated[float, BeforeValidator(_parse_rate_ratio)]
     term_months: Annotated[int, BeforeValidator(_parse_loan_months)]
     drawings: NonNegativeNumber = 0.0
-    tax: NonNegativeNumber = 0.0
+    tax: NonNegativeNumber | None = None
+    tax_source: TaxSource | None = None
     off_farm_income: NonNegativeNumber = 0.0
     min_cover: Annotated[float, BeforeValidator(_parse_cover)] = 1.0
+    filed_years: list[FiledYearInput] = Field(default_factory=list, max_length=3)
 
     @model_validator(mode="after")
     def _unique(self) -> "DebtCapacityInput":
         _reject_duplicate_months(self.months)
+        _check_tax_and_filed(self.tax, self.tax_source, self.filed_years, len(self.months))
         return self
 
 
@@ -707,9 +739,12 @@ class FarmReportInput(_StrictModel):
     livestock_opening_value: NonNegativeNumber | None = None
     stock_opening_value: NonNegativeNumber | None = None
     drawings: NonNegativeNumber = 0.0
-    tax: NonNegativeNumber = 0.0
+    # As in debt.capacity (ADR-0055): whose tax figure, and filed years for the bank.
+    tax: NonNegativeNumber | None = None
+    tax_source: TaxSource | None = None
     off_farm_income: NonNegativeNumber = 0.0
     new_loan: NewLoanTermsInput | None = None
+    filed_years: list[FiledYearInput] = Field(default_factory=list, max_length=3)
     scenarios: list[SensitivityScenarioInput] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
@@ -723,6 +758,7 @@ class FarmReportInput(_StrictModel):
         for items in (self.projected_pl_months, self.projected_cf_months):
             if items and min((m.year, m.month) for m in items) <= last_pl:
                 raise ValueError("projected months must be after the reporting period")
+        _check_tax_and_filed(self.tax, self.tax_source, self.filed_years, len(self.pl_months))
         return self
 
 
@@ -1778,7 +1814,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "grant", "accounting_profit", "taxable_profit", "other_income", "spouse_paye_income",
             "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
             "capital_allowances", "current_year_tax", "preceding_year_tax", "pre_preceding_year_tax",
-            "preceding_year_preliminary_paid", "liability", "preliminary_paid",
+            "preceding_year_preliminary_paid", "liability", "preliminary_paid", "net_profit", "total_tax",
         ),
         _EUR,
     ),
@@ -1821,6 +1857,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "cf_months", "comparison", "forecast", "history", "investments", "loans", "months",
             "pl_months", "prior_pl_months", "projected_cf_months", "projected_pl_months",
             "reduced_costs", "reduced_income", "scenarios", "prior_farming_profits", "partners", "tax_history",
+            "filed_years",
         ),
         "list",
     ),
@@ -1841,7 +1878,10 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     **dict.fromkeys(("tax_year", "registered_year", "successor_birth_year"), "year"),
     "profit_share_pct": "%",
     "successor": "index",
-    **dict.fromkeys(("business_type", "tax_allowance", "marital_status", "stock_relief_regime", "preliminary_basis"), "choice"),
+    **dict.fromkeys(
+        ("business_type", "tax_allowance", "marital_status", "stock_relief_regime", "preliminary_basis", "tax_source"),
+        "choice",
+    ),
 }
 
 

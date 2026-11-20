@@ -77,28 +77,82 @@ def schedule_loans(*, loans: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _new_loan(
+    capacity: float, debt_service: float, months: int, annual_rate: float, term_months: int, min_cover: float
+) -> dict[str, Any]:
+    """Largest new loan the capacity carries at the required cover."""
+    # Total debt service the lender accepts: capacity / required cover.
+    headroom = max(0.0, capacity / min_cover - debt_service)
+    monthly_payment = headroom / months
+    # Round the loan down so its instalment never exceeds the headroom.
+    max_loan = floor(annuity_principal(monthly_payment, annual_rate, term_months) * 100) / 100
+    return {
+        "annual_rate": annual_rate,
+        "term_months": term_months,
+        "max_monthly_payment": round_money(monthly_payment),
+        "max_principal": max_loan,
+        "monthly_payment_at_max": round_money(annuity_payment(max_loan, annual_rate, term_months)),
+    }
+
+
+def _filed_view(
+    filed_years: list[dict[str, Any]],
+    *,
+    off_farm_income: float,
+    drawings: float,
+    debt_service: float,
+    months: int,
+    annual_rate: float,
+    term_months: int,
+    min_cover: float,
+) -> dict[str, Any]:
+    """Capacity on the filed accounts the bank reads (ADR-0055): the average of
+    the years sent. Net profit + depreciation + interest is the year's surplus
+    before finance, comparable with the months' operating surplus."""
+    years = sorted(filed_years, key=lambda f: f["tax_year"])
+    surplus = sum_amounts(*(f["net_profit"] + f["depreciation"] + f["interest"] for f in years)) / len(years)
+    tax = sum_amounts(*(f["total_tax"] for f in years)) / len(years)
+    capacity = surplus + off_farm_income - drawings - tax
+    cover = coverage_ratio(capacity, debt_service)
+    return {
+        "tax_years": [f["tax_year"] for f in years],
+        "average_surplus": round_money(surplus),
+        "average_tax": round_money(tax),
+        "repayment_capacity": round_money(capacity),
+        "repayment_cover": None if cover is None else round_money(cover),
+        "new_loan": _new_loan(capacity, debt_service, months, annual_rate, term_months, min_cover),
+    }
+
+
 def debt_capacity(
     *,
     months: list[dict[str, Any]],
     annual_rate: float,
     term_months: int,
     drawings: float = 0.0,
-    tax: float = 0.0,
+    tax: float | None = None,
+    tax_source: str | None = None,
     off_farm_income: float = 0.0,
     min_cover: float = 1.0,
+    filed_years: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """``debt.capacity``: repayment capacity, cover and the largest new loan (ADR-0036)."""
+    """``debt.capacity``: repayment capacity, cover and the largest new loan
+    (ADR-0036). ``tax_source`` says whose tax figure it is; with ``filed_years``
+    the same on the filed accounts, side by side (ADR-0055)."""
     statements = pl_statements(months)
     surplus = sum_amounts(*(s["profit"]["net"] for s in statements))
     debt_service = sum_amounts(*(s["finance"]["loan_repayments"] for s in statements))
+    tax = tax or 0.0
     capacity = surplus + off_farm_income - drawings - tax
-    # Total debt service the lender accepts: capacity / required cover.
-    headroom = max(0.0, capacity / min_cover - debt_service)
-    monthly_payment = headroom / len(statements)
-    # Round the loan down so its instalment never exceeds the headroom.
-    max_loan = floor(annuity_principal(monthly_payment, annual_rate, term_months) * 100) / 100
     cover = coverage_ratio(capacity, debt_service)
     periods = sorted((s["period"]["year"], s["period"]["month"]) for s in statements)
+    terms = {"annual_rate": annual_rate, "term_months": term_months, "min_cover": min_cover}
+    filed = None
+    if filed_years:
+        filed = _filed_view(
+            filed_years, off_farm_income=off_farm_income, drawings=drawings,
+            debt_service=debt_service, months=len(statements), **terms,
+        )
     return {
         "currency": "EUR",
         "from": {"kind": "month", "year": periods[0][0], "month": periods[0][1]},
@@ -108,15 +162,11 @@ def debt_capacity(
         "off_farm_income": round_money(off_farm_income),
         "drawings": round_money(drawings),
         "tax": round_money(tax),
+        "tax_source": tax_source,
         "repayment_capacity": round_money(capacity),
         "debt_service": round_money(debt_service),
         "repayment_cover": None if cover is None else round_money(cover),
         "min_cover": min_cover,
-        "new_loan": {
-            "annual_rate": annual_rate,
-            "term_months": term_months,
-            "max_monthly_payment": round_money(monthly_payment),
-            "max_principal": max_loan,
-            "monthly_payment_at_max": round_money(annuity_payment(max_loan, annual_rate, term_months)),
-        },
+        "new_loan": _new_loan(capacity, debt_service, len(statements), **terms),
+        "filed": filed,
     }

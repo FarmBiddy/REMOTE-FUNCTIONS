@@ -50,6 +50,7 @@ FILE = {
     "livestock_opening_value": 300_000,
     "drawings": 18_000,
     "tax": 4_500,
+    "tax_source": "accountant",
     "scenarios": [{"name": "milk -5c", "milk_price_c": -5}],
 }
 
@@ -78,7 +79,7 @@ def test_bank_report_sizes_a_requested_loan():
     capacity = _report("bank", new_loan=terms)["result"]["capacity"]
     direct = run_function(
         "debt.capacity",
-        {"months": PL, "drawings": 18_000, "tax": 4_500, **terms},
+        {"months": PL, "drawings": 18_000, "tax": 4_500, "tax_source": "accountant", **terms},
     )["result"]
     assert capacity == direct
 
@@ -125,3 +126,19 @@ def test_misaligned_and_overlapping_periods_are_rejected():
 def test_http_matches_runner():
     body = client.post("/v1/functions/report.bank/run", json=FILE).json()
     assert body == run_function("report.bank", FILE)
+
+
+def test_bank_report_shows_the_filed_years_next_to_the_period():
+    """ADR-0055: the capacity section is debt.capacity's, filed view and tax source included.
+    Filed years compare a year with a year: the 9-month file is refused."""
+    filed = [{"tax_year": 2025, "net_profit": 40_000, "depreciation": 12_000, "interest": 3_000, "total_tax": 5_000}]
+    short = _report("bank", filed_years=filed)
+    assert short["errors"][0]["details"]["reason"] == "filed_years_invalid"
+    year_pl = [{**PL[0], "month": m} for m in range(1, 13)]
+    year_cf = [{**CF[0], "month": m} for m in range(1, 13)]
+    body = _report("bank", pl_months=year_pl, cf_months=year_cf, projected_pl_months=[], projected_cf_months=[],
+                   filed_years=filed)["result"]["capacity"]
+    direct = run_function("debt.capacity", {"months": year_pl, "drawings": 18_000, "tax": 4_500, "tax_source": "accountant",
+                                            "filed_years": filed, "annual_rate": 0.0, "term_months": 1})["result"]
+    assert body["tax_source"] == "accountant"
+    assert body["filed"]["repayment_capacity"] == direct["filed"]["repayment_capacity"] == 55_000 - 18_000 - 5_000

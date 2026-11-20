@@ -111,7 +111,9 @@ def report_bank(**f: Any) -> dict[str, Any]:
         months=f["pl_months"],
         drawings=f["drawings"],
         tax=f["tax"],
+        tax_source=f["tax_source"],
         off_farm_income=f["off_farm_income"],
+        filed_years=f["filed_years"],
         **terms,
     )
     if f["new_loan"] is None:  # capacity without an application: no loan sizing

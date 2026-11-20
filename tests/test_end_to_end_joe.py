@@ -308,7 +308,7 @@ def test_full_tax_chain_into_debt_capacity(results):
         **PAYLOADS["tax.estimate"], "taxable_profit": relief["profit_after_relief"], "stock_relief": relief["relief"],
     })["result"]
     assert tax["assessment"] == "joint" and 0 < tax["total_tax"] < relief["profit_after_relief"]
-    capacity = run_function("debt.capacity", {**PAYLOADS["debt.capacity"], "tax": tax["total_tax"]})["result"]
+    capacity = run_function("debt.capacity", {**PAYLOADS["debt.capacity"], "tax": tax["total_tax"], "tax_source": "estimate"})["result"]
     assert capacity["tax"] == tax["total_tax"]
     # The same estimate sets this year's preliminary tax (ADR-0055): paid with last year's balance.
     payments = run_function("tax.payments", {

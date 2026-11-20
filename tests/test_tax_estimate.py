@@ -115,7 +115,7 @@ def test_feeds_debt_capacity():
     """Platform passes total_tax as debt.capacity tax: no maths in between."""
     tax = _ok(**SINGLE)["total_tax"]
     months = [{"year": 2026, "month": m, "milk_litres": 40_000, "milk_price": 0.40, "feed": 8_000} for m in range(1, 13)]
-    body = run_function("debt.capacity", {"months": months, "tax": tax, "annual_rate": 0.05, "term_months": 120})["result"]
+    body = run_function("debt.capacity", {"months": months, "tax": tax, "tax_source": "estimate", "annual_rate": 0.05, "term_months": 120})["result"]
     assert body["repayment_capacity"] == pytest.approx(12 * 8_000 - tax, abs=0.01)
 
 

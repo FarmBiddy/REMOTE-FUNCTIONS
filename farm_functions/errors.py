@@ -426,6 +426,10 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(
                 issue(INVALID_TYPE, text, field=at(text.split(" needs the")[0]), details={"reason": "averaging_years_invalid"})
             )
+        elif text == "tax_source needs tax":
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_source"), details={"reason": "needs_tax"}))
+        elif text in ("filed_years must not repeat a tax year", "filed_years need 12 months to compare a year with a year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("filed_years"), details={"reason": "filed_years_invalid"}))
         elif text.startswith("tax_profile.tax_history needs"):
             issues.append(issue(INVALID_TYPE, text, field=at("tax_profile.tax_history"), details={"reason": "tax_history_invalid"}))
         elif text == "preliminary tax timing is for individuals":

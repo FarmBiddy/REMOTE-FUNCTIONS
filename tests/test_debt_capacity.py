@@ -19,7 +19,7 @@ YEAR = [
     {"year": 2026, "month": m, "milk_litres": 40_000, "milk_price": 0.40, "feed": 8_000, "labour": 3_000, "loan_repayments": 1_500}
     for m in range(1, 13)
 ]
-BASE = {"months": YEAR, "annual_rate": 0.05, "term_months": 120, "drawings": 24_000, "tax": 6_000, "min_cover": 1.25}
+BASE = {"months": YEAR, "annual_rate": 0.05, "term_months": 120, "drawings": 24_000, "tax": 6_000, "tax_source": "accountant", "min_cover": 1.25}
 
 
 def _run(**overrides):
@@ -68,3 +68,47 @@ def test_cover_below_one_is_rejected():
 def test_http_matches_runner():
     body = client.post("/v1/functions/debt.capacity/run", json=BASE).json()
     assert body == run_function("debt.capacity", BASE)
+
+
+# Filed accounts side by side (ADR-0055). Same year, 3 filed years:
+#   surplus before finance = net profit + depreciation + interest:
+#   2023 45,000 + 10,000 + 4,000 = 59,000; 2024 50,000 + 11,000 + 3,000 = 64,000;
+#   2025 41,000 + 12,000 + 4,000 = 57,000 → average 60,000; tax 8,000 / 12,000 / 7,000 → 9,000
+#   capacity 60,000 − 24,000 − 9,000 = 27,000 → cover 1.5
+#   27,000 / 1.25 = 21,600 − 18,000 = 3,600/yr = 300/month → 0.6 × 47,140.67 = 28,284.40
+FILED = [
+    {"tax_year": 2024, "net_profit": 50_000, "depreciation": 11_000, "interest": 3_000, "total_tax": 12_000},
+    {"tax_year": 2023, "net_profit": 45_000, "depreciation": 10_000, "interest": 4_000, "total_tax": 8_000},
+    {"tax_year": 2025, "net_profit": 41_000, "depreciation": 12_000, "interest": 4_000, "total_tax": 7_000},
+]
+
+
+def test_filed_years_side_by_side():
+    body = _run(filed_years=FILED)["result"]
+    assert body["repayment_capacity"] == 30_000  # this year's view is unchanged
+    filed = body["filed"]
+    assert filed["tax_years"] == [2023, 2024, 2025]
+    assert (filed["average_surplus"], filed["average_tax"], filed["repayment_capacity"]) == (60_000, 9_000, 27_000)
+    assert filed["repayment_cover"] == 1.5
+    assert filed["new_loan"]["max_monthly_payment"] == 300
+    assert filed["new_loan"]["max_principal"] == 28_284.4
+    assert _run()["result"]["filed"] is None
+
+
+def test_tax_says_whose_figure_it_is():
+    assert _run()["result"]["tax_source"] == "accountant"
+    assert _run(tax_source="estimate")["result"]["tax_source"] == "estimate"
+    missing = run_function("debt.capacity", {k: v for k, v in BASE.items() if k != "tax_source"})
+    assert missing["status"] == "needs_input" and [m["path"] for m in missing["missing"]] == ["tax_source"]
+    no_tax = run_function("debt.capacity", {k: v for k, v in BASE.items() if k not in ("tax", "tax_source")})
+    assert no_tax["result"]["tax"] == 0 and no_tax["result"]["tax_source"] is None
+
+
+def test_filed_years_errors():
+    def reason(**overrides):
+        return _run(**overrides)["errors"][0]["details"]["reason"]
+
+    assert reason(filed_years=[FILED[0], FILED[0]]) == "filed_years_invalid"
+    assert reason(months=YEAR[:6], filed_years=FILED) == "filed_years_invalid"
+    no_tax = {k: v for k, v in BASE.items() if k != "tax"}
+    assert run_function("debt.capacity", no_tax)["errors"][0]["details"]["reason"] == "needs_tax"

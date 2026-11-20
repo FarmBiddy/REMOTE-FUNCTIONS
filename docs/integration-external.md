@@ -452,7 +452,9 @@ and `state_aid_used` (young farmer aid already received, or partnership de
 minimis aid in the previous two years). Show `total_tax` with the breakdown and
 pass it as `tax` to `debt.capacity` (partnerships: see below); there `off_farm_income` should then be
 gross, since the household tax already includes the spouse's PAYE. If the
-accountant gives a tax figure, send theirs instead.
+accountant gives a tax figure, send theirs instead, with `tax_source:
+"accountant"` (else `"estimate"`): the source is required with `tax` and is
+echoed so reports say whose figure it is (ADR-0055).
 
 Partnerships (ADR-0053, Ireland): for a registered or succession farm
 partnership call `tax.partnership` once with the partnership's
@@ -506,7 +508,11 @@ same register as `assets.schedule`. The Engine splits loans and values assets.
 "How much can I borrow?" (ADR-0036): call `debt.capacity` with 12 months
 (actual or projected), the household `drawings`, `tax`, `off_farm_income`, and
 the loan's `annual_rate`, `term_months` and the lender's `min_cover` (e.g. 1.25).
-Show `new_loan.max_principal` and `repayment_cover`.
+Show `new_loan.max_principal` and `repayment_cover`. Banks read the last three
+years of filed accounts: send them as `filed_years` (`net_profit`,
+`depreciation`, `interest`, `total_tax` from the accounts and returns) and show
+`filed` next to the current figures, labelled "on your filed accounts"; the
+engine does not choose between them (ADR-0055). Same in `report.bank`.
 
 Variance (ADR-0035): "vs last year" / "vs budget" columns call `pl.compare` or
 `cf.compare` with the two sets of months. Show `milk.volume_effect` /

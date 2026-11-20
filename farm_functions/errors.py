@@ -413,7 +413,7 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
         ):
             issues.append(issue(INVALID_TYPE, text, field=at("succession"), details={"reason": "succession_invalid"}))
         elif text == "send flat_rate_addition in base_pl_months or a tax_profile, not both":
-            issues.append(issue(INVALID_TYPE, text, field=at("base_pl_months"), details={"reason": "fra_conflict"}))
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_profile"), details={"reason": "fra_conflict"}))
         elif text == "send assumptions.tax or tax_profile, not both":
             issues.append(issue(INVALID_TYPE, text, field=at("tax_profile"), details={"reason": "tax_conflict"}))
         elif text in (

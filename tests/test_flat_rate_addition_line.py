@@ -10,9 +10,14 @@ Hand check, 2026 (4.5%): 25,000 L × 0.40 = 10,000 milk → addition 450.
   surplus change −1,000 − 45 = −1,045
 """
 
+import json
+from pathlib import Path
+
 import pytest
 
 from farm_functions.runner import run_function
+
+EXAMPLES = Path(__file__).resolve().parents[1] / "sample_data" / "examples"
 
 MONTH = {"year": 2026, "month": 5, "milk_litres": 25_000, "milk_price": 0.40, "feed": 4_000}
 
@@ -80,3 +85,24 @@ def test_projection_carries_it_with_sales_or_rejects_it_with_a_tax_profile():
         "tax_profile": {"business_type": "company", "vat_registered": False},
     })
     assert clash["errors"][0]["details"]["reason"] == "fra_conflict"
+
+
+def test_fra_enters_a_projection_once():
+    """Review fix: with a tax profile the engine adds the FRA itself, so a Platform
+    amount for the line is refused (it was counted twice); investments cannot set it."""
+    example = json.loads((EXAMPLES / "plan.projection.json").read_text())
+    clash = run_function("plan.projection", {**example, "assumptions": {"lines_amount": {"flat_rate_addition": [20_000]}}})
+    assert clash["errors"][0]["details"]["reason"] == "fra_conflict"
+    base = [{**MONTH, "month": m} for m in range(1, 13)]
+    investment = {"year": 1, "amount": 1_000, "life_months": 12, "annual_effects": {"flat_rate_addition": 100}}
+    refused = run_function("plan.projection", {"base_pl_months": base, "opening_cash": 0, "milking_cows": 100,
+                                               "investments": [investment]})
+    assert refused["status"] == "error"
+
+
+def test_fra_cannot_be_shocked_on_its_own():
+    pl = [{**MONTH, "flat_rate_addition": 450}]
+    cf = [{"year": 2026, "month": 5, "milk": 10_000, "flat_rate_addition": 450}]
+    result = run_function("risk.sensitivity", {"pl_months": pl, "cf_months": cf, "opening_cash": 0,
+                                               "scenarios": [{"lines_pct": {"flat_rate_addition": 10}}]})
+    assert result["status"] == "error"

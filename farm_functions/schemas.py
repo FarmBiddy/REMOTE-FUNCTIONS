@@ -589,7 +589,8 @@ PctChange = Annotated[float, BeforeValidator(_parse_pct_change)]
 SHOCKABLE_LINES = tuple(
     sorted(
         (set(MonthlyDairyFinancialInput.model_fields) | set(CASH_FLOW_LINES))
-        - {"milk_litres", "milk_price", "milk"}
+        # The flat-rate addition follows milk and cattle sales: not shocked on its own (ADR-0055).
+        - {"milk_litres", "milk_price", "milk", "flat_rate_addition"}
     )
 )
 
@@ -599,7 +600,8 @@ EFFECT_LINES = tuple(
     line
     for activity_lines in (OPERATING_CASH_INFLOW_CATEGORIES, OPERATING_CASH_OUTFLOW_CATEGORIES)
     for line in activity_lines
-    if line != "milk"
+    # An investment cannot set the flat-rate addition: it follows sales (ADR-0055).
+    if line not in ("milk", "flat_rate_addition")
 )
 
 
@@ -1074,7 +1076,10 @@ class PlanProjectionInput(_StrictModel):
     def _consistent(self) -> "PlanProjectionInput":
         if self.tax_profile and self.assumptions.tax:
             raise ValueError("send assumptions.tax or tax_profile, not both")
-        if self.tax_profile and any(m.flat_rate_addition for m in self.base_pl_months):
+        fra_sent = any(m.flat_rate_addition for m in self.base_pl_months) or (
+            "flat_rate_addition" in (self.assumptions.lines_amount or {})
+        )
+        if self.tax_profile and fra_sent:
             raise ValueError("send flat_rate_addition in base_pl_months or a tax_profile, not both")
         _reject_duplicate_months(self.base_pl_months)
         keys = sorted((m.year, m.month) for m in self.base_pl_months)

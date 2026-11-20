@@ -419,8 +419,10 @@ month's `addition` as `flat_rate_addition` on the same `pl.*` months (it is farm
 income in the accounts and lands in `revenue.other`) and on the `cf.*` months
 when the co-op / mart pays it (ADR-0055). Show `rules_applied[].status`
 ("announced" = Budget figure, not yet law). The engine picks the rate for each
-month. In `plan.projection`, send it in `base_pl_months` only without a
-`tax_profile`; with one, the engine adds it itself (`fra_conflict` otherwise).
+month. In `plan.projection`, send it in `base_pl_months` or
+`assumptions.lines_amount` only without a `tax_profile`; with one, the engine
+adds it itself (`fra_conflict` otherwise). It is not a scenario line: shock
+milk and cattle and it follows.
 
 Stock relief (ADR-0053, Ireland): call `tax.stock_relief` for the accounting
 period with the same opening / closing livestock and stock valuations sent to

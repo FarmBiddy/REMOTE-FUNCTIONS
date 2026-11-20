@@ -119,7 +119,10 @@ where the Engine's Irish layer differs from practice.
 - `risk.sensitivity` moves it in proportion to milk and cattle sales; it is not
   a tornado driver. `plan.projection` carries a base-year FRA in proportion to
   sales without a tax profile; with one the Engine computes it, so base months
-  carrying it are refused (`fra_conflict`).
+  or `assumptions.lines_amount` carrying it are refused (`fra_conflict`).
+  Investments cannot set it and `lines_pct` cannot shock it (it follows sales;
+  found in the branch review, where a `lines_amount` next to a tax profile was
+  counted twice).
 - Annual Phase 1 IDs (`pl.summary`, `revenue.*`) are unchanged (ex-FRA).
 - Whether Teagasc NFS figures are VAT-inclusive is unconfirmed (likely).
 

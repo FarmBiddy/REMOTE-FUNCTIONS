@@ -296,6 +296,26 @@ SW(MP)A 2024)
   carried forward. Companies (s.396): not modelled. Module
   `farm_functions/ie/losses.py`.
 
+## 6C. Pension contributions (self-employed; checked 2026-11-20)
+
+| rule_id | value | from / to | ref | status |
+|---|---|---|---|---|
+| pension_pct_from_age_0 / 30 / 40 / 50 / 55 / 60 | 15 / 20 / 25 / 30 / 35 / 40% of net relevant earnings | 2024 → 2027 (researched window) | s.787; Pensions Manual Ch. 3 | enacted |
+| pension_earnings_cap | €115,000 (all earnings together) | 2024 → 2027 | s.790A; Pensions Manual Ch. 26 | enacted |
+
+- Age = the age reached in the tax year. Relief at the marginal rate, **income
+  tax only** (no USC or PRSI relief: Pensions Manual Ch. 21, 24).
+- Net relevant earnings (s.787(1)–(2)): relevant earnings less losses and
+  capital allowances of those activities. Under averaging the Engine uses the
+  averaged assessable profit (the figure charged) — **the Engine's reading**,
+  not stated by Revenue (`earnings_basis: assessable_farm_profit`).
+- Contributions above the limit carry forward (`unrelieved`). A contribution
+  paid by the return date can be claimed for the previous year: the Platform
+  decides which year it sends it for.
+- No change to the % or the cap in Finance (No. 2) Bill 2026.
+- Engine (`tax.estimate`, ADR-0055): `pension_contributions` + `birth_year`.
+  Module `farm_functions/ie/pensions.py`.
+
 ## 7. Partnerships
 
 - Transparent: profit computed as a sole trader (no deduction for partner

@@ -22,6 +22,7 @@ from typing import Any
 from farm_functions.core.ratios import per_unit
 from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.ie import capital_allowances as ca
+from farm_functions.ie import pensions
 from farm_functions.ie import preliminary as prelim
 from farm_functions.ie.averaging import averaged_profit, averaging_rule
 from farm_functions.ie.losses import PRSI_TREATMENT as LOSS_PRSI_TREATMENT
@@ -194,9 +195,11 @@ def _individual(
     spouse: float,
     extra_credit: float = 0.0,
     paye: float = 0.0,
+    it_deduction: float = 0.0,
 ) -> dict:
     """Joint assessment when married: one band and credit set for the couple;
-    USC and PRSI per person. Farm losses count as nil (no loss relief)."""
+    USC and PRSI per person. Farm losses count as nil (no loss relief).
+    ``it_deduction`` (pension relief) reduces income for income tax only."""
     earned = max(farm_profit, 0.0)
     farmer = earned + other_income
     if married:
@@ -205,8 +208,9 @@ def _individual(
     else:
         band, personal = v["it_band_single"], v["it_credit_personal_single"]
     total = farmer + spouse
-    at_standard = min(total, band)
-    gross = banded(total, (band,), (v["it_rate_standard"], v["it_rate_higher"]))
+    it_income = max(total - it_deduction, 0.0)
+    at_standard = min(it_income, band)
+    gross = banded(it_income, (band,), (v["it_rate_standard"], v["it_rate_higher"]))
     credits = (
         personal
         + min(v["it_credit_earned_income"], earned * v["it_rate_standard"] / 100)
@@ -220,7 +224,7 @@ def _individual(
         "income_tax": {
             "standard_rate_band": band,
             "at_standard_rate": at_standard,
-            "at_higher_rate": total - at_standard,
+            "at_higher_rate": it_income - at_standard,
             "gross": gross,
             "credits": credits,
             "net": max(gross - credits, 0.0),
@@ -270,13 +274,17 @@ def tax_estimate(
     prior_farming_profits: list[float] | None = None,
     capital_allowances: float | None = None,
     losses_forward: float = 0.0,
+    pension_contributions: float = 0.0,
+    birth_year: int | None = None,
     **inputs: Any,
 ) -> dict[str, Any]:
     """``tax.estimate``: tax for one year on taxable farming profit (after capital
     allowances and stock relief), applying the stock relief caps on tax value.
     With income averaging the averaged profit is assessed, and this year's stock
     relief counts a fifth towards its cap (it moves the average by a fifth).
-    Individuals' losses brought forward (s.382) then reduce the profit charged."""
+    Individuals' losses brought forward (s.382) then reduce the profit charged;
+    pension contributions are relieved against income tax only, up to the age %
+    of net relevant earnings (the assessable farm profit, the Engine's reading)."""
     averaging = rule = None
     relief_effect = stock_relief
     if income_averaging:
@@ -288,12 +296,31 @@ def tax_estimate(
     if inputs["business_type"] != "company":
         taxable_profit, used = apply_losses(taxable_profit, losses_forward, stock_relief > 0)
         losses = {k: round_money(v) for k, v in used.items()} | {"prsi_treatment": LOSS_PRSI_TREATMENT}
+    pension, pension_rules = None, []
+    if pension_contributions:
+        age = tax_year - birth_year
+        pct_rule, cap_rule = pensions.age_band_rule(age, tax_year), pensions.earnings_cap_rule(tax_year)
+        earnings = max(taxable_profit, 0.0)
+        relieved = pensions.relief(pension_contributions, earnings, pct_rule.value, cap_rule.value)
+        pension = {
+            "contributions": round_money(pension_contributions),
+            "age": age,
+            "age_pct": pct_rule.value,
+            "net_relevant_earnings": round_money(earnings),
+            "earnings_basis": "assessable_farm_profit",
+            "limit": round_money(pct_rule.value / 100 * min(earnings, cap_rule.value)),
+            "relief": round_money(relieved),
+            "unrelieved": round_money(pension_contributions - relieved),
+        }
+        pension_rules = [pct_rule.as_dict(), cap_rule.as_dict()]
     result = estimate_with_rules(
-        year_rules(tax_year), tax_year=tax_year, taxable_profit=taxable_profit, stock_relief=relief_effect, **inputs
+        year_rules(tax_year), tax_year=tax_year, taxable_profit=taxable_profit, stock_relief=relief_effect,
+        pension_relief=0.0 if pension is None else pension["relief"], **inputs,
     )
     if rule is not None:
         result["rules_applied"].append(rule.as_dict())
-    return {**result, "averaging": averaging, "losses": losses}
+    result["rules_applied"] += pension_rules
+    return {**result, "averaging": averaging, "losses": losses, "pension": pension}
 
 
 def estimate_with_rules(
@@ -309,6 +336,7 @@ def estimate_with_rules(
     stock_relief_regime: str = "general",
     state_aid_used: float = 0.0,
     extra_credit: float = 0.0,
+    pension_relief: float = 0.0,
 ) -> dict[str, Any]:
     v = {k: r.value for k, r in rules.items()}
     used: list[str]
@@ -324,10 +352,15 @@ def estimate_with_rules(
     else:
         used = [k for k in RULES if k.startswith(("it_", "usc_", "prsi_"))]
         married = marital_status == "married"
-        person = _individual(v, taxable_profit, other_income, married, spouse_paye_income, extra_credit)
+        person = _individual(
+            v, taxable_profit, other_income, married, spouse_paye_income, extra_credit, it_deduction=pension_relief
+        )
         clawback = 0.0
         if stock_relief_regime != "general" and stock_relief > 0:
-            without = _individual(v, taxable_profit + stock_relief, other_income, married, spouse_paye_income, extra_credit)
+            without = _individual(
+                v, taxable_profit + stock_relief, other_income, married, spouse_paye_income, extra_credit,
+                it_deduction=pension_relief,
+            )
             tax_value = _it_usc(without) - _it_usc(person)
             if stock_relief_regime == "young_trained_farmer":
                 used += ["stock_relief_ytf_cap", "state_aid_young_farmer_lifetime"]
@@ -369,6 +402,7 @@ def estimate_with_rules(
         "rules_applied": [rules[k].as_dict() for k in used],
         "averaging": None,
         "losses": None,
+        "pension": None,
     }
 
 

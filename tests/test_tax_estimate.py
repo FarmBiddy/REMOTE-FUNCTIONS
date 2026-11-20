@@ -227,3 +227,46 @@ def test_company_losses_are_not_modelled():
     result = _run(business_type="company", tax_year=2026, taxable_profit=10_000, losses_forward=1_000)
     assert result["errors"][0]["details"]["reason"] == "regime_not_available"
     assert _ok(business_type="company", tax_year=2026, taxable_profit=10_000)["losses"] is None
+
+
+# Pension contributions (s.787, ADR-0055 §5b), single 2026, 60,000 profit, born 1981 → 45 → 25%.
+#   limit 25% × 60,000 = 15,000; 10,000 paid → all relieved, income tax only:
+#   IT on 50,000 = 8,800 + 2,400 − 4,000 = 7,200 (was 11,200); USC 1,332.82, PRSI 2,542.50 unchanged
+#   total 11,075.32
+def test_pension_relief_is_income_tax_only():
+    body = _ok(**SINGLE, pension_contributions=10_000, birth_year=1981)
+    assert body["pension"] == {
+        "contributions": 10_000, "age": 45, "age_pct": 25, "net_relevant_earnings": 60_000,
+        "earnings_basis": "assessable_farm_profit", "limit": 15_000, "relief": 10_000, "unrelieved": 0,
+    }
+    assert body["income_tax"]["net"] == 7_200
+    assert (body["usc"]["total"], body["prsi"]["total"]) == (1_332.82, 2_542.5)
+    assert body["total_tax"] == 11_075.32
+    assert {"pension_pct_from_age_40", "pension_earnings_cap"} <= {r["rule_id"] for r in body["rules_applied"]}
+
+
+def test_pension_above_the_limit_is_carried():
+    """20,000 paid, 15,000 relieved: IT on 45,000 = 8,800 + 400 − 4,000 = 5,200."""
+    body = _ok(**SINGLE, pension_contributions=20_000, birth_year=1981)
+    assert (body["pension"]["relief"], body["pension"]["unrelieved"], body["income_tax"]["net"]) == (15_000, 5_000, 5_200)
+
+
+def test_pension_age_bands_and_earnings_cap():
+    assert _ok(**SINGLE, pension_contributions=1, birth_year=1996)["pension"]["age_pct"] == 20  # 30 in 2026
+    assert _ok(**SINGLE, pension_contributions=1, birth_year=1997)["pension"]["age_pct"] == 15  # 29
+    high = _ok(**{**SINGLE, "taxable_profit": 200_000}, pension_contributions=60_000, birth_year=1964)["pension"]
+    assert (high["age_pct"], high["limit"], high["relief"]) == (40, 46_000, 46_000)  # 40% × 115,000
+
+
+def test_pension_uses_profit_after_averaging_and_losses():
+    """Averaged 50,000 − 5,000 losses = 45,000 earnings → 25% limit 11,250."""
+    pension = _ok(**AVERAGING, losses_forward=5_000, pension_contributions=20_000, birth_year=1981)["pension"]
+    assert (pension["net_relevant_earnings"], pension["limit"]) == (45_000, 11_250)
+
+
+def test_pension_inputs():
+    missing = _run(**SINGLE, pension_contributions=5_000)
+    assert missing["status"] == "needs_input" and [m["path"] for m in missing["missing"]] == ["birth_year"]
+    assert _reason(**SINGLE, birth_year=1981) == "birth_year_invalid"
+    assert _reason(business_type="company", tax_year=2026, taxable_profit=1, pension_contributions=1, birth_year=1980) == "regime_not_available"
+    assert _ok(**SINGLE)["pension"] is None

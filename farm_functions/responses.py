@@ -940,6 +940,19 @@ class LossesForward(_Out):
     prsi_treatment: Literal["reduced_unconfirmed"]
 
 
+class PensionRelief(_Out):
+    """Pension contribution relief, income tax only (s.787, ADR-0055)."""
+
+    contributions: float
+    age: int
+    age_pct: float
+    net_relevant_earnings: float
+    earnings_basis: Literal["assessable_farm_profit"]
+    limit: float
+    relief: float
+    unrelieved: float
+
+
 class TaxEstimateResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -957,6 +970,7 @@ class TaxEstimateResult(_Out):
     rules_applied: list[RuleApplied]
     averaging: AveragingDetail | None
     losses: LossesForward | None
+    pension: PensionRelief | None
 
 
 class ExtractionCompany(_Out):

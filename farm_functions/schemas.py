@@ -17,7 +17,7 @@ from farm_functions.dairy.cash_flow import (
 from farm_functions.errors import missing_inputs
 from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
 from farm_functions.ie import preliminary as prelim
-from farm_functions.ie.averaging import AVERAGING_YEARS, averaging_rule
+from farm_functions.ie.averaging import AVERAGING_YEARS, averaging_rule, step_out_rules
 from farm_functions.ie.home_carer import home_carer_rules
 from farm_functions.ie.livestock_valuation import MATURE as LIVESTOCK_MATURE
 from farm_functions.ie.livestock_valuation import deemed_cost_rule
@@ -1288,6 +1288,30 @@ class TaxEstimateInput(_StrictModel):
     # (sole trader) pays the spouse (ADR-0055).
     spouse_self_employed_income: NonNegativeNumber = 0.0
     spouse_farm_wages: NonNegativeNumber = 0.0
+    # In averaging: this year is a step-out year (s.657(6A)); the last step-out
+    # year ("never" if none) checks the gap (ADR-0055).
+    step_out: bool = False
+    last_step_out_year: Literal["never"] | CalendarYear | None = None
+
+    @model_validator(mode="after")
+    def _step_out(self) -> "TaxEstimateInput":
+        if not self.step_out:
+            if self.last_step_out_year is not None:
+                raise ValueError("last_step_out_year only used with step_out")
+            return self
+        if self.income_averaging is None:
+            return self  # asked for as needs_input by the profile check
+        if not self.income_averaging:
+            raise ValueError("step_out needs income_averaging")
+        rules = step_out_rules(self.tax_year)
+        if rules is None:
+            raise ValueError(f"no step-out rule for tax year {self.tax_year}")
+        if self.last_step_out_year is None:
+            raise missing_inputs("last_step_out_year")
+        last, gap = self.last_step_out_year, int(rules[1].value)
+        if last != "never" and not last < self.tax_year - gap:
+            raise ValueError(f"no step-out within {gap} years of the last one ({last})")
+        return self
 
     @model_validator(mode="after")
     def _profile(self) -> "TaxEstimateInput":
@@ -1976,12 +2000,13 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     ),
     **dict.fromkeys(("label", "name"), "text"),
     **dict.fromkeys(("cash_line", "category", "method", "rank_by"), "choice"),
-    **dict.fromkeys(("variable", "vat_registered", "registered_partnership", "income_averaging", "direct_debit", "home_carer"), "boolean"),
+    **dict.fromkeys(("variable", "vat_registered", "registered_partnership", "income_averaging", "direct_debit", "home_carer",
+            "step_out",), "boolean"),
     "period_end_year": "year",
     "period_end_month": "month",
     "direct_debit_start_month": "month",
     "young_trained_farmer_first_year": "year",
-    **dict.fromkeys(("tax_year", "registered_year", "successor_birth_year", "birth_year"), "year"),
+    **dict.fromkeys(("tax_year", "registered_year", "successor_birth_year", "birth_year", "last_step_out_year"), "year"),
     "profit_share_pct": "%",
     "head": "head",
     "successor": "index",

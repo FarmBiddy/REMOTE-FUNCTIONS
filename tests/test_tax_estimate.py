@@ -341,3 +341,40 @@ def test_home_carer_counts_all_the_spouse_income():
 def test_spouse_income_errors():
     assert _reason(**SINGLE, spouse_self_employed_income=1) == "spouse_needs_married"
     assert _reason(**{**MARRIED, "business_type": "partnership"}, spouse_farm_wages=1) == "regime_not_available"
+
+
+# Step-out year (s.657(6A), ADR-0055 §8a), single 2026, a poor year after four good ones:
+#   prior 60,000 × 4; this year 20,000 after 8,000 allowances (28,000 before)
+#   averaged (240,000 + 28,000) / 5 = 53,600 − 8,000 = 45,600 → IT 8,800 + 640 − 4,000 = 5,440
+#   actual 20,000 → IT 4,000 − 4,000 = 0; USC 60.06 + 7,988 × 2% = 219.82; PRSI 847.50 → 1,067.32
+#   deferred income tax 5,440 → 4 × 1,360 on 31 Oct 2028, 2029, 2030, 2031
+STEP_OUT = {**SINGLE, "taxable_profit": 20_000, "income_averaging": True,
+            "prior_farming_profits": [60_000] * 4, "capital_allowances": 8_000,
+            "step_out": True, "last_step_out_year": "never"}
+
+
+def test_step_out_taxes_actual_and_defers_the_rest():
+    body = _ok(**STEP_OUT)
+    assert body["income"]["farm_profit"] == 20_000 and body["total_tax"] == 1_067.32
+    assert body["averaging"]["assessable_profit"] == 45_600
+    step = body["step_out"]
+    assert (step["income_tax_on_average"], step["income_tax_on_actual"], step["deferred_income_tax"]) == (5_440, 0, 5_440)
+    assert step["instalments"] == [{"due": f"{y}-10-31", "amount": 1_360} for y in (2028, 2029, 2030, 2031)]
+    ids = {r["rule_id"] for r in body["rules_applied"]}
+    assert {"income_averaging_years", "averaging_step_out_instalments", "averaging_step_out_gap_years"} <= ids
+    assert _ok(**SINGLE)["step_out"] is None
+
+
+def test_step_out_never_defers_a_negative():
+    """A better year than the average: nothing to defer."""
+    body = _ok(**{**STEP_OUT, "taxable_profit": 90_000})
+    assert body["step_out"]["deferred_income_tax"] == 0 and body["step_out"]["instalments"][0]["amount"] == 0
+
+
+def test_step_out_rules():
+    missing = _run(**{k: v for k, v in STEP_OUT.items() if k != "last_step_out_year"})
+    assert [m["path"] for m in missing["missing"]] == ["last_step_out_year"]
+    assert _reason(**{**STEP_OUT, "last_step_out_year": 2022}) == "step_out_too_soon"  # within 4 years
+    assert _ok(**{**STEP_OUT, "last_step_out_year": 2021})["step_out"]["last_step_out_year"] == 2021
+    assert _reason(**SINGLE, step_out=True, last_step_out_year="never") == "needs_income_averaging"
+    assert _reason(**SINGLE, last_step_out_year=2020) == "needs_income_averaging"

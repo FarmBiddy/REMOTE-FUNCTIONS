@@ -963,6 +963,22 @@ class HomeCarer(_Out):
     applied: Literal["credit", "band_increase"]
 
 
+class StepOutInstalment(_Out):
+    due: str
+    amount: float
+
+
+class StepOut(_Out):
+    """Step-out year (s.657(6A), ADR-0055): taxed on actual profit, the income tax
+    saved against the averaged figure paid later in instalments."""
+
+    income_tax_on_average: float
+    income_tax_on_actual: float
+    deferred_income_tax: float
+    instalments: list[StepOutInstalment]
+    last_step_out_year: int | Literal["never"]
+
+
 class TaxEstimateResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -982,6 +998,7 @@ class TaxEstimateResult(_Out):
     losses: LossesForward | None
     pension: PensionRelief | None
     home_carer: HomeCarer | None
+    step_out: StepOut | None
 
 
 class ExtractionCompany(_Out):

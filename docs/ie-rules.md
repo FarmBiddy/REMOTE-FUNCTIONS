@@ -279,7 +279,7 @@ SW(MP)A 2024)
   (since 2019). Not companies.
 - Minimum 5 years in. Exit: the previous 4 years are topped up to the final
   averaged figure. Step-out: one year on actual profit once every 5 years;
-  deferred tax paid in 4 equal instalments (all due on permanent exit).
+  deferred tax paid in 4 equal instalments (all due on permanent exit) — §6.1.
   Re-entry after 4 years on the normal basis.
 - A sole trade moving into an RFP continues for averaging (s.657(10A)).
 | rule_id | value | base | applies | from / to | ref | status |
@@ -305,6 +305,22 @@ SW(MP)A 2024)
   projected years; partnership de minimis aid rolls over 3 years. Partnerships
   are projected per partner (share of profit, relief, averaging, aid). The
   flat-rate addition (unless `vat_registered`) is taxable income and cash.
+
+### 6.1 Step-out year (s.657(6A); TDM 23-01-34 Example 3)
+
+| rule_id | value | from / to | ref | status |
+|---|---|---|---|---|
+| averaging_step_out_instalments | 4 | 2024 → 2027 (researched window; exists from 2016) | s.657(6A)(b)–(c) | enacted |
+| averaging_step_out_gap_years | 4 | 2024 → 2027 | s.657(6A)(d) | enacted |
+
+- Elected on the Form 11 for one year, taxed on actual profit. The deferred
+  tax is **income tax only** (s.657(1)): tax on the averaged figure − tax on
+  actual. Paid in 4 equal instalments, the first on the return date for the
+  year after the step-out year (31 October two years on), then yearly.
+- Not if a step-out was made in any of the previous 4 years. On permanent
+  exit all deferred tax falls due at once (s.657(8)(e)).
+- Engine (`tax.estimate`, ADR-0055): `step_out` + `last_step_out_year`
+  (year or "never"); USC and PRSI follow the actual year.
 
 ## 6A. Preliminary tax and pay dates (Part 41A; checked 2026-11-19)
 

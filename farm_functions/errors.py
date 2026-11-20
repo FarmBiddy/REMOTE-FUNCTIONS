@@ -437,6 +437,12 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(issue(INVALID_TYPE, text, field=at("home_carer"), details={"reason": "spouse_needs_married"}))
         elif text.startswith("no home carer credit rule for tax year"):
             issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
+        elif text in ("last_step_out_year only used with step_out", "step_out needs income_averaging"):
+            issues.append(issue(INVALID_TYPE, text, field=at("step_out"), details={"reason": "needs_income_averaging"}))
+        elif text.startswith("no step-out within"):
+            issues.append(issue(INVALID_TYPE, text, field=at("last_step_out_year"), details={"reason": "step_out_too_soon"}))
+        elif text.startswith("no step-out rule for tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
         elif text == "income averaging is for individuals, not companies":
             issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
         elif text.endswith("only used with income_averaging"):

@@ -221,6 +221,18 @@ where the Engine's Irish layer differs from practice.
   `enacted` / `announced`, so the source is never overstated.
 - Rules in `farm_functions/ie/livestock_valuation.py`.
 
+### 8a. Averaging step-out year in `tax.estimate`
+
+- The accountant: step-out is seldom used, but it exists and farmers ask.
+  `step_out` (averaging on) taxes the year on actual profit; the income tax
+  saved against the averaged figure is deferred (never negative) and paid in
+  4 equal instalments on 31 October from two years on (s.657(6A)).
+- `last_step_out_year` (a year or "never") is needed to check the 4-year gap
+  (`step_out_too_soon`). The instalment count and the gap are dated rules in
+  `farm_functions/ie/averaging.py`.
+- Not modelled: step-out in `tax.partnership` and `plan.projection` (decided
+  with the user: rare).
+
 ## Consequences
 - Breaking for callers of `tax.estimate` that are individuals and of
   `tax.partnership`, and `plan.projection` tax profiles of individuals: they

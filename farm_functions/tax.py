@@ -25,7 +25,7 @@ from farm_functions.ie import capital_allowances as ca
 from farm_functions.ie import home_carer as carer
 from farm_functions.ie import pensions
 from farm_functions.ie import preliminary as prelim
-from farm_functions.ie.averaging import averaged_profit, averaging_rule
+from farm_functions.ie.averaging import averaged_profit, averaging_rule, step_out_due_years, step_out_rules
 from farm_functions.ie.losses import PRSI_TREATMENT as LOSS_PRSI_TREATMENT
 from farm_functions.ie.losses import apply_losses
 from farm_functions.ie.partnership import (
@@ -296,7 +296,7 @@ def averaging_view(
     return assessable, view, rule
 
 
-def tax_estimate(
+def _estimate_year(
     *,
     tax_year: int,
     taxable_profit: float,
@@ -365,6 +365,43 @@ def tax_estimate(
         result["rules_applied"].append(rule.as_dict())
     result["rules_applied"] += pension_rules
     return {**result, "averaging": averaging, "losses": losses, "pension": pension}
+
+
+def tax_estimate(
+    *, step_out: bool = False, last_step_out_year: int | str | None = None, **inputs: Any
+) -> dict[str, Any]:
+    """``tax.estimate``. A step-out year (s.657(6A), averaging on) is taxed on
+    actual profit; the income tax it saves against the averaged figure is
+    deferred and paid in equal yearly instalments from two years on."""
+    if not step_out:
+        return {**_estimate_year(**inputs), "step_out": None}
+    averaged = _estimate_year(**inputs)
+    actual = _estimate_year(**{**inputs, "income_averaging": False, "prior_farming_profits": None, "capital_allowances": None})
+    tax_year = inputs["tax_year"]
+    count_rule, gap_rule = step_out_rules(tax_year)
+    on_average, on_actual = averaged["income_tax"]["net"], actual["income_tax"]["net"]
+    deferred = round_money(max(on_average - on_actual, 0.0))
+    count = int(count_rule.value)
+    cents = prelim.instalments(round(deferred * 100), count)
+    due = [
+        {"due": date(y, 10, prelim.STATUTORY_DAY_OF_OCTOBER).isoformat(), "amount": c / 100}
+        for y, c in zip(step_out_due_years(tax_year, count), cents)
+    ]
+    averaging_rules = [r for r in averaged["rules_applied"] if r["rule_id"] == "income_averaging_years"]
+    rules = [*actual["rules_applied"], *averaging_rules, count_rule.as_dict(), gap_rule.as_dict()]
+    return {
+        **actual,
+        # The averaged figure the deferred tax is measured on; this year is taxed on actual.
+        "averaging": averaged["averaging"],
+        "rules_applied": rules,
+        "step_out": {
+            "income_tax_on_average": on_average,
+            "income_tax_on_actual": on_actual,
+            "deferred_income_tax": deferred,
+            "instalments": due,
+            "last_step_out_year": last_step_out_year,
+        },
+    }
 
 
 def estimate_with_rules(
@@ -467,6 +504,7 @@ def estimate_with_rules(
         "losses": None,
         "pension": None,
         "home_carer": None if income_tax is None else home_carer_view,
+        "step_out": None,
     }
 
 

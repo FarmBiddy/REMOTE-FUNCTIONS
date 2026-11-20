@@ -18,6 +18,29 @@ AVERAGING_YEARS: tuple[Rule, ...] = (
 )
 
 
+# Step-out (s.657(6A), from 2016): one year on actual profit; the income tax
+# deferred is paid in equal yearly instalments, the first on the return date for
+# the year after the step-out year (31 October two years on); no step-out if one
+# was made in the previous years of the gap.
+STEP_OUT_INSTALMENTS: tuple[Rule, ...] = (
+    Rule("averaging_step_out_instalments", 4, date(2024, 1, 1), date(2027, 12, 31), "TCA s.657(6A)(b)-(c)", "enacted"),
+)
+STEP_OUT_GAP_YEARS: tuple[Rule, ...] = (
+    Rule("averaging_step_out_gap_years", 4, date(2024, 1, 1), date(2027, 12, 31), "TCA s.657(6A)(d)", "enacted"),
+)
+
+
+def step_out_rules(tax_year: int) -> tuple[Rule, Rule] | None:
+    on = date(tax_year, 1, 1)
+    count, gap = rule_at(STEP_OUT_INSTALMENTS, on), rule_at(STEP_OUT_GAP_YEARS, on)
+    return None if count is None or gap is None else (count, gap)
+
+
+def step_out_due_years(tax_year: int, instalments: int) -> list[int]:
+    """Years whose 31 October each instalment is due: from two years after the step-out year."""
+    return [tax_year + 2 + k for k in range(instalments)]
+
+
 def averaging_rule(tax_year: int) -> Rule | None:
     """The averaging period in force for the tax year, or None."""
     return rule_at(AVERAGING_YEARS, date(tax_year, 1, 1))
@@ -30,4 +53,12 @@ def averaged_profit(profits: list[float], years: int) -> float:
     return sum(window) / years
 
 
-__all__ = ["AVERAGING_YEARS", "averaged_profit", "averaging_rule"]
+__all__ = [
+    "AVERAGING_YEARS",
+    "STEP_OUT_GAP_YEARS",
+    "STEP_OUT_INSTALMENTS",
+    "averaged_profit",
+    "averaging_rule",
+    "step_out_due_years",
+    "step_out_rules",
+]

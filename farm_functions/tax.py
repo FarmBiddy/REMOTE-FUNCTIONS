@@ -577,6 +577,36 @@ def tax_payments(
     }
 
 
+def projected_payments(
+    basis: str,
+    pay_year: int,
+    tax_year: int,
+    liabilities: dict[int, float],
+    preliminary_paid: dict[int, float],
+) -> dict[str, Any]:
+    """Tax paid in one ``plan.projection`` year (ADR-0055): on the October pay
+    date inside the year, preliminary tax for ``pay_year`` plus the balance of
+    the year before. ``liabilities`` and ``preliminary_paid`` are by tax year
+    (history, then projected); this year's preliminary is recorded for the next.
+    Years after the last rules year use that year's rates."""
+    rule = prelim.safe_harbour_rule(basis, min(pay_year, LAST_TAX_YEAR))
+    amount = round_money(prelim.preliminary_amount(basis, rule.value, liabilities, pay_year))
+    balance = round_money(liabilities[pay_year - 1] - preliminary_paid[pay_year - 1])
+    preliminary_paid[pay_year] = amount
+    balance_due, refund = max(balance, 0.0), max(-balance, 0.0)
+    return {
+        "pay_year": pay_year,
+        "preliminary_basis": basis,
+        "preliminary": amount,
+        "balance_previous_year": balance_due,
+        "refund_previous_year": refund,
+        "paid": round_money(balance_due + amount),
+        # Accrued and not yet paid at the year end: this pay year's balance, plus a
+        # later tax year whose pay date falls after the year (non-calendar year ends).
+        "owed_at_year_end": round_money(sum(liabilities[y] for y in range(pay_year, tax_year + 1)) - amount),
+    }
+
+
 def succession_credit_amount(succession: dict[str, Any] | None, tax_year: int) -> tuple[float, Rule | None]:
     """Total succession partnership credit for the year (0 outside its 5 years or
     once the successor is 40 on 1 January), with the rule fixed at registration."""
@@ -768,6 +798,7 @@ __all__ = [
     "tax_company_extraction",
     "succession_credit_amount",
     "tax_partnership",
+    "projected_payments",
     "projected_tax",
     "resolve_allowance",
     "stock_relief_regime",

@@ -360,6 +360,11 @@ basis the farmer uses (`preliminary_basis`). Put `due_on_pay_date` in October
 (or November when filing on ROS) and, by direct debit, each instalment in its
 month. Label it approximate until the accountant confirms the figure.
 
+In `plan.projection`, an individual's `tax_profile` needs `preliminary_basis`
+and `tax_history` (the engine names the years it needs). `cash.tax` is then
+what is paid that year and `balance_sheet.tax_owed` what is still owed: show
+both, the second as "tax owed at year end (approx.)".
+
 Projected months (ADR-0026): call `pl.forecast` / `cf.forecast` with the actual
 months (incl. the same months last year) and the months to project, adding any
 known values (co-op price, scheme payments, `loan.schedule` rows). Chart the

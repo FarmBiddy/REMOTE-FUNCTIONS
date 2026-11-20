@@ -865,6 +865,15 @@ def _check_allowance_rules(assets: list["AssetInput"]) -> None:
             raise ValueError(f"no capital allowance rule for assets[{i}] ({kind}) bought {a.year}-{a.month:02d}")
 
 
+class ProjectionTaxYearInput(_StrictModel):
+    """A tax year before the plan (ADR-0055): its total tax (the accountant's
+    figure or ``tax.estimate``) and, when needed, the preliminary tax paid for it."""
+
+    tax_year: CalendarYear
+    liability: NonNegativeNumber
+    preliminary_paid: NonNegativeNumber | None = None
+
+
 class ProjectionTaxProfileInput(_StrictModel):
     """Irish tax profile for ``plan.projection`` (ADR-0053): tax per year is
     estimated from it. ``prior_farming_profits``: up to 4 past years of farming
@@ -886,6 +895,11 @@ class ProjectionTaxProfileInput(_StrictModel):
     # Partnerships: one entry per partner (2–10, shares add up to 100) with their own
     # personal details; the profile's own personal fields stay unset.
     partners: list[PartnerInput] = Field(default_factory=list, max_length=10)
+    # Individuals: when tax is paid (ADR-0055). The Platform's basis for preliminary
+    # tax, and the tax years before the plan the first pay date needs (partnerships:
+    # partners' totals). Companies keep tax paid in the year (not modelled yet).
+    preliminary_basis: Literal["current_90", "prior_100"] | None = None
+    tax_history: list[ProjectionTaxYearInput] = Field(default_factory=list, max_length=2)
 
     @model_validator(mode="after")
     def _profile(self) -> "ProjectionTaxProfileInput":
@@ -909,8 +923,19 @@ class ProjectionTaxProfileInput(_StrictModel):
             raise ValueError("registered_partnership needs business_type partnership")
         if self.spouse_paye_income and self.marital_status != "married":
             raise ValueError("spouse_paye_income needs marital_status married")
-        if self.business_type != "company" and self.income_averaging is None:
-            raise missing_inputs("income_averaging")
+        if self.business_type == "company":
+            if self.preliminary_basis or self.tax_history:
+                raise ValueError("preliminary tax timing is for individuals")
+            return self
+        missing = [
+            name for name, absent in (
+                ("income_averaging", self.income_averaging is None),
+                ("preliminary_basis", self.preliminary_basis is None),
+                ("tax_history", not self.tax_history),
+            ) if absent
+        ]
+        if missing:
+            raise missing_inputs(*missing)
         return self
 
 
@@ -948,6 +973,16 @@ class PlanProjectionInput(_StrictModel):
             raise ValueError(f"no tax rules for the first projected tax year {keys[-1][0] + 1}")
         if self.tax_profile:
             _check_allowance_rules(self.assets)
+        if self.tax_profile and self.tax_profile.business_type != "company":
+            last = keys[-1][0] * 12 + keys[-1][1] - 1
+            needed = prelim.history_needed(last + 1, last + 12)
+            given = {h.tax_year: h for h in self.tax_profile.tax_history}
+            if len(given) != len(self.tax_profile.tax_history) or set(given) != set(needed):
+                years = ", ".join(str(y) for y in sorted(needed))
+                raise ValueError(f"tax_profile.tax_history needs tax years {years}, once each")
+            unpaid = [y for y, paid in needed.items() if paid and given[y].preliminary_paid is None]
+            if unpaid:
+                raise ValueError(f"tax_profile.tax_history needs preliminary_paid for tax year {unpaid[0]}")
         return self
 
 
@@ -1737,7 +1772,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "grant", "accounting_profit", "taxable_profit", "other_income", "spouse_paye_income",
             "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
             "capital_allowances", "current_year_tax", "preceding_year_tax", "pre_preceding_year_tax",
-            "preceding_year_preliminary_paid",
+            "preceding_year_preliminary_paid", "liability", "preliminary_paid",
         ),
         _EUR,
     ),
@@ -1779,7 +1814,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "actual", "added_costs", "added_income", "assets", "base_pl_months", "cash_flows",
             "cf_months", "comparison", "forecast", "history", "investments", "loans", "months",
             "pl_months", "prior_pl_months", "projected_cf_months", "projected_pl_months",
-            "reduced_costs", "reduced_income", "scenarios", "prior_farming_profits", "partners",
+            "reduced_costs", "reduced_income", "scenarios", "prior_farming_profits", "partners", "tax_history",
         ),
         "list",
     ),

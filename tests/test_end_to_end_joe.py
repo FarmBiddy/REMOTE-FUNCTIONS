@@ -321,12 +321,22 @@ def test_full_tax_chain_into_debt_capacity(results):
 def test_projection_estimates_tax_each_year():
     """Joe and his wife, jointly assessed, averaging with four past years (ADR-0053)."""
     profile = {"business_type": "sole_trader", "marital_status": "married", "spouse_paye_income": 32_000,
-               "income_averaging": True, "prior_farming_profits": [41_000, 38_000, 62_000, 55_000]}
+               "income_averaging": True, "prior_farming_profits": [41_000, 38_000, 62_000, 55_000],
+               # ADR-0055: Joe's year ends in September, so October 2026 falls in plan year 1:
+               # preliminary 2026 = 90% × 10,000 = 9,000 + 2025 balance 9,000 − 8,000 = 10,000 paid.
+               "preliminary_basis": "current_90",
+               "tax_history": [{"tax_year": 2025, "liability": 9_000, "preliminary_paid": 8_000},
+                               {"tax_year": 2026, "liability": 10_000}]}
     years = run_function("plan.projection", {**PAYLOADS["plan.projection"], "tax_profile": profile})["result"]["years"]
     assert [y["tax"]["tax_year"] for y in years] == [2027, 2028, 2029, 2030, 2031]
     assert {y["tax"]["averaging"] for y in years} == {"applied"}
     assert [y["tax"]["rules_basis"] for y in years][:2] == ["in_force", "latest_held_constant"]
-    assert all(y["cash"]["tax"] == y["tax"]["total_tax"] > 0 for y in years)
+    first, second = years[0], years[1]
+    assert first["tax"]["payments"]["pay_year"] == 2026 and first["cash"]["tax"] == 10_000
+    # 2026's balance and all of 2027's tax are owed at the end of September 2027.
+    assert first["balance_sheet"]["tax_owed"] == pytest.approx(1_000 + first["tax"]["total_tax"], abs=0.01)
+    # October 2027: 90% of 2027 + 2026's balance of 1,000.
+    assert second["cash"]["tax"] == pytest.approx(round(0.9 * first["tax"]["total_tax"], 2) + 1_000, abs=0.01)
 
 
 def test_succession_partnership_with_his_son(results):

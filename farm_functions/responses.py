@@ -584,7 +584,10 @@ class ProjectionCash(_Out):
     flat_rate_addition: float
     off_farm_income: float
     drawings: float
+    # Paid to Revenue in the year (ADR-0055): with a tax profile for individuals,
+    # preliminary tax + last year's balance; else the year's tax.
     tax: float
+    tax_refund: float
     interest: float
     principal: float
     capex: float
@@ -606,6 +609,8 @@ class ProjectionBalanceSheet(_Out):
     land: float
     livestock: float
     debt: float
+    # Tax accrued and not yet paid at the year end (negative = overpaid).
+    tax_owed: float
     net_worth: float
 
 
@@ -631,6 +636,16 @@ class ProjectionPartnerTax(_Out):
     total_tax: float
 
 
+class ProjectionTaxPayments(_Out):
+    pay_year: int
+    preliminary_basis: Literal["current_90", "prior_100"]
+    preliminary: float
+    balance_previous_year: float
+    refund_previous_year: float
+    paid: float
+    owed_at_year_end: float
+
+
 class ProjectionTax(_Out):
     tax_year: int
     rules_basis: Literal["in_force", "latest_held_constant"]
@@ -647,6 +662,7 @@ class ProjectionTax(_Out):
     total_tax: float
     effective_rate_pct: float | None
     partners: list[ProjectionPartnerTax] | None
+    payments: ProjectionTaxPayments | None
 
 
 class ProjectionYear(_Out):

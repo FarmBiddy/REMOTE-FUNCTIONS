@@ -260,6 +260,11 @@ SW(MP)A 2024)
   advance (70–75%) in mid / late October, just before the pay date, and the
   balance from 1 December (2026 BISS T&Cs v6). Payment dates are Platform data.
 - Engine: `tax.payments` (ADR-0055); module `farm_functions/ie/preliminary.py`.
+- Engine (`plan.projection`, individuals): each projection year pays on the
+  October inside it — preliminary for that calendar year (90% of it or 100%
+  of the year before, the Platform's `preliminary_basis`) plus the year
+  before's balance; the 105% direct debit basis is `tax.payments` only.
+  Companies keep tax paid in the year (corporation tax dates not modelled).
 
 ## 7. Partnerships
 

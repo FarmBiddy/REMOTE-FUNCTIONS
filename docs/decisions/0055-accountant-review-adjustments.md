@@ -86,7 +86,9 @@ where the Engine's Irish layer differs from practice.
 
 - Breaking for callers of `tax.estimate` that are individuals and of
   `tax.partnership`, and `plan.projection` tax profiles of individuals: they
-  must send `income_averaging`. Engine 1.11.0.
+  must send `income_averaging`; individual tax profiles also `preliminary_basis`
+  and `tax_history`, and projected cash / net worth change with the new
+  timing. Engine 1.11.0.
 
 ## Related
 

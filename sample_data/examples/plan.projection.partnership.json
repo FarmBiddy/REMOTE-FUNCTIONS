@@ -367,6 +367,18 @@
         "profit_share_pct": 30,
         "young_trained_farmer_first_year": 2026
       }
+    ],
+    "preliminary_basis": "prior_100",
+    "tax_history": [
+      {
+        "tax_year": 2025,
+        "liability": 21200,
+        "preliminary_paid": 19600
+      },
+      {
+        "tax_year": 2026,
+        "liability": 23400
+      }
     ]
   }
 }

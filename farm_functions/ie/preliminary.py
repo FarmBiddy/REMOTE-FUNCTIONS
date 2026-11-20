@@ -46,6 +46,37 @@ def safe_harbour_rule(basis: str, tax_year: int) -> Rule | None:
     return rule_at(SAFE_HARBOUR[basis], date(tax_year, 1, 1))
 
 
+# Month of the statutory pay date (31 October).
+PAY_MONTH = 10
+
+
+def pay_year(first_month: int, last_month: int) -> int:
+    """Calendar year of the October inside a 12-month span (month indexes
+    ``year * 12 + month - 1``): the tax year whose preliminary tax, with the
+    year before's balance, is paid in that span."""
+    october = next(m for m in range(first_month, last_month + 1) if m % 12 == PAY_MONTH - 1)
+    return october // 12
+
+
+def preliminary_amount(basis: str, rate_pct: float, liabilities: dict[int, float], tax_year: int) -> float:
+    """Preliminary tax for ``tax_year`` on a basis: 90% of that year's tax, or
+    100% of the year before's (``liabilities`` by tax year)."""
+    base_year = tax_year if basis == "current_90" else tax_year - 1
+    return liabilities[base_year] * rate_pct / 100
+
+
+def history_needed(first_month: int, last_month: int) -> dict[int, bool]:
+    """Tax years before a plan whose tax the first pay date needs, each with
+    whether its preliminary tax already paid is needed too. The year before the
+    first pay year always (its balance is paid then); the first pay year itself
+    when its accounts end before the plan's first tax year (e.g. a March year end)."""
+    first_pay, first_tax_year = pay_year(first_month, last_month), last_month // 12
+    needed = {first_pay - 1: True}
+    if first_pay < first_tax_year:
+        needed[first_pay] = False
+    return needed
+
+
 def instalments(total_cents: int, months: int) -> list[int]:
     """Equal monthly amounts in cents, the remainder in the last month."""
     each = total_cents // months
@@ -56,9 +87,13 @@ __all__ = [
     "BASES",
     "DIRECT_DEBIT_BASIS",
     "DIRECT_DEBIT_DAY",
+    "PAY_MONTH",
     "ROS_PAY_AND_FILE",
     "SAFE_HARBOUR",
     "STATUTORY_DAY_OF_OCTOBER",
+    "history_needed",
     "instalments",
+    "pay_year",
+    "preliminary_amount",
     "safe_harbour_rule",
 ]

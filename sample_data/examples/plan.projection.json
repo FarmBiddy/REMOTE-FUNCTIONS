@@ -355,6 +355,18 @@
       62000,
       55000
     ],
-    "vat_registered": false
+    "vat_registered": false,
+    "preliminary_basis": "prior_100",
+    "tax_history": [
+      {
+        "tax_year": 2025,
+        "liability": 19800,
+        "preliminary_paid": 19600
+      },
+      {
+        "tax_year": 2026,
+        "liability": 21800
+      }
+    ]
   }
 }

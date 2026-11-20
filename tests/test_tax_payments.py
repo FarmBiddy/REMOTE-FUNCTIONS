@@ -56,7 +56,7 @@ def test_good_year_then_weaker_year():
     }
     assert body["pay_date"] == {"statutory": "2026-10-31", "ros": "2026-11-18", "ros_source": "Revenue eBrief 034/26"}
     assert body["due_on_pay_date"] == 25_460
-    assert body["balance_next_year"] == 2_140
+    assert body["next_year"] == {"balance_due": 2_140, "overpaid": 0}
     assert body["direct_debit_instalments"] is None
     assert [r["legal_ref"] for r in body["rules_applied"]][0] == "TCA s.959AO(3)(b)(i)"
 
@@ -64,7 +64,7 @@ def test_good_year_then_weaker_year():
 def test_platform_choice_is_kept_even_when_not_the_lowest():
     body = _ok(preliminary_basis="prior_100")
     assert body["preliminary"]["amount"] == 36_200 and body["lowest_safe"]["basis"] == "current_90"
-    assert body["due_on_pay_date"] == 42_400 and body["balance_next_year"] == -14_800
+    assert body["due_on_pay_date"] == 42_400 and body["next_year"] == {"balance_due": 0, "overpaid": 14_800}
 
 
 def test_direct_debit_spreads_the_preliminary():

@@ -81,6 +81,9 @@ where the Engine's Irish layer differs from practice.
 - Direct debit: equal monthly instalments from the start month to December
   (cents in December); only last year's balance is then due on the pay date.
 - An overpayment of last year is reported, never netted against this year.
+- This year's tax against the preliminary (settled with next year's return) is
+  also split into `balance_due` / `overpaid` (review fix: it was one signed
+  figure).
 - Rules (90 / 100 / 105%) and ROS dates live in `farm_functions/ie/preliminary.py`.
 
 ### 2c. `plan.projection`: tax paid on the Irish dates
@@ -95,7 +98,9 @@ where the Engine's Irish layer differs from practice.
   `preliminary_basis` (`current_90` | `prior_100`; the 105% direct debit
   basis stays in `tax.payments`, because a nil year inside a plan would leave
   the Engine choosing another basis) and `tax_history` (the tax years before
-  the plan that the first pay date needs; the validator names them).
+  the plan that the first pay date needs; the validator names them). A
+  `preliminary_paid` for a year paid inside the plan is refused, not silently
+  replaced (review fix).
 - Outputs: `cash.tax` = paid in the year, `cash.tax_refund` = an overpaid
   balance coming back (gross, not netted), `balance_sheet.tax_owed` = accrued
   and unpaid (deducted in net worth), `tax.payments` per year. Repayment

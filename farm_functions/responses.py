@@ -1137,6 +1137,11 @@ class TaxAveragingExitResult(_Out):
     rules_applied: list[RuleApplied]
 
 
+class NextYearSettlement(_Out):
+    balance_due: float
+    overpaid: float
+
+
 class TaxPaymentsResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -1148,7 +1153,7 @@ class TaxPaymentsResult(_Out):
     pay_date: PayDate
     due_on_pay_date: float
     direct_debit_instalments: list[DirectDebitInstalment] | None
-    balance_next_year: float
+    next_year: NextYearSettlement
     rules_applied: list[RuleApplied]
 
 

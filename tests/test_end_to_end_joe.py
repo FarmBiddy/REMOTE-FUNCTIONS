@@ -351,6 +351,11 @@ def test_projection_estimates_tax_each_year():
     assert first["tax"]["payments"]["pay_year"] == 2026 and first["cash"]["tax"] == 10_000
     # 2026's balance and all of 2027's tax are owed at the end of September 2027.
     assert first["balance_sheet"]["tax_owed"] == pytest.approx(1_000 + first["tax"]["total_tax"], abs=0.01)
+    # Review fix: 2026's preliminary is paid inside the plan, so a figure for it is refused.
+    paid_2026 = {**profile, "tax_history": [profile["tax_history"][0], {"tax_year": 2026, "liability": 10_000,
+                                                                          "preliminary_paid": 5_000}]}
+    refused = run_function("plan.projection", {**PAYLOADS["plan.projection"], "tax_profile": paid_2026})
+    assert refused["errors"][0]["details"]["reason"] == "tax_history_invalid"
     # October 2027: 90% of 2027 + 2026's balance of 1,000.
     assert second["cash"]["tax"] == pytest.approx(round(0.9 * first["tax"]["total_tax"], 2) + 1_000, abs=0.01)
 

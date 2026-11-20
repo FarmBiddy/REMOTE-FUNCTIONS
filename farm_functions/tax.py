@@ -398,7 +398,7 @@ def tax_estimate(
     count = int(count_rule.value)
     cents = prelim.instalments(round(deferred * 100), count)
     due = [
-        {"due": date(y, 10, prelim.STATUTORY_DAY_OF_OCTOBER).isoformat(), "amount": c / 100}
+        {"due": date(y, prelim.PAY_MONTH, prelim.STATUTORY_DAY_OF_OCTOBER).isoformat(), "amount": c / 100}
         for y, c in zip(step_out_due_years(tax_year, count), cents)
     ]
     averaging_rules = [r for r in averaged["rules_applied"] if r["rule_id"] == "income_averaging_years"]
@@ -769,15 +769,19 @@ def tax_payments(
             "overpaid": round_money(overpaid),
         },
         "pay_date": {
-            "statutory": date(tax_year, 10, prelim.STATUTORY_DAY_OF_OCTOBER).isoformat(),
+            "statutory": date(tax_year, prelim.PAY_MONTH, prelim.STATUTORY_DAY_OF_OCTOBER).isoformat(),
             "ros": None if ros is None else ros[0].isoformat(),
             "ros_source": None if ros is None else ros[1],
         },
         # Gross: an overpayment of last year is shown, never netted here.
         "due_on_pay_date": round_money(balance_due + (0.0 if direct_debit else preliminary)),
         "direct_debit_instalments": plan,
-        # This year's tax not covered by the preliminary: due with next year's return.
-        "balance_next_year": round_money(current_year_tax - preliminary),
+        # This year's tax against the preliminary, settled with next year's return:
+        # gross, a balance due or an overpayment, never one signed figure.
+        "next_year": {
+            "balance_due": round_money(max(current_year_tax - preliminary, 0.0)),
+            "overpaid": round_money(max(preliminary - current_year_tax, 0.0)),
+        },
         "rules_applied": rules,
     }
 

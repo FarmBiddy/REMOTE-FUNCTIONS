@@ -1105,6 +1105,12 @@ class PlanProjectionInput(_StrictModel):
             unpaid = [y for y, paid in needed.items() if paid and given[y].preliminary_paid is None]
             if unpaid:
                 raise ValueError(f"tax_profile.tax_history needs preliminary_paid for tax year {unpaid[0]}")
+            # The first pay year's preliminary is paid inside the plan: the Engine works it out.
+            unused = [y for y, paid in needed.items() if not paid and given[y].preliminary_paid is not None]
+            if unused:
+                raise ValueError(
+                    f"tax_profile.tax_history needs no preliminary_paid for tax year {unused[0]} (paid inside the plan)"
+                )
         return self
 
 

@@ -152,6 +152,11 @@ where the Engine's Irish layer differs from practice.
   (decided with the user).
 - Result `losses`: used, lost in a stock relief claim year (s.666(3)),
   this year's own loss, and what is carried forward.
+- The young trained farmer / partnership caps measure the relief as tax saved
+  against a year without it; that year re-applies the same losses (and the
+  pension limit on its higher profit). Found in the branch review: without
+  this, losses made an unrelieved year look taxable and clawed back tax on nil
+  income.
 - Not modelled: s.381 against other income (and the s.662 restriction),
   company losses (s.396), losses in `tax.partnership` and `plan.projection`.
 

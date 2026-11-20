@@ -331,10 +331,14 @@ def _estimate_year(
         )
         relief_effect = stock_relief / averaging["years"]
     losses = None
+    # Without the relief (for its caps): this year's profit + the relief counted, then
+    # the same losses and pension limit applied to that higher profit.
+    without_profit = taxable_profit + relief_effect
     if inputs["business_type"] != "company":
         taxable_profit, used = apply_losses(taxable_profit, losses_forward, stock_relief > 0)
         losses = {k: round_money(v) for k, v in used.items()} | {"prsi_treatment": LOSS_PRSI_TREATMENT}
-    pension, pension_rules = None, []
+        without_profit, _ = apply_losses(without_profit, losses_forward, False)
+    pension, pension_rules, without_pension = None, [], 0.0
     if pension_contributions:
         age = tax_year - birth_year
         pct_rule, cap_rule = pensions.age_band_rule(age, tax_year), pensions.earnings_cap_rule(tax_year)
@@ -351,6 +355,9 @@ def _estimate_year(
             "unrelieved": round_money(pension_contributions - relieved),
         }
         pension_rules = [pct_rule.as_dict(), cap_rule.as_dict()]
+        without_pension = pensions.relief(
+            pension_contributions, max(without_profit, 0.0), pct_rule.value, cap_rule.value
+        )
     carer_credit, carer_rules = 0.0, []
     if home_carer:
         credit_rule, limit_rule = carer.home_carer_rules(tax_year)
@@ -361,7 +368,8 @@ def _estimate_year(
         carer_rules = [credit_rule.as_dict(), limit_rule.as_dict()]
     result = estimate_with_rules(
         year_rules(tax_year), tax_year=tax_year, taxable_profit=taxable_profit, stock_relief=relief_effect,
-        pension_relief=0.0 if pension is None else pension["relief"], home_carer_credit=carer_credit, **inputs,
+        pension_relief=0.0 if pension is None else pension["relief"], home_carer_credit=carer_credit,
+        without_relief_profit=without_profit, without_relief_pension=without_pension, **inputs,
     )
     if home_carer:
         result["home_carer"] = {"credit_after_taper": round_money(carer_credit),
@@ -427,7 +435,13 @@ def estimate_with_rules(
     home_carer_credit: float = 0.0,
     spouse_self_employed_income: float = 0.0,
     spouse_farm_wages: float = 0.0,
+    without_relief_profit: float | None = None,
+    without_relief_pension: float | None = None,
 ) -> dict[str, Any]:
+    """Tax for one taxpayer on the given rules. The stock relief caps compare
+    with the tax had there been no relief: ``without_relief_profit`` /
+    ``without_relief_pension`` give that case when losses or the pension limit
+    depend on the profit (default: profit + relief, same pension relief)."""
     v = {k: r.value for k, r in rules.items()}
     used: list[str]
     income_tax = usc = prsi = corporation = cap = None
@@ -451,8 +465,11 @@ def estimate_with_rules(
         clawback = 0.0
         if stock_relief_regime != "general" and stock_relief > 0:
             without = _individual(
-                v, taxable_profit + stock_relief, other_income, married, spouse_paye_income, extra_credit,
-                it_deduction=pension_relief, home_carer_credit=home_carer_credit,
+                v,
+                taxable_profit + stock_relief if without_relief_profit is None else without_relief_profit,
+                other_income, married, spouse_paye_income, extra_credit,
+                it_deduction=pension_relief if without_relief_pension is None else without_relief_pension,
+                home_carer_credit=home_carer_credit,
                 spouse_self_employed=spouse_self_employed_income, spouse_farm_wages=spouse_farm_wages,
             )
             tax_value = _it_usc(without) - _it_usc(person)

@@ -378,3 +378,25 @@ def test_step_out_rules():
     assert _ok(**{**STEP_OUT, "last_step_out_year": 2021})["step_out"]["last_step_out_year"] == 2021
     assert _reason(**SINGLE, step_out=True, last_step_out_year="never") == "needs_income_averaging"
     assert _reason(**SINGLE, last_step_out_year=2020) == "needs_income_averaging"
+
+
+# Review fix: the stock relief cap measures the relief against a no-relief year with
+# the same losses and pension limit applied to the higher profit.
+def test_cap_counts_losses_in_the_no_relief_case():
+    """20,000 after 150,000 young farmer relief, 200,000 losses: without the relief the
+    170,000 would still be covered by losses, so the relief saves nothing — no clawback
+    (it was 16,730.62 of tax on nil income)."""
+    body = _ok(**{**SINGLE, "taxable_profit": 20_000}, stock_relief=150_000,
+               stock_relief_regime="young_trained_farmer", losses_forward=200_000)
+    assert (body["stock_relief_cap"]["tax_value"], body["stock_relief_cap"]["clawback"]) == (0, 0)
+    assert body["total_tax"] == 0
+
+
+def test_cap_recomputes_the_pension_limit():
+    """60,000 after 30,000 relief, 20,000 pension, age 45 (25%):
+    with relief:    limit 15,000 → IT on 45,000 = 5,200; USC on 60,000 = 1,332.82
+    without relief: limit 22,500 → all 20,000 → IT on 70,000 = 15,200; USC on 90,000 = 3,230.62
+    tax value 10,000 + 1,897.80 = 11,897.80 (was 13,897.80 with the 15,000 limit reused)."""
+    cap = _ok(**SINGLE, stock_relief=30_000, stock_relief_regime="young_trained_farmer",
+              pension_contributions=20_000, birth_year=1981)["stock_relief_cap"]
+    assert cap["tax_value"] == 11_897.8

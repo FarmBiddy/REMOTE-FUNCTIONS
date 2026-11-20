@@ -37,6 +37,7 @@ EXPECTED_PUBLIC_IDS = (
     "kpi.summary",
     "pl.net",
     "bs.summary",
+    "herd.valuation",
     "milk.quality",
     "vat.flat_rate",
     "tax.stock_relief",
@@ -170,6 +171,8 @@ def _happy_payload(calculation_id: str) -> dict:
     if calculation_id == "milk.quality":
         return {"months": [{"year": 2026, "month": 3, "milk_litres": 1_000, "fat_pct": 4.2,
                             "protein_pct": 3.5, "scc_k": 120, "tbc_k": 10}]}
+    if calculation_id == "herd.valuation":
+        return {"year": 2026, "month": 12, "groups": [{"category": "calves", "head": 10, "unit_market_value": 300}, {"category": "dairy_cows", "head": 2, "unit_market_value": 1_500, "unit_held_value": 1_200}]}
     if calculation_id == "bs.summary":
         return {"year": 2026, "month": 12, "cash": 1_000, "land": 10_000}
     if calculation_id == "pl.compare":
@@ -196,8 +199,8 @@ def _happy_payload(calculation_id: str) -> dict:
 
 def test_exactly_thirty_seven_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 39
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 39
+    assert len(PUBLIC_CALCULATION_IDS) == 40
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 40
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

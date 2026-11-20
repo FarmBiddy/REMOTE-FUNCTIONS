@@ -1,0 +1,38 @@
+{
+  "year": 2026,
+  "month": 12,
+  "groups": [
+    {
+      "label": "Milking cows",
+      "category": "dairy_cows",
+      "head": 110,
+      "unit_market_value": 2400,
+      "unit_held_value": 1900
+    },
+    {
+      "label": "In-calf heifers",
+      "category": "heifers",
+      "head": 28,
+      "unit_market_value": 2100
+    },
+    {
+      "label": "Weanling heifers",
+      "category": "weanlings",
+      "head": 30,
+      "unit_market_value": 950
+    },
+    {
+      "label": "Bull calves",
+      "category": "calves",
+      "head": 12,
+      "unit_market_value": 120
+    },
+    {
+      "label": "Stock bull",
+      "category": "stock_bulls",
+      "head": 1,
+      "unit_market_value": 2200,
+      "unit_held_value": 2800
+    }
+  ]
+}

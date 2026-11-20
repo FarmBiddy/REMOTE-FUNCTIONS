@@ -788,7 +788,7 @@ class RuleApplied(_Out):
     from_: str = Field(alias="from")
     to: str | None
     legal_ref: str
-    status: Literal["enacted", "announced"]
+    status: Literal["enacted", "announced", "practice"]
 
 
 class VatMonth(_Out):
@@ -1052,6 +1052,32 @@ class DirectDebitInstalment(_Out):
     amount: float
 
 
+class HerdGroupValue(_Out):
+    label: str
+    category: str
+    head: float
+    unit_market_value: float
+    market_value: float
+    unit_revenue_practice_value: float
+    revenue_practice_value: float
+    revenue_practice_basis: Literal["deemed_cost_pct", "held_value", "written_down_to_market"]
+
+
+class HerdTotal(_Out):
+    head: float
+    market_value: float
+    revenue_practice_value: float
+
+
+class HerdValuationResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    as_of: MonthlyPeriodIdentity
+    groups: list[HerdGroupValue]
+    total: HerdTotal
+    rules_applied: list[RuleApplied]
+
+
 class ReconcileBridge(_Out):
     herd_value_change: float
     stock_value_change: float
@@ -1228,6 +1254,7 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "tax.payments": TaxPaymentsResult,
     "cf.reconcile": CfReconcileResult,
     "bs.summary": BsSummaryResult,
+    "herd.valuation": HerdValuationResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,
     "risk.sensitivity": RiskSensitivityResult,

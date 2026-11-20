@@ -514,6 +514,14 @@ years of filed accounts: send them as `filed_years` (`net_profit`,
 `filed` next to the current figures, labelled "on your filed accounts"; the
 engine does not choose between them (ADR-0055). Same in `report.bank`.
 
+Herd values (ADR-0055): at each year end, call `herd.valuation` with the head
+count per group (from ICBF / the farmer's stock take) and the market value per
+head (Platform data: mart reports, the farmer, the accountant). For mature
+breeding stock also send the value per head held since they matured (Platform
+history). Send `total.revenue_practice_value` as the livestock value to
+`pl.net` / `tax.stock_relief` (accounts and tax) and show
+`total.market_value` next to it for a bank; label which is which.
+
 Profit to cash (ADR-0055): accounts are on an accruals basis (milk paid a
 month later, merchant credit, stock), the monthly figures on cash. Before a
 bank or accountant relies on the monthly figures, call `cf.reconcile` with the

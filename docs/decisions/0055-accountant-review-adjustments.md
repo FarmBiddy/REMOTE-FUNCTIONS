@@ -206,14 +206,29 @@ where the Engine's Irish layer differs from practice.
   outside both sides (financing / investing in `cf.*`, not in the Operating
   Surplus).
 
+### 7. `herd.valuation`: the herd on market value and Revenue practice
+
+- The accountant: herd and stock are valued as numbers × average value, at
+  60% of market value for Revenue or loans. Confirmed as Revenue practice
+  (deemed cost: immature cattle 60%, sheep and pigs 75%; mature breeding stock
+  at the value held since maturity, written down to market if lower).
+- New ID `herd.valuation`: groups (category, head, market value per head, and
+  for mature breeding stock the held value per head → `needs_input` without
+  it) at a valuation date; returns both bases side by side; the Platform
+  chooses which feeds accounts and tax (Revenue practice) and which a bank
+  view (market). Market values are Platform data: the Engine has none.
+- New rule status `practice` (Revenue practice, not statute) next to
+  `enacted` / `announced`, so the source is never overstated.
+- Rules in `farm_functions/ie/livestock_valuation.py`.
+
 ## Consequences
 - Breaking for callers of `tax.estimate` that are individuals and of
   `tax.partnership`, and `plan.projection` tax profiles of individuals: they
   must send `income_averaging`; individual tax profiles also `preliminary_basis`
   and `tax_history`, and projected cash / net worth change with the new
   timing. `tax.capital_allowances` no longer takes `flat_rate_addition`.
-  `debt.capacity` and the reports need `tax_source` with `tax`. 39 public IDs.
-  Engine 1.11.0.
+  `debt.capacity` and the reports need `tax_source` with `tax`. 40 public IDs.
+  Rule status gains `practice`. Engine 1.11.0.
 
 ## Related
 

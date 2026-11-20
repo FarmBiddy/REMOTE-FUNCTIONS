@@ -81,6 +81,7 @@ def test_discovery_lists_core_functions_only():
     "tax.company_extraction",
     "tax.payments",
         "bs.summary",
+        "herd.valuation",
         "report.bank",
         "report.advisor",
         "report.accountant",

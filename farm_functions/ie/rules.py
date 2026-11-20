@@ -19,7 +19,8 @@ class Rule:
     start: date
     end: date | None
     legal_ref: str
-    status: Literal["enacted", "announced"]
+    # enacted = law; announced = Budget / Bill, not yet law; practice = Revenue practice, not statute.
+    status: Literal["enacted", "announced", "practice"]
 
     def as_dict(self) -> dict:
         return {

@@ -222,6 +222,9 @@ def _happy_payload(key: str) -> dict:
         return SAMPLE_PL_NET
     if key == "bs.summary":
         return SAMPLE_BS
+    if key == "herd.valuation":
+        # Calves 10 × 300 × 60% = 1,800; cows 2 × min(1,200, 1,500) = 2,400 → 4,200 (market 6,000).
+        return {"year": 2026, "month": 12, "groups": [{"category": "calves", "head": 10, "unit_market_value": 300}, {"category": "dairy_cows", "head": 2, "unit_market_value": 1_500, "unit_held_value": 1_200}]}
     if key in REPORT_KEYS:
         return SAMPLE_REPORT
     if key == "plan.projection":
@@ -381,6 +384,8 @@ def _zero_payload(key: str) -> dict:
             "opening_cash": 0,
             "milking_cows": 0,
         }
+    if key == "herd.valuation":
+        return {"year": 2026, "month": 12, "groups": [{"category": "calves", "head": 0, "unit_market_value": 0}]}
     if key == "bs.summary":
         return {
             "year": 1, "month": 1, "cash": 0, "debtors": 0, "stock": 0, "livestock": 0, "land": 0,
@@ -573,6 +578,8 @@ def test_happy_path(key: str) -> None:
         assert body["liabilities"]["current"]["loans_due_within_12_months"] == 12_000
         assert body["net_worth"] == 85_000
         assert body["ratios"]["current_ratio"] == 0.59
+    elif key == "herd.valuation":
+        assert result["result"]["total"] == {"head": 12, "market_value": 6_000, "revenue_practice_value": 4_200}
     elif key == "pl.net":
         body = result["result"]
         assert (body["adjusted_surplus"], body["ebit"], body["net_profit_before_tax"]) == (3_500, 2_500, 2_300)
@@ -745,6 +752,8 @@ def test_explicit_zeros_are_ok(key: str) -> None:
         body = result["result"]
         assert body["net_worth"] == 0
         assert body["ratios"]["equity_pct"] is None and body["ratios"]["current_ratio"] is None
+    elif key == "herd.valuation":
+        assert result["result"]["total"]["revenue_practice_value"] == 0
     elif key == "pl.net":
         assert result["result"]["net_profit_before_tax"] == 0
         assert result["result"]["net_margin_pct"] is None

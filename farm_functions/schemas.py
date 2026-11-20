@@ -19,6 +19,8 @@ from farm_functions.ie import FLAT_RATE_ADDITION, rule_at
 from farm_functions.ie import preliminary as prelim
 from farm_functions.ie.averaging import AVERAGING_YEARS, averaging_rule
 from farm_functions.ie.home_carer import home_carer_rules
+from farm_functions.ie.livestock_valuation import MATURE as LIVESTOCK_MATURE
+from farm_functions.ie.livestock_valuation import deemed_cost_rule
 from farm_functions.ie.capital_allowances import DEFAULT_FOR_CATEGORY
 from farm_functions.ie.partnership import MIN_SUCCESSOR_SHARE_PCT
 from farm_functions.ie.taxes import LAST_TAX_YEAR, year_rules
@@ -364,6 +366,46 @@ class CfReconcileInput(_StrictModel):
         _reject_duplicate_months(self.cf_months)
         if {(m.year, m.month) for m in self.pl_months} != {(m.year, m.month) for m in self.cf_months}:
             raise ValueError("cf_months must cover the same months as pl_months")
+        return self
+
+
+class HerdGroupInput(_StrictModel):
+    """One group of animals at the valuation date (ADR-0055). ``unit_held_value``:
+    mature breeding stock only, the value per head fixed when they matured (or
+    their purchase price), Platform history."""
+
+    label: str = Field("", max_length=80)
+    category: Literal[
+        "dairy_cows", "suckler_cows", "stock_bulls", "heifers", "calves", "weanlings", "stores",
+        "finishing_cattle", "breeding_ewes", "rams", "lambs", "other_sheep", "pigs",
+    ]
+    head: NonNegativeNumber
+    unit_market_value: NonNegativeNumber
+    unit_held_value: NonNegativeNumber | None = None
+
+    @model_validator(mode="after")
+    def _held(self) -> "HerdGroupInput":
+        mature = self.category in LIVESTOCK_MATURE
+        if mature and self.unit_held_value is None:
+            raise missing_inputs("unit_held_value")
+        if not mature and self.unit_held_value is not None:
+            raise ValueError("unit_held_value is only for mature breeding stock")
+        return self
+
+
+class HerdValuationInput(_StrictModel):
+    """HTTP / runner input for ``herd.valuation`` (ADR-0055): the groups at the
+    valuation date (usually the accounting year end)."""
+
+    year: CalendarYear
+    month: CalendarMonth
+    groups: list[HerdGroupInput] = Field(..., min_length=1, max_length=30)
+
+    @model_validator(mode="after")
+    def _rules(self) -> "HerdValuationInput":
+        on = date(self.year, self.month, 1)
+        if any(deemed_cost_rule(g.category, on) is None for g in self.groups):
+            raise ValueError(f"no livestock valuation rule for {self.year}-{self.month:02d}")
         return self
 
 
@@ -1878,7 +1920,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
             "capital_allowances", "current_year_tax", "preceding_year_tax", "pre_preceding_year_tax",
             "preceding_year_preliminary_paid", "liability", "preliminary_paid", "net_profit", "total_tax", "losses_forward", "pension_contributions", "spouse_self_employed_income", "spouse_farm_wages",
-            "milk_debtors_opening", "milk_debtors_closing", "other_debtors_opening", "other_debtors_closing", "merchant_credit_opening", "merchant_credit_closing", "other_creditors_opening", "other_creditors_closing",
+            "milk_debtors_opening", "milk_debtors_closing", "other_debtors_opening", "other_debtors_closing", "merchant_credit_opening", "merchant_credit_closing", "unit_market_value", "unit_held_value", "other_creditors_opening", "other_creditors_closing",
         ),
         _EUR,
     ),
@@ -1921,7 +1963,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "cf_months", "comparison", "forecast", "history", "investments", "loans", "months",
             "pl_months", "prior_pl_months", "projected_cf_months", "projected_pl_months",
             "reduced_costs", "reduced_income", "scenarios", "prior_farming_profits", "partners", "tax_history",
-            "filed_years",
+            "filed_years", "groups",
         ),
         "list",
     ),
@@ -1941,6 +1983,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
     "young_trained_farmer_first_year": "year",
     **dict.fromkeys(("tax_year", "registered_year", "successor_birth_year", "birth_year"), "year"),
     "profit_share_pct": "%",
+    "head": "head",
     "successor": "index",
     **dict.fromkeys(
         ("business_type", "tax_allowance", "marital_status", "stock_relief_regime", "preliminary_basis", "tax_source"),

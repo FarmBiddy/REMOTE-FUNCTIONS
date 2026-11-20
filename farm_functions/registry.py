@@ -24,6 +24,7 @@ from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.decisions import investment_appraisal, partial_budget
 from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
+from farm_functions.livestock import herd_valuation
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.quality import milk_quality
@@ -58,6 +59,7 @@ from farm_functions.schemas import (
     CfMonthlyInput,
     CfCompareInput,
     CfReconcileInput,
+    HerdValuationInput,
     CfForecastInput,
     CfMonthsInput,
     FarmReportInput,
@@ -410,6 +412,19 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=BsSummaryInput,
         handler=bs_summary,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="herd.valuation",
+        description=(
+            "Herd and flock at a valuation date: head × value per head for each group, on "
+            "market value and on Irish Revenue practice side by side (young cattle 60%, "
+            "young sheep / pigs 75% of market value; mature breeding stock at the value "
+            "held since maturity, written down to market if lower); totals for pl.net, "
+            "tax.stock_relief and bs.summary."
+        ),
+        input_model=HerdValuationInput,
+        handler=herd_valuation,
         supports_provenance=False,
     ),
     CalculationDefinition(

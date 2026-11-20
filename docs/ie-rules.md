@@ -213,6 +213,31 @@ SW(MP)A 2024)
   saved (Reg. (EU) 2022/2472 Art. 18(7); s.667B(7), s.667D(8)). The aid already
   used is history the Platform holds.
 
+## 4A. Livestock valuation (Revenue practice; checked 2026-11-20)
+
+| rule_id | value | applies | from / to | ref | status |
+|---|---|---|---|---|---|
+| livestock_deemed_cost_cattle_pct | 60% of market value | immature cattle, home-bred or bought young | 2024 → 2027 (researched window) | Revenue milk production partnerships guidance App. 2 (SCSI 2020 App. 3) | practice |
+| livestock_deemed_cost_sheep_pct | 75% | immature sheep | 2024 → 2027 | same | practice |
+| livestock_deemed_cost_pigs_pct | 75% | pigs | 2024 → 2027 | same | practice |
+
+- Status **practice** = Revenue practice, not statute: the normal rule is the
+  lower of cost and market value (FRS 102 s.13); the % is an accepted deemed
+  cost. The accountant (Nov 2026): "stock numbers × average value, valued at
+  60% of market value"; IFAC practice notes say the same for calves, weanlings
+  and stores.
+- Mature breeding stock (a cow after her first calf, stock bulls, breeding
+  ewes, rams): held at the value fixed when they matured — home-bred at the %
+  of market value at the first accounting date after maturity, bought at
+  purchase price — and written down to market value if lower. That held value
+  is Platform history (`unit_held_value`).
+- Harvested crops 75%; home-grown fodder and growing crops need not be valued;
+  unspread fertiliser at cost (not in `herd.valuation`).
+- Revenue's current partnership TDM 23-02-09 is offline; the appendix is from
+  the archived guidance as reproduced by SCSI. Banks publish no valuation basis.
+- Engine: `herd.valuation` (ADR-0055); module
+  `farm_functions/ie/livestock_valuation.py`.
+
 ## 5. Capital allowances
 
 | rule_id | value | base | applies | from / to | ref | status |

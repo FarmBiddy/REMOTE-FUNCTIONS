@@ -101,6 +101,13 @@ PAYLOADS = {
                                   {"max_k": 400, "adjustment_c": 0}, {"adjustment_c": -1}],
                     "tbc_bands": [{"max_k": 10, "adjustment_c": 0.2}, {"adjustment_c": 0}]},
     },
+    # Joe's herd at the Sep 2026 year end: 100 cows held at 2,400 (market 2,600),
+    # 30 in-calf heifers 2,000, 35 calves 600 (Revenue practice 60%).
+    "herd.valuation": {"year": 2026, "month": 9, "groups": [
+        {"category": "dairy_cows", "head": 100, "unit_market_value": 2_600, "unit_held_value": 2_400},
+        {"category": "heifers", "head": 30, "unit_market_value": 2_000},
+        {"category": "calves", "head": 35, "unit_market_value": 600},
+    ]},
     "bs.summary": {"year": 2026, "month": 9, "loans": joe.LOANS, "assets": joe.ASSETS,
                    **{k: joe.VALUES[k] for k in ("debtors", "stock", "livestock", "land", "creditors")}},
     "pl.compare": {"actual": joe.ACTUAL, "comparison": joe.PRIOR},

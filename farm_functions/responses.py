@@ -929,6 +929,17 @@ class AveragingDetail(_Out):
     assessable_profit: float
 
 
+class LossesForward(_Out):
+    """Losses brought forward and what happened to them (s.382, ADR-0055)."""
+
+    brought_forward: float
+    used: float
+    lost_by_stock_relief: float
+    this_year_loss: float
+    carried_forward: float
+    prsi_treatment: Literal["reduced_unconfirmed"]
+
+
 class TaxEstimateResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -945,6 +956,7 @@ class TaxEstimateResult(_Out):
     effective_rate_pct: float | None
     rules_applied: list[RuleApplied]
     averaging: AveragingDetail | None
+    losses: LossesForward | None
 
 
 class ExtractionCompany(_Out):

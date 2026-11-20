@@ -24,6 +24,8 @@ from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.ie import capital_allowances as ca
 from farm_functions.ie import preliminary as prelim
 from farm_functions.ie.averaging import averaged_profit, averaging_rule
+from farm_functions.ie.losses import PRSI_TREATMENT as LOSS_PRSI_TREATMENT
+from farm_functions.ie.losses import apply_losses
 from farm_functions.ie.partnership import (
     SUCCESSION_CREDIT,
     SUCCESSION_CREDIT_YEARS,
@@ -267,24 +269,31 @@ def tax_estimate(
     income_averaging: bool | None = None,
     prior_farming_profits: list[float] | None = None,
     capital_allowances: float | None = None,
+    losses_forward: float = 0.0,
     **inputs: Any,
 ) -> dict[str, Any]:
     """``tax.estimate``: tax for one year on taxable farming profit (after capital
     allowances and stock relief), applying the stock relief caps on tax value.
     With income averaging the averaged profit is assessed, and this year's stock
-    relief counts a fifth towards its cap (it moves the average by a fifth)."""
+    relief counts a fifth towards its cap (it moves the average by a fifth).
+    Individuals' losses brought forward (s.382) then reduce the profit charged."""
     averaging = rule = None
+    relief_effect = stock_relief
     if income_averaging:
         taxable_profit, averaging, rule = averaging_view(
             tax_year, taxable_profit + capital_allowances, prior_farming_profits, capital_allowances
         )
-        stock_relief /= averaging["years"]
+        relief_effect = stock_relief / averaging["years"]
+    losses = None
+    if inputs["business_type"] != "company":
+        taxable_profit, used = apply_losses(taxable_profit, losses_forward, stock_relief > 0)
+        losses = {k: round_money(v) for k, v in used.items()} | {"prsi_treatment": LOSS_PRSI_TREATMENT}
     result = estimate_with_rules(
-        year_rules(tax_year), tax_year=tax_year, taxable_profit=taxable_profit, stock_relief=stock_relief, **inputs
+        year_rules(tax_year), tax_year=tax_year, taxable_profit=taxable_profit, stock_relief=relief_effect, **inputs
     )
     if rule is not None:
         result["rules_applied"].append(rule.as_dict())
-    return {**result, "averaging": averaging}
+    return {**result, "averaging": averaging, "losses": losses}
 
 
 def estimate_with_rules(
@@ -359,6 +368,7 @@ def estimate_with_rules(
         "effective_rate_pct": None if rate is None else round_margin_pct(rate * 100),
         "rules_applied": [rules[k].as_dict() for k in used],
         "averaging": None,
+        "losses": None,
     }
 
 

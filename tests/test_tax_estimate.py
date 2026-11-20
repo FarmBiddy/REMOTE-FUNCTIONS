@@ -188,3 +188,42 @@ def test_averaging_errors():
     assert _reason(**SINGLE, prior_farming_profits=[1, 2, 3, 4]) == "needs_income_averaging"
     assert _reason(**SINGLE, capital_allowances=0) == "needs_income_averaging"
     assert _reason(business_type="company", tax_year=2026, taxable_profit=1, income_averaging=True) == "regime_not_available"
+
+
+# Losses carried forward (s.382, ADR-0055 §5a), single 2026.
+def test_losses_forward_reduce_the_profit_charged():
+    """60,000 − 10,000 losses = 50,000: the same tax as a 50,000 year (10,351.57)."""
+    body = _ok(**SINGLE, losses_forward=10_000)
+    assert body["losses"] == {
+        "brought_forward": 10_000, "used": 10_000, "lost_by_stock_relief": 0, "this_year_loss": 0,
+        "carried_forward": 0, "prsi_treatment": "reduced_unconfirmed",
+    }
+    assert body["income"]["farm_profit"] == 50_000 and body["total_tax"] == 10_351.57
+
+
+def test_unused_losses_carry_on():
+    body = _ok(**SINGLE, losses_forward=80_000)
+    assert (body["losses"]["used"], body["losses"]["carried_forward"], body["total_tax"]) == (60_000, 20_000, 0)
+
+
+def test_stock_relief_claim_stops_losses_going_further():
+    """s.666(3): in a stock relief claim year the 20,000 left over cannot be carried on."""
+    losses = _ok(**SINGLE, losses_forward=80_000, stock_relief=3_000)["losses"]
+    assert (losses["used"], losses["lost_by_stock_relief"], losses["carried_forward"]) == (60_000, 20_000, 0)
+
+
+def test_a_loss_year_adds_to_what_is_carried():
+    losses = _ok(**{**SINGLE, "taxable_profit": -15_000}, losses_forward=5_000)["losses"]
+    assert (losses["used"], losses["this_year_loss"], losses["carried_forward"]) == (0, 15_000, 20_000)
+
+
+def test_losses_come_after_averaging():
+    """Averaged assessable 50,000 (see AVERAGING) − 5,000 losses = 45,000."""
+    body = _ok(**AVERAGING, losses_forward=5_000)
+    assert body["averaging"]["assessable_profit"] == 50_000 and body["income"]["farm_profit"] == 45_000
+
+
+def test_company_losses_are_not_modelled():
+    result = _run(business_type="company", tax_year=2026, taxable_profit=10_000, losses_forward=1_000)
+    assert result["errors"][0]["details"]["reason"] == "regime_not_available"
+    assert _ok(business_type="company", tax_year=2026, taxable_profit=10_000)["losses"] is None

@@ -273,6 +273,29 @@ SW(MP)A 2024)
   before's balance; the 105% direct debit basis is `tax.payments` only.
   Companies keep tax paid in the year (corporation tax dates not modelled).
 
+## 6B. Losses carried forward (individuals; checked 2026-11-20)
+
+- **s.382**: an unused trading loss is set against later profits of the
+  **same trade**, earliest first, no time limit (TDM 12-01-02). Enacted.
+- **s.381** (against other income in the same year) is restricted for farming
+  by **s.662** after 3 loss years in a row (TDM 23-01-05): not modelled.
+- **USC**: s.382 losses reduce USC income (s.531AU); s.381 losses do not.
+- **PRSI Class S**: reckonable income is income "as estimated in accordance
+  with the Income Tax Acts" after capital allowances (SWCA 2005 s.2(1); Revenue
+  "PRSI for self-employed"). Read as after s.382 losses too — **not stated
+  outright** by Revenue or DSP; the result says `prsi_treatment:
+  reduced_unconfirmed`.
+- **Stock relief claim year**: losses brought forward can be used that year
+  but not carried beyond it (s.666(3)).
+- **Under averaging**: a net 5-year loss gives nil assessable and 1/5 of it is
+  relievable (TDM 23-01-34); the Engine carries that fifth.
+- Engine (`tax.estimate`, ADR-0055): `losses_forward` applied after averaging
+  and capital allowances; result `losses{brought_forward, used,
+  lost_by_stock_relief, this_year_loss, carried_forward, prsi_treatment}`. A
+  negative assessable profit (incl. allowances above the profit, s.304(4)) is
+  carried forward. Companies (s.396): not modelled. Module
+  `farm_functions/ie/losses.py`.
+
 ## 7. Partnerships
 
 - Transparent: profit computed as a sole trader (no deduction for partner

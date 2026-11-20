@@ -415,6 +415,8 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             "marital status, enhanced stock relief, State aid and averaging are for individuals",
         ):
             issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
+        elif text == "losses_forward is for individuals (company losses are not modelled)":
+            issues.append(issue(INVALID_TYPE, text, field=at("losses_forward"), details={"reason": "regime_not_available"}))
         elif text == "income averaging is for individuals, not companies":
             issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
         elif text.endswith("only used with income_averaging"):

@@ -1202,9 +1202,13 @@ class TaxEstimateInput(_StrictModel):
     income_averaging: bool | None = None
     prior_farming_profits: list[SignedNumber] = Field(default_factory=list, max_length=MAX_PRIOR_FARMING_PROFITS)
     capital_allowances: NonNegativeNumber | None = None
+    # Individuals: s.382 losses of the farm trade brought forward (ADR-0055).
+    losses_forward: NonNegativeNumber = 0.0
 
     @model_validator(mode="after")
     def _profile(self) -> "TaxEstimateInput":
+        if self.business_type == "company" and self.losses_forward:
+            raise ValueError("losses_forward is for individuals (company losses are not modelled)")
         personal = self.marital_status == "married" or self.stock_relief_regime != "general" or self.state_aid_used
         if self.business_type == "company" and personal:
             raise ValueError("marital status, enhanced stock relief and State aid are for individuals")
@@ -1814,7 +1818,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "grant", "accounting_profit", "taxable_profit", "other_income", "spouse_paye_income",
             "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
             "capital_allowances", "current_year_tax", "preceding_year_tax", "pre_preceding_year_tax",
-            "preceding_year_preliminary_paid", "liability", "preliminary_paid", "net_profit", "total_tax",
+            "preceding_year_preliminary_paid", "liability", "preliminary_paid", "net_profit", "total_tax", "losses_forward",
         ),
         _EUR,
     ),

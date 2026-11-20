@@ -886,6 +886,8 @@ class TaxIncome(_Out):
     farm_profit: float
     other_income: float
     spouse_paye_income: float
+    spouse_self_employed_income: float
+    spouse_farm_wages: float
     total: float
 
 

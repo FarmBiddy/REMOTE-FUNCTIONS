@@ -122,6 +122,24 @@ SW(MP)A 2024)
   rate) above a weekly threshold of €552 (2026), €600 (2027, announced).
   Wages are already an operating cost; employer PRSI is reference only.
 
+## 2B. The spouse's own income (checked 2026-11-20)
+
+- **Second-earner band increase** (s.15(3)–(4)): the lesser of the maximum
+  and the "specified income" of the lower-earning spouse — total income of
+  **any type** after source deductions (allowances, losses), excluding DIRT
+  interest. So a spouse's own trade or farm wages count.
+- **Spouse with their own trade**: earned income credit (s.472AB) and their own
+  Class S PRSI with their own 5,000 threshold (SWCA s.2(1) ignores joint
+  assessment); non-PAYE income for the USC surcharge.
+- **Spouse paid wages by a sole-trader spouse**: no employee (PAYE) credit,
+  the earned income credit instead (TDM 15-01-44 Example 4); USC as PAYE pay;
+  **no PRSI** — employment by one's spouse is excepted (SWCA 2005 Sch. 1
+  Part 2 para 1; Class M). The farm's P&L already carries the wages as labour.
+- Employee and earned income credits share one cap per person (2,000 in
+  2025–26, 2,125 announced 2027).
+- Engine (`tax.estimate`, ADR-0055): `spouse_self_employed_income`,
+  `spouse_farm_wages` (sole traders only), next to `spouse_paye_income`.
+
 ## 2A. Home carer credit (s.466A; TDM 15-01-29; checked 2026-11-20)
 
 | rule_id | 2024 | 2025 | 2026 | 2027 | ref | status |

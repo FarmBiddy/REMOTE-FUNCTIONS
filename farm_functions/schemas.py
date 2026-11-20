@@ -1212,9 +1212,17 @@ class TaxEstimateInput(_StrictModel):
     # Married couples: the Platform confirms the spouse cares for a dependant at home
     # (s.466A); the spouse's own income is the carer's income (ADR-0055).
     home_carer: bool = False
+    # Married: the spouse's own trade (after its allowances) and wages the farmer
+    # (sole trader) pays the spouse (ADR-0055).
+    spouse_self_employed_income: NonNegativeNumber = 0.0
+    spouse_farm_wages: NonNegativeNumber = 0.0
 
     @model_validator(mode="after")
     def _profile(self) -> "TaxEstimateInput":
+        if (self.spouse_self_employed_income or self.spouse_farm_wages) and self.marital_status != "married":
+            raise ValueError("spouse income needs marital_status married")
+        if self.spouse_farm_wages and self.business_type != "sole_trader":
+            raise ValueError("spouse_farm_wages are wages a sole trader pays the spouse")
         if self.home_carer:
             if self.marital_status != "married":
                 raise ValueError("home_carer needs marital_status married")
@@ -1839,7 +1847,7 @@ OTHER_FIELD_UNITS: dict[str, str] = {
             "grant", "accounting_profit", "taxable_profit", "other_income", "spouse_paye_income",
             "stock_relief", "state_aid_used", "non_trading_income", "salary", "dividends", "flat_rate_addition",
             "capital_allowances", "current_year_tax", "preceding_year_tax", "pre_preceding_year_tax",
-            "preceding_year_preliminary_paid", "liability", "preliminary_paid", "net_profit", "total_tax", "losses_forward", "pension_contributions",
+            "preceding_year_preliminary_paid", "liability", "preliminary_paid", "net_profit", "total_tax", "losses_forward", "pension_contributions", "spouse_self_employed_income", "spouse_farm_wages",
         ),
         _EUR,
     ),

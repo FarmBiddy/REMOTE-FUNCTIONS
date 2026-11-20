@@ -305,3 +305,39 @@ def test_home_carer_rules_and_eligibility():
     assert _ok(**{**MARRIED, "tax_year": 2024}, home_carer=True)["home_carer"]["credit_after_taper"] == 1_800
     assert _reason(**{**MARRIED, "tax_year": 2027}, home_carer=True) == "rule_not_available"
     assert _reason(**SINGLE, home_carer=True) == "spouse_needs_married"
+
+
+# Spouse's own income (ADR-0055 §5d), married 2026, farm profit 60,000.
+#   Own trade 30,000: same band (83,000) and credits (earned income instead of employee),
+#   USC 432.82, Class S 30,000 × 4.2375% = 1,271.25 → 16,979.39, as PAYE pay of 30,000
+#   Farm wages 30,000: same income tax and USC, no PRSI (excepted employment) → 15,708.14
+#   PAYE 8,000 + own trade 8,000: credits 1,600 + 1,600 capped at 2,000 per person;
+#     band 53,000 + 16,000 = 69,000; IT 13,800 + 2,800 − 8,000 = 8,600;
+#     PRSI: Class A nil (153.85 a week), Class S minimum 650
+def test_spouse_own_trade():
+    body = _ok(**MARRIED, spouse_self_employed_income=30_000)
+    assert body["income"]["spouse_self_employed_income"] == 30_000 and body["income"]["total"] == 90_000
+    assert body["income_tax"]["standard_rate_band"] == 83_000 and body["income_tax"]["net"] == 11_400
+    assert (body["usc"]["spouse"], body["prsi"]["spouse"], body["total_tax"]) == (432.82, 1_271.25, 16_979.39)
+
+
+def test_spouse_paid_by_the_farm_pays_no_prsi():
+    body = _ok(**MARRIED, spouse_farm_wages=30_000)
+    assert body["income_tax"]["net"] == 11_400 and body["usc"]["spouse"] == 432.82
+    assert body["prsi"]["spouse"] == 0 and body["total_tax"] == 15_708.14
+
+
+def test_spouse_credits_share_one_cap():
+    body = _ok(**MARRIED, spouse_paye_income=8_000, spouse_self_employed_income=8_000)
+    assert body["income_tax"]["standard_rate_band"] == 69_000
+    assert (body["income_tax"]["credits"], body["income_tax"]["net"]) == (8_000, 8_600)
+    assert body["prsi"]["spouse"] == 650
+
+
+def test_home_carer_counts_all_the_spouse_income():
+    assert _ok(**MARRIED, spouse_self_employed_income=9_000, home_carer=True)["home_carer"]["credit_after_taper"] == 1_050
+
+
+def test_spouse_income_errors():
+    assert _reason(**SINGLE, spouse_self_employed_income=1) == "spouse_needs_married"
+    assert _reason(**{**MARRIED, "business_type": "partnership"}, spouse_farm_wages=1) == "regime_not_available"

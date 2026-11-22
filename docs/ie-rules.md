@@ -45,6 +45,13 @@ credit and USC rate pages; Teagasc NFS 2025 report and dairy factsheet.
   farmer** (s.4 "a person"; Teagasc — `unverified` against Revenue).
 - Registration only for intra-EU acquisitions (> €41,000) or foreign services
   is ring-fenced: flat-rate status kept.
+- **In the accounts** the FRA is farm income (trading receipt, taxable): the
+  farmer keeps it and it is not VAT due (Revenue scheme TDM; IFAC accountant,
+  Nov 2026). No Revenue text says "taxable" outright — inference, confirmed in
+  practice. Engine: a monthly `pl.*` / `cf.*` line `flat_rate_addition`
+  (ADR-0055); annual Phase 1 IDs (`pl.summary`, `revenue.*`) stay ex-FRA.
+- Teagasc NFS: no VAT statement in the 2024 report; the milk prices it quotes
+  match the CSO VAT-inclusive series. Likely VAT-inclusive, **unconfirmed**.
 - Input VAT for flat-rate farmers is a cost (the FRA compensates it), except
   **VAT 58 refunds** (S.I. 201/2012) on farm buildings, fencing, drainage, land
   reclamation, micro-generation — not machinery.
@@ -115,6 +122,47 @@ SW(MP)A 2024)
   rate) above a weekly threshold of €552 (2026), €600 (2027, announced).
   Wages are already an operating cost; employer PRSI is reference only.
 
+## 2B. The spouse's own income (checked 2026-11-20)
+
+- **Second-earner band increase** (s.15(3)–(4)): the lesser of the maximum
+  and the "specified income" of the lower-earning spouse — total income of
+  **any type** after source deductions (allowances, losses), excluding DIRT
+  interest. So a spouse's own trade or farm wages count.
+- **Spouse with their own trade**: earned income credit (s.472AB) and their own
+  Class S PRSI with their own 5,000 threshold (SWCA s.2(1) ignores joint
+  assessment); non-PAYE income for the USC surcharge.
+- **Spouse paid wages by a sole-trader spouse**: no employee (PAYE) credit,
+  the earned income credit instead (TDM 15-01-44 Example 4); USC as PAYE pay;
+  **no PRSI** — employment by one's spouse is excepted (SWCA 2005 Sch. 1
+  Part 2 para 1; Class M). The farm's P&L already carries the wages as labour.
+- Employee and earned income credits share one cap per person (2,000 in
+  2025–26, 2,125 announced 2027).
+- Engine (`tax.estimate`, ADR-0055): `spouse_self_employed_income`,
+  `spouse_farm_wages` (sole traders only), next to `spouse_paye_income`.
+
+## 2A. Home carer credit (s.466A; TDM 15-01-29; checked 2026-11-20)
+
+| rule_id | 2024 | 2025 | 2026 | 2027 | ref | status |
+|---|---|---|---|---|---|---|
+| home_carer_credit | 1,800 | 1,950 | 1,950 | 2,050 announced — **not in the Engine** | s.466A | enacted 2024–26 |
+| home_carer_income_limit | 7,200 | 7,200 | 7,200 | not confirmed | s.466A(3) | enacted 2024–26 |
+
+- Jointly assessed; the carer cares for a dependant (child, person over 65,
+  or permanently incapacitated) at home. Eligibility is the Platform's answer
+  (`home_carer`); the carer's income is the spouse's (Carer's Allowance /
+  Benefit excluded).
+- Full credit up to the limit, reduced by half the excess: nil at 10,800 (2024)
+  and 11,100 (2025–26). Revenue's rates page says 11,100 for 2024 — a year
+  mix-up; TDM 15-01-29 gives 10,800.
+- Not with the second-earner band increase in the same year: Revenue gives
+  whichever is better; so does the Engine (`applied`).
+- 2027: only the credit is announced (CAI, KPMG); no source confirms the
+  7,200 limit, so a 2027 claim is `rule_not_available` until the Bill text is
+  checked (decided with the user). Module `farm_functions/ie/home_carer.py`
+  (kept apart from the yearly table so 2027 estimates without a claim work).
+- Not modelled: single person child carer credit (1,750 / 1,900 / 1,900 +
+  4,000 band, s.462B), age credit (245 / 490, s.464), rent credit.
+
 ## 3. Companies
 
 | rule_id | value | ref | status |
@@ -165,6 +213,31 @@ SW(MP)A 2024)
   saved (Reg. (EU) 2022/2472 Art. 18(7); s.667B(7), s.667D(8)). The aid already
   used is history the Platform holds.
 
+## 4A. Livestock valuation (Revenue practice; checked 2026-11-20)
+
+| rule_id | value | applies | from / to | ref | status |
+|---|---|---|---|---|---|
+| livestock_deemed_cost_cattle_pct | 60% of market value | immature cattle, home-bred or bought young | 2024 → 2027 (researched window) | Revenue milk production partnerships guidance App. 2 (SCSI 2020 App. 3) | practice |
+| livestock_deemed_cost_sheep_pct | 75% | immature sheep | 2024 → 2027 | same | practice |
+| livestock_deemed_cost_pigs_pct | 75% | pigs | 2024 → 2027 | same | practice |
+
+- Status **practice** = Revenue practice, not statute: the normal rule is the
+  lower of cost and market value (FRS 102 s.13); the % is an accepted deemed
+  cost. The accountant (Nov 2026): "stock numbers × average value, valued at
+  60% of market value"; IFAC practice notes say the same for calves, weanlings
+  and stores.
+- Mature breeding stock (a cow after her first calf, stock bulls, breeding
+  ewes, rams): held at the value fixed when they matured — home-bred at the %
+  of market value at the first accounting date after maturity, bought at
+  purchase price — and written down to market value if lower. That held value
+  is Platform history (`unit_held_value`).
+- Harvested crops 75%; home-grown fodder and growing crops need not be valued;
+  unspread fertiliser at cost (not in `herd.valuation`).
+- Revenue's current partnership TDM 23-02-09 is offline; the appendix is from
+  the archived guidance as reproduced by SCSI. Banks publish no valuation basis.
+- Engine: `herd.valuation` (ADR-0055); module
+  `farm_functions/ie/livestock_valuation.py`.
+
 ## 5. Capital allowances
 
 | rule_id | value | base | applies | from / to | ref | status |
@@ -206,19 +279,138 @@ SW(MP)A 2024)
   (since 2019). Not companies.
 - Minimum 5 years in. Exit: the previous 4 years are topped up to the final
   averaged figure. Step-out: one year on actual profit once every 5 years;
-  deferred tax paid in 4 equal instalments (all due on permanent exit).
+  deferred tax paid in 4 equal instalments (all due on permanent exit) — §6.1.
   Re-entry after 4 years on the normal basis.
 - A sole trade moving into an RFP continues for averaging (s.657(10A)).
-- Engine (`plan.projection` `tax_profile`): the farmer opts in with
-  `income_averaging`; the window is the Platform's `prior_farming_profits`
+| rule_id | value | base | applies | from / to | ref | status |
+|---|---|---|---|---|---|---|
+| income_averaging_years | 5 | this year + previous 4, farming profit before capital allowances | individuals | 2024-01-01 → 2027-12-31 (researched window) | s.657; TDM 23-01-34 | enacted |
+
+- Engine (`tax.estimate`, ADR-0055): individuals must say whether they are in
+  averaging (accountant review, Nov 2026: nearly every dairy farmer is). With
+  it on, the Platform sends the previous 4 years' profit before capital
+  allowances (after stock relief) and this year's allowances; the result shows
+  the 5 profits, the average and the assessable profit. Module:
+  `farm_functions/ie/averaging.py`.
+- Engine (`tax.partnership`, ADR-0055): each partner answers averaging and,
+  if in it, sends their own share of the previous 4 years; the partnership's
+  allowances are split by share and deducted after averaging.
+- Engine (`plan.projection` `tax_profile`): individuals must answer
+  `income_averaging` (ADR-0055); the period length comes from the same rule; the window is the Platform's `prior_farming_profits`
   (before capital allowances) followed by projected years; until 5 years are
-  known the year is taxed on actual profit (`insufficient_history`). Not
-  modelled: exit top-up, step-out year, and the 4-year eligibility test.
+  known the year is taxed on actual profit (`insufficient_history`). Step-out
+  and exit are in `tax.estimate` / `tax.averaging_exit` (§6.1–6.2), not in
+  plans; the 4-year eligibility test is not modelled.
   Under averaging, this year's stock relief counts a fifth towards its cap (it
   moves the average by a fifth). Young farmer aid given adds up across
   projected years; partnership de minimis aid rolls over 3 years. Partnerships
   are projected per partner (share of profit, relief, averaging, aid). The
   flat-rate addition (unless `vat_registered`) is taxable income and cash.
+
+### 6.1 Step-out year (s.657(6A); TDM 23-01-34 Example 3)
+
+| rule_id | value | from / to | ref | status |
+|---|---|---|---|---|
+| averaging_step_out_instalments | 4 | 2024 → 2027 (researched window; exists from 2016) | s.657(6A)(b)–(c) | enacted |
+| averaging_step_out_gap_years | 4 | 2024 → 2027 | s.657(6A)(d) | enacted |
+
+- Elected on the Form 11 for one year, taxed on actual profit. The deferred
+  tax is **income tax only** (s.657(1)): tax on the averaged figure − tax on
+  actual. Paid in 4 equal instalments, the first on the return date for the
+  year after the step-out year (31 October two years on), then yearly.
+- Not if a step-out was made in any of the previous 4 years. On permanent
+  exit all deferred tax falls due at once (s.657(8)(e)).
+- Engine (`tax.estimate`, ADR-0055): `step_out` + `last_step_out_year`
+  (year or "never"); USC and PRSI follow the actual year.
+
+### 6.2 Leaving averaging (s.657(7)–(8); TDM 23-01-34 Example 2)
+
+- Only after 5 years in (s.657(7)), with notice on the return. The year of
+  reversion is taxed on the normal basis.
+- Each of the 4 years before the **final averaged year** is raised by
+  additional assessment to at least that year's averaged profit
+  (s.657(8)(d)); outstanding step-out tax becomes payable (s.657(8)(e)).
+- Re-entry only after 4 years on the normal basis. On cessation the s.67 rules
+  apply instead (s.657(10)): not modelled.
+- Engine: `tax.averaging_exit` (ADR-0055) gives each year's extra assessable
+  profit; the tax on it is `tax.estimate` for that year (rules from 2024) or
+  the accountant's figure.
+
+## 6A. Preliminary tax and pay dates (Part 41A; checked 2026-11-19)
+
+| rule_id | value | base | from / to | ref | status |
+|---|---|---|---|---|---|
+| prelim_current_year_pct | 90% | this year's tax | 2024 → 2027 (researched window) | s.959AO(3)(b)(i) | enacted |
+| prelim_prior_year_pct | 100% | last year's tax | 2024 → 2027 | s.959AO(3)(b)(ii) | enacted |
+| prelim_pre_preceding_year_dd_pct | 105% | tax of the year before last; direct debit only, not if that tax was nil | 2024 → 2027 | s.959AO(3)(b)(iii), s.959AP | enacted |
+
+- Preliminary tax for year Y and the balance of Y−1 are both due on
+  **31 October of Y** (s.959AO(1), (2)(a)). Paying less than the least of the
+  options makes the whole year's tax due on 31 October of Y, with interest
+  at 0.0219% a day (s.1080(2)(c)).
+- **ROS pay-and-file date** (Revenue practice, announced each year, filing
+  *and* paying through ROS): 19 Nov 2025 (eBrief 088/25), 18 Nov 2026
+  (eBrief 034/26). 2027 not announced yet.
+- Revenue's page treats income tax, USC and PRSI together; s.959AO itself
+  says "income tax". The Engine applies the options to `total_tax`.
+- Direct debit: taken on the 9th of each month within the tax year, deemed
+  paid on 31 October (s.959AP; Revenue DD guidelines, Oct 2025). The minimum
+  number of instalments (3 first year, 8 later) may have been removed by
+  Finance Act 2025: not checked by the Engine.
+- Under averaging, "this year's tax" is the averaged liability (s.657(6)).
+- Accountant review (Nov 2026): most farmers pay on the 100% basis, and tax
+  time causes cash problems; DAFM pays most of the BISS / CRISS / Eco-scheme
+  advance (70–75%) in mid / late October, just before the pay date, and the
+  balance from 1 December (2026 BISS T&Cs v6). Payment dates are Platform data.
+- Engine: `tax.payments` (ADR-0055); module `farm_functions/ie/preliminary.py`.
+- Engine (`plan.projection`, individuals): each projection year pays on the
+  October inside it — preliminary for that calendar year (90% of it or 100%
+  of the year before, the Platform's `preliminary_basis`) plus the year
+  before's balance; the 105% direct debit basis is `tax.payments` only.
+  Companies keep tax paid in the year (corporation tax dates not modelled).
+
+## 6B. Losses carried forward (individuals; checked 2026-11-20)
+
+- **s.382**: an unused trading loss is set against later profits of the
+  **same trade**, earliest first, no time limit (TDM 12-01-02). Enacted.
+- **s.381** (against other income in the same year) is restricted for farming
+  by **s.662** after 3 loss years in a row (TDM 23-01-05): not modelled.
+- **USC**: s.382 losses reduce USC income (s.531AU); s.381 losses do not.
+- **PRSI Class S**: reckonable income is income "as estimated in accordance
+  with the Income Tax Acts" after capital allowances (SWCA 2005 s.2(1); Revenue
+  "PRSI for self-employed"). Read as after s.382 losses too — **not stated
+  outright** by Revenue or DSP; the result says `prsi_treatment:
+  reduced_unconfirmed`.
+- **Stock relief claim year**: losses brought forward can be used that year
+  but not carried beyond it (s.666(3)).
+- **Under averaging**: a net 5-year loss gives nil assessable and 1/5 of it is
+  relievable (TDM 23-01-34); the Engine carries that fifth.
+- Engine (`tax.estimate`, ADR-0055): `losses_forward` applied after averaging
+  and capital allowances; result `losses{brought_forward, used,
+  lost_by_stock_relief, this_year_loss, carried_forward, prsi_treatment}`. A
+  negative assessable profit (incl. allowances above the profit, s.304(4)) is
+  carried forward. Companies (s.396): not modelled. Module
+  `farm_functions/ie/losses.py`.
+
+## 6C. Pension contributions (self-employed; checked 2026-11-20)
+
+| rule_id | value | from / to | ref | status |
+|---|---|---|---|---|
+| pension_pct_from_age_0 / 30 / 40 / 50 / 55 / 60 | 15 / 20 / 25 / 30 / 35 / 40% of net relevant earnings | 2024 → 2027 (researched window) | s.787; Pensions Manual Ch. 3 | enacted |
+| pension_earnings_cap | €115,000 (all earnings together) | 2024 → 2027 | s.790A; Pensions Manual Ch. 26 | enacted |
+
+- Age = the age reached in the tax year. Relief at the marginal rate, **income
+  tax only** (no USC or PRSI relief: Pensions Manual Ch. 21, 24).
+- Net relevant earnings (s.787(1)–(2)): relevant earnings less losses and
+  capital allowances of those activities. Under averaging the Engine uses the
+  averaged assessable profit (the figure charged) — **the Engine's reading**,
+  not stated by Revenue (`earnings_basis: assessable_farm_profit`).
+- Contributions above the limit carry forward (`unrelieved`). A contribution
+  paid by the return date can be claimed for the previous year: the Platform
+  decides which year it sends it for.
+- No change to the % or the cap in Finance (No. 2) Bill 2026.
+- Engine (`tax.estimate`, ADR-0055): `pension_contributions` + `birth_year`.
+  Module `farm_functions/ie/pensions.py`.
 
 ## 7. Partnerships
 

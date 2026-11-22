@@ -955,6 +955,7 @@
   "creditors": 12490,
   "drawings": 30000,
   "tax": 7000,
+  "tax_source": "accountant",
   "off_farm_income": 0,
   "new_loan": {
     "annual_rate": 0.05,

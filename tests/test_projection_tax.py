@@ -15,6 +15,9 @@ import pytest
 
 from farm_functions.runner import run_function
 
+# When tax is paid (ADR-0055): a steady farm that paid 2025's tax in full on 100% of 2024.
+TIMING = {"preliminary_basis": "prior_100",
+          "tax_history": [{"tax_year": 2025, "liability": 15_075.32, "preliminary_paid": 15_075.32}]}
 BASE = {
     "base_pl_months": [
         {"year": 2025, "month": m, "milk_litres": 40_000, "milk_price": 0.40, "feed": 11_000} for m in range(1, 13)
@@ -22,7 +25,7 @@ BASE = {
     "opening_cash": 0,
     "milking_cows": 100,
     "years": 3,
-    "tax_profile": {"business_type": "sole_trader", "vat_registered": True},
+    "tax_profile": {"business_type": "sole_trader", "vat_registered": True, "income_averaging": False, **TIMING},
 }
 TRACTOR = {"category": "machinery", "cost": 40_000, "year": 2024, "month": 4, "life_months": 120}
 
@@ -38,7 +41,7 @@ def _years(**overrides):
 
 
 def _profile(**fields):
-    return {"tax_profile": {"business_type": "sole_trader", "vat_registered": True, **fields}}
+    return {"tax_profile": {"business_type": "sole_trader", "vat_registered": True, "income_averaging": False, **TIMING, **fields}}
 
 
 def test_tax_per_year_with_rules_in_force_then_held_constant():
@@ -105,11 +108,13 @@ def test_errors():
 
 def test_flat_rate_farmers_get_the_vat_addition_in_profit_and_cash():
     """Not VAT-registered: 192,000 milk × 4.5% (2026) = 8,640, then × 4.8% (2027) = 9,216."""
-    years = _years(tax_profile={"business_type": "sole_trader"})
+    years = _years(tax_profile={"business_type": "sole_trader", "income_averaging": False, **TIMING})
     assert [y["tax"]["flat_rate_addition"] for y in years[:2]] == [8_640, 9_216]
     assert years[0]["tax"]["profit_before_allowances"] == 68_640
     assert years[0]["cash"]["flat_rate_addition"] == 8_640
-    assert years[0]["cash"]["closing"] == pytest.approx(68_640 - years[0]["tax"]["total_tax"], abs=0.01)
+    # Cash pays last year's tax on the 100% basis (ADR-0055); this year's liability is owed.
+    assert years[0]["cash"]["closing"] == pytest.approx(68_640 - 15_075.32, abs=0.01)
+    assert years[0]["balance_sheet"]["tax_owed"] == pytest.approx(years[0]["tax"]["total_tax"] - 15_075.32, abs=0.01)
     assert _years()[0]["cash"]["flat_rate_addition"] == 0  # registered
 
 
@@ -117,7 +122,7 @@ def test_partnership_is_taxed_per_partner():
     """60,000 split 60 / 40, single partners, 2026:
     36,000 → IT 3,200 + USC 612.82 + PRSI 1,525.50 = 5,338.32
     24,000 → IT 800 + USC 299.82 + PRSI 1,017 = 2,116.82  → 7,455.14, not 15,075.32."""
-    profile = {"business_type": "partnership", "vat_registered": True,
+    profile = {"business_type": "partnership", "vat_registered": True, "income_averaging": False, **TIMING,
                "partners": [{"label": "Joe", "profit_share_pct": 60}, {"label": "Mark", "profit_share_pct": 40}]}
     tax = _years(tax_profile=profile)[0]["tax"]
     assert [p["total_tax"] for p in tax["partners"]] == [5_338.32, 2_116.82]
@@ -161,7 +166,7 @@ def test_projection_rejects_assets_without_an_allowance_rule():
 
 
 def test_partnership_profile_errors_name_the_field():
-    single_partner = {"business_type": "partnership", "partners": [{"profit_share_pct": 100}]}
+    single_partner = {"business_type": "partnership", "income_averaging": False, **TIMING, "partners": [{"profit_share_pct": 100}]}
     result = _run(tax_profile=single_partner)
     assert (result["errors"][0]["details"]["reason"], result["errors"][0]["field"]) == ("partners_invalid", "tax_profile.partners")
     old = [{**m, "year": 2020} for m in BASE["base_pl_months"]]
@@ -176,7 +181,68 @@ def test_rules_status_counts_every_rule_the_year_used(monkeypatch):
     import farm_functions.tax as tax
     from farm_functions.ie.rules import Rule
 
-    assert _years(tax_profile={"business_type": "sole_trader"})[0]["tax"]["rules_status"] == "enacted"  # 2026
+    assert _years(tax_profile={"business_type": "sole_trader", "income_averaging": False, **TIMING})[0]["tax"]["rules_status"] == "enacted"  # 2026
     announced = (Rule("vat_fra", 4.5, date(2026, 1, 1), None, "test", "announced"),)
     monkeypatch.setattr(tax, "FLAT_RATE_ADDITION", announced)
-    assert _years(tax_profile={"business_type": "sole_trader"})[0]["tax"]["rules_status"] == "announced"
+    assert _years(tax_profile={"business_type": "sole_trader", "income_averaging": False, **TIMING})[0]["tax"]["rules_status"] == "announced"
+
+
+def test_individuals_must_answer_averaging():
+    """ADR-0055: no default; companies leave it unset."""
+    result = _run(tax_profile={"business_type": "sole_trader", "vat_registered": True})
+    assert result["status"] == "needs_input"
+    assert [m["path"] for m in result["missing"]] == [
+        "tax_profile.income_averaging", "tax_profile.preliminary_basis", "tax_profile.tax_history",
+    ]
+    assert _years(tax_profile={"business_type": "company", "vat_registered": True})[0]["tax"]["averaging"] == "off"
+
+
+# When tax is paid (ADR-0055 §2c), calendar year end: each October pays that year's
+# preliminary + last year's balance. Liabilities 2026 15,075.32, 2027 14,399.32.
+#   90% basis, 2025 owed 20,000 with 16,000 preliminary paid:
+#   2026: 90% × 15,075.32 = 13,567.79 + 4,000 = 17,567.79; owed 15,075.32 − 13,567.79 = 1,507.53
+#   2027: 90% × 14,399.32 = 12,959.39 + 1,507.53 = 14,466.92; owed 1,439.93
+def test_irish_timing_on_the_90_percent_basis():
+    years = _years(**_profile(preliminary_basis="current_90",
+                              tax_history=[{"tax_year": 2025, "liability": 20_000, "preliminary_paid": 16_000}]))
+    first, second = years[0], years[1]
+    assert first["tax"]["payments"] == {
+        "pay_year": 2026, "preliminary_basis": "current_90", "preliminary": 13_567.79,
+        "balance_previous_year": 4_000, "refund_previous_year": 0, "paid": 17_567.79, "owed_at_year_end": 1_507.53,
+    }
+    assert (first["cash"]["tax"], first["cash"]["tax_refund"], first["cash"]["closing"]) == (17_567.79, 0, 42_432.21)
+    assert first["balance_sheet"]["tax_owed"] == 1_507.53
+    assert first["balance_sheet"]["net_worth"] == pytest.approx(42_432.21 - 1_507.53, abs=0.01)
+    assert (second["cash"]["tax"], second["balance_sheet"]["tax_owed"]) == (14_466.92, 1_439.93)
+    # The year's own tax is unchanged, and cover stays on it.
+    assert first["tax"]["total_tax"] == 15_075.32
+
+
+def test_overpaid_last_year_comes_back_gross():
+    """100% basis after a better 2025 (30,000 owed, 40,000 paid): 2026 pays 30,000
+    preliminary and gets 10,000 back; 2026 then ends overpaid by 14,924.68."""
+    first = _years(**_profile(tax_history=[{"tax_year": 2025, "liability": 30_000, "preliminary_paid": 40_000}]))[0]
+    assert (first["cash"]["tax"], first["cash"]["tax_refund"]) == (30_000, 10_000)
+    assert first["cash"]["closing"] == 40_000
+    assert first["balance_sheet"]["tax_owed"] == -14_924.68
+
+
+def test_timing_errors():
+    def reason(**fields):
+        result = _run(**_profile(**fields))
+        assert result["status"] == "error", result
+        return result["errors"][0]["details"]["reason"]
+
+    assert reason(tax_history=[{"tax_year": 2024, "liability": 1, "preliminary_paid": 1}]) == "tax_history_invalid"
+    assert reason(tax_history=[{"tax_year": 2025, "liability": 1}]) == "tax_history_invalid"
+    assert reason(tax_history=[{"tax_year": 2025, "liability": 1, "preliminary_paid": 1},
+                               {"tax_year": 2025, "liability": 1, "preliminary_paid": 1}]) == "tax_history_invalid"
+    company = _run(tax_profile={"business_type": "company", "vat_registered": True, "preliminary_basis": "prior_100"})
+    assert company["errors"][0]["details"]["reason"] == "regime_not_available"
+    assert _run(**_profile(preliminary_basis="pre_preceding_105_dd"))["status"] == "error"
+
+
+def test_company_and_caller_tax_are_paid_in_the_year():
+    company = _years(tax_profile={"business_type": "company", "vat_registered": True})[0]
+    assert company["tax"]["payments"] is None and company["cash"]["tax"] == 7_500
+    assert company["balance_sheet"]["tax_owed"] == 0

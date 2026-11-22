@@ -18,20 +18,23 @@ from farm_functions.core.surplus import net_profit, profit_margin, profit_margin
 from farm_functions.dairy.costs import total_costs
 from farm_functions.dairy.revenue import milk_revenue, other_revenue, total_revenue
 from farm_functions.dairy.statement import pl_summary
-from farm_functions.accounts import bs_summary, pl_net
+from farm_functions.accounts import bs_summary, cf_reconcile, pl_net
 from farm_functions.assets import assets_schedule
 from farm_functions.compare import compare_cf, compare_pl
 from farm_functions.decisions import investment_appraisal, partial_budget
 from farm_functions.forecast import forecast_cf, forecast_pl
 from farm_functions.kpis import kpi_summary
+from farm_functions.livestock import herd_valuation
 from farm_functions.loans import debt_capacity, schedule_loans
 from farm_functions.projections import plan_projection
 from farm_functions.quality import milk_quality
 from farm_functions.tax import (
+    tax_averaging_exit,
     tax_capital_allowances,
     tax_company_extraction,
     tax_estimate,
     tax_partnership,
+    tax_payments,
     tax_stock_relief,
 )
 from farm_functions.vat import vat_flat_rate
@@ -56,6 +59,8 @@ from farm_functions.schemas import (
     BsSummaryInput,
     CfMonthlyInput,
     CfCompareInput,
+    CfReconcileInput,
+    HerdValuationInput,
     CfForecastInput,
     CfMonthsInput,
     FarmReportInput,
@@ -85,6 +90,8 @@ from farm_functions.schemas import (
     TotalRevenueInput,
     TaxCapitalAllowancesInput,
     TaxCompanyExtractionInput,
+    TaxAveragingExitInput,
+    TaxPaymentsInput,
     TaxEstimateInput,
     TaxPartnershipInput,
     TaxStockReliefInput,
@@ -410,6 +417,19 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         supports_provenance=False,
     ),
     CalculationDefinition(
+        id="herd.valuation",
+        description=(
+            "Herd and flock at a valuation date: head × value per head for each group, on "
+            "market value and on Irish Revenue practice side by side (young cattle 60%, "
+            "young sheep / pigs 75% of market value; mature breeding stock at the value "
+            "held since maturity, written down to market if lower); totals for pl.net, "
+            "tax.stock_relief and bs.summary."
+        ),
+        input_model=HerdValuationInput,
+        handler=herd_valuation,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
         id="milk.quality",
         description=(
             "Milk quality from monthly milk statements: litre-weighted fat, protein, SCC "
@@ -493,6 +513,29 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         supports_provenance=False,
     ),
     CalculationDefinition(
+        id="tax.averaging_exit",
+        description=(
+            "Leaving Irish income averaging: each of the 4 years before the final averaged "
+            "year raised to at least its averaged profit (the extra assessable profit per "
+            "year), the year normal basis starts and deferred step-out tax due at once."
+        ),
+        input_model=TaxAveragingExitInput,
+        handler=tax_averaging_exit,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="tax.payments",
+        description=(
+            "Irish preliminary tax and pay date for a tax year: the safe-harbour options "
+            "(90% of this year, 100% of last year, 105% of the year before by direct debit), "
+            "the lowest safe amount, last year's balance and the gross total due on 31 October "
+            "or the ROS date; monthly direct debit instalments."
+        ),
+        input_model=TaxPaymentsInput,
+        handler=tax_payments,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
         id="pl.compare",
         description=(
             "P&L variance: actual months vs comparison months (prior year or budget). "
@@ -511,6 +554,18 @@ CALCULATION_CATALOGUE: tuple[CalculationDefinition, ...] = (
         ),
         input_model=CfCompareInput,
         handler=compare_cf,
+        supports_provenance=False,
+    ),
+    CalculationDefinition(
+        id="cf.reconcile",
+        description=(
+            "Profit to cash: accounts operating profit (Operating Surplus + herd and stock "
+            "value change) less those non-cash changes and the change in milk / other "
+            "debtors, plus the change in merchant credit and other creditors, against the "
+            "months' operating cash; the unexplained difference in EUR and % of revenue."
+        ),
+        input_model=CfReconcileInput,
+        handler=cf_reconcile,
         supports_provenance=False,
     ),
     CalculationDefinition(

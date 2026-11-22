@@ -94,7 +94,7 @@ VALUES = {
     "stock": 11_000, "stock_opening_value": 9_000,
     "land": 1_600_000, "debtors": 21_000, "creditors": 12_490,
 }
-HOUSEHOLD = {"drawings": 30_000, "tax": 7_000, "off_farm_income": 0}
+HOUSEHOLD = {"drawings": 30_000, "tax": 7_000, "tax_source": "accountant", "off_farm_income": 0}
 COWS = 100
 HECTARES = 60
 

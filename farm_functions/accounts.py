@@ -1,4 +1,5 @@
-"""Accounting views: net profit (ADR-0038) and balance sheet (ADR-0039).
+"""Accounting views: net profit (ADR-0038), balance sheet (ADR-0039) and the
+bridge from profit to cash (ADR-0055).
 
 Application layer: bridges Operating Surplus to net profit before tax, and
 builds the balance sheet from Platform balances plus loans and the asset
@@ -10,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from farm_functions.assets import month_index, nbv_at
-from farm_functions.compare import pl_statements
+from farm_functions.compare import cf_statements, pl_statements
 from farm_functions.core.aggregate import sum_amounts
 from farm_functions.core.loans import amortisation_schedule
 from farm_functions.core.ratios import coverage_ratio, per_unit
@@ -53,6 +54,68 @@ def pl_net(
         "interest": round_money(interest),
         "net_profit_before_tax": round_money(net),
         "net_margin_pct": None if margin is None else round_margin_pct(margin * 100),
+    }
+
+
+def cf_reconcile(
+    *,
+    pl_months: list[dict[str, Any]],
+    cf_months: list[dict[str, Any]],
+    livestock_opening_value: float = 0.0,
+    livestock_closing_value: float = 0.0,
+    stock_opening_value: float = 0.0,
+    stock_closing_value: float = 0.0,
+    milk_debtors_opening: float = 0.0,
+    milk_debtors_closing: float = 0.0,
+    other_debtors_opening: float = 0.0,
+    other_debtors_closing: float = 0.0,
+    merchant_credit_opening: float = 0.0,
+    merchant_credit_closing: float = 0.0,
+    other_creditors_opening: float = 0.0,
+    other_creditors_closing: float = 0.0,
+) -> dict[str, Any]:
+    """``cf.reconcile``: why the months' operating cash differs from profit.
+
+    Accounts operating profit (Operating Surplus + herd and stock value change,
+    as ``pl.net``) less those non-cash value changes, less the increase in money
+    owed to the farm (milk / co-op, other), plus the increase in what the farm
+    owes (merchant credit, other creditors) = the operating cash the months
+    should show. What the cash months show beyond that is ``unexplained``: the
+    Engine reports it, the Platform or accountant judges it.
+    """
+    statements = pl_statements(pl_months)
+    revenue = sum_amounts(*(s["revenue"]["total"] for s in statements))
+    surplus = sum_amounts(*(s["profit"]["net"] for s in statements))
+    herd_change = livestock_closing_value - livestock_opening_value
+    stock_change = stock_closing_value - stock_opening_value
+    accounts_profit = surplus + herd_change + stock_change
+    # Signed as they move cash: a value or a debtor going up holds cash back.
+    bridge = {
+        "herd_value_change": livestock_opening_value - livestock_closing_value,
+        "stock_value_change": stock_opening_value - stock_closing_value,
+        "milk_debtors": milk_debtors_opening - milk_debtors_closing,
+        "other_debtors": other_debtors_opening - other_debtors_closing,
+        "merchant_credit": merchant_credit_closing - merchant_credit_opening,
+        "other_creditors": other_creditors_closing - other_creditors_opening,
+    }
+    expected = accounts_profit + sum_amounts(*bridge.values())
+    actual = sum_amounts(*(c["operating"]["net"] for c in cf_statements(cf_months)))
+    unexplained = actual - expected
+    share = per_unit(unexplained, revenue)
+    periods = sorted((s["period"]["year"], s["period"]["month"]) for s in statements)
+    return {
+        "currency": "EUR",
+        "from": {"kind": "month", "year": periods[0][0], "month": periods[0][1]},
+        "to": {"kind": "month", "year": periods[-1][0], "month": periods[-1][1]},
+        "month_count": len(statements),
+        "revenue": round_money(revenue),
+        "operating_surplus": round_money(surplus),
+        "accounts_operating_profit": round_money(accounts_profit),
+        "bridge": {k: round_money(v) for k, v in bridge.items()},
+        "expected_operating_cash": round_money(expected),
+        "actual_operating_cash": round_money(actual),
+        "unexplained": round_money(unexplained),
+        "unexplained_pct_of_revenue": None if share is None else round_margin_pct(share * 100),
     }
 
 

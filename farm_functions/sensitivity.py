@@ -261,13 +261,20 @@ def _outcome(
         lines = _scale_lines(item, scenario["lines_pct"], herd)
         lines["milk_price"] = max(0.0, item["milk_price"] + price_shift)
         lines["milk_litres"] = item["milk_litres"] * volume
+        _follow_sales(
+            lines,
+            item["milk_litres"] * item["milk_price"] + item.get("cattle_sales", 0.0),
+            lines["milk_litres"] * lines["milk_price"] + lines.get("cattle_sales", 0.0),
+        )
         shocked_pl.append(lines)
-    shocked_cf = [
-        {**_scale_lines(item, scenario["lines_pct"], herd), "milk": item["milk"] * cash_milk}
-        if _live(item, start)
-        else item
-        for item in cf_months
-    ]
+    shocked_cf = []
+    for item in cf_months:
+        if not _live(item, start):
+            shocked_cf.append(item)
+            continue
+        lines = {**_scale_lines(item, scenario["lines_pct"], herd), "milk": item["milk"] * cash_milk}
+        _follow_sales(lines, item["milk"] + item["cattle_sales"], lines["milk"] + lines["cattle_sales"])
+        shocked_cf.append(lines)
 
     statements = _statements(shocked_pl)
     surplus = sum_amounts(*(s["profit"]["net"] for s in statements))
@@ -322,10 +329,18 @@ def risk_sensitivity(
     }
 
 
+def _follow_sales(lines: dict[str, Any], sales_before: float, sales_after: float) -> None:
+    """The flat-rate VAT addition is a share of milk and cattle sales (ADR-0055):
+    it moves in proportion when a scenario changes them."""
+    if lines.get("flat_rate_addition") and sales_before:
+        lines["flat_rate_addition"] *= sales_after / sales_before
+
+
 # Lines a tornado may move: operating income (except milk, which has price /
 # volume / herd drivers), operating costs, and household drawings (ADR-0044).
 TORNADO_LINES = (
-    tuple(l for l in OPERATING_CASH_INFLOW_CATEGORIES if l != "milk")
+    # The flat-rate addition follows milk and cattle sales: not a driver of its own.
+    tuple(l for l in OPERATING_CASH_INFLOW_CATEGORIES if l not in ("milk", "flat_rate_addition"))
     + OPERATING_COST_CATEGORIES
     + ("household_drawings",)
 )

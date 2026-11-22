@@ -18,7 +18,8 @@ from farm_functions.core.rounding import round_money
 from farm_functions.dairy.costs import HERD_LINKED_INCOME, OPERATING_COST_CATEGORIES, VARIABLE_COST_CATEGORIES
 from farm_functions.dairy.monthly_statement import monthly_pl_summary
 from farm_functions.schemas import PROJECTION_AMOUNT_LINES
-from farm_functions.tax import projected_tax
+from farm_functions.ie import preliminary as prelim
+from farm_functions.tax import projected_payments, projected_tax
 
 _HERD_LINES = VARIABLE_COST_CATEGORIES + HERD_LINKED_INCOME
 
@@ -152,6 +153,15 @@ def plan_projection(
     cash = opening_cash
     out_years = []
     tax_state: dict[str, Any] = {}
+    # Individuals pay on the Irish dates (ADR-0055); companies and assumptions.tax
+    # pay each year's tax in that year.
+    timing = bool(tax_profile) and tax_profile["business_type"] != "company"
+    liabilities = {h["tax_year"]: h["liability"] for h in (tax_profile or {}).get("tax_history", [])}
+    preliminary_paid = {
+        h["tax_year"]: h["preliminary_paid"]
+        for h in (tax_profile or {}).get("tax_history", [])
+        if h["preliminary_paid"] is not None
+    }
     for y, (start, end) in enumerate(windows):
         drivers = {}
         for k in lines:
@@ -166,6 +176,14 @@ def plan_projection(
                 value = max(0.0, value + effects[y][k])
             drivers[k] = value
         drivers["milk_litres"] = base["milk_litres"] * herd[y] * yield_[y]
+        if base.get("flat_rate_addition") and "flat_rate_addition" not in amounts:
+            # The flat-rate addition follows milk and cattle sales (ADR-0055). With a tax
+            # profile the engine computes it instead (the base months cannot carry it);
+            # an amount the Platform sets for the year wins.
+            base_sales = base_milk + base.get("cattle_sales", 0.0)
+            sales = price[y] * drivers["milk_litres"] + drivers.get("cattle_sales", 0.0)
+            if base_sales:
+                drivers["flat_rate_addition"] = base["flat_rate_addition"] * sales / base_sales
         debt_service = debt[y]["interest"] + debt[y]["principal"]
         pl = monthly_pl_summary(milk_price=price[y], loan_repayments=debt_service, **drivers)
         surplus = pl["profit"]["net"]
@@ -181,6 +199,18 @@ def plan_projection(
                 register=register,
             )
             tax_y, fra = tax_detail["total_tax"], tax_detail["flat_rate_addition"]
+        tax_paid, tax_refund, tax_owed = tax_y, 0.0, 0.0
+        if tax_detail is not None:
+            payments = None
+            if timing:
+                liabilities[end // 12] = tax_y
+                payments = projected_payments(
+                    tax_profile["preliminary_basis"], prelim.pay_year(start, end), end // 12,
+                    liabilities, preliminary_paid,
+                )
+                tax_paid, tax_refund = payments["paid"], payments["refund_previous_year"]
+                tax_owed = payments["owed_at_year_end"]
+            tax_detail = {**tax_detail, "payments": payments}
 
         fixed = (
             assets_schedule(
@@ -191,14 +221,15 @@ def plan_projection(
             else {"depreciation": 0.0, "closing_nbv": 0.0}
         )
         net_cash = (
-            surplus + fra + off_farm[y] - drawings[y] - tax_y - debt_service - capex[y] + proceeds[y]
+            surplus + fra + off_farm[y] - drawings[y] - tax_paid + tax_refund - debt_service - capex[y] + proceeds[y]
         )
         opening, cash = cash, cash + net_cash
         cows = milking_cows * herd[y]
         dscr = coverage_ratio(surplus, debt_service)
+        # Cover is on the year's own tax (what its income owes), not on when it is paid.
         cover = coverage_ratio(surplus + fra + off_farm[y] - drawings[y] - tax_y, debt_service)
         livestock_value = livestock * herd[y]
-        net_worth = cash + fixed["closing_nbv"] + land + livestock_value - debt[y]["balance"]
+        net_worth = cash + fixed["closing_nbv"] + land + livestock_value - debt[y]["balance"] - tax_owed
         out_years.append(
             {
                 "year": y + 1,
@@ -228,7 +259,8 @@ def plan_projection(
                     "flat_rate_addition": round_money(fra),
                     "off_farm_income": round_money(off_farm[y]),
                     "drawings": round_money(drawings[y]),
-                    "tax": round_money(tax_y),
+                    "tax": round_money(tax_paid),
+                    "tax_refund": round_money(tax_refund),
                     "interest": round_money(debt[y]["interest"]),
                     "principal": round_money(debt[y]["principal"]),
                     "capex": round_money(capex[y]),
@@ -248,6 +280,7 @@ def plan_projection(
                     "land": round_money(land),
                     "livestock": round_money(livestock_value),
                     "debt": round_money(debt[y]["balance"]),
+                    "tax_owed": round_money(tax_owed),
                     "net_worth": round_money(net_worth),
                 },
                 "tax": tax_detail,

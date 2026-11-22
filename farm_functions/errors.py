@@ -11,6 +11,7 @@ from math import isfinite
 from typing import Any
 
 from pydantic import ValidationError
+from pydantic_core import PydanticCustomError
 
 MISSING_REQUIRED = "missing_required"
 UNKNOWN_FIELD = "unknown_field"
@@ -142,6 +143,25 @@ def _ctx_error_text(err: dict[str, Any]) -> str:
     return str(raw)
 
 
+def missing_inputs(*fields: str) -> PydanticCustomError:
+    """Raise from a model validator when inputs required only in some cases
+    (e.g. averaging history) are absent: the runner answers needs_input."""
+    return PydanticCustomError("missing", "required: {fields}", {"fields": list(fields)})
+
+
+def expand_missing(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One ``missing`` error per field: conditional ones (``missing_inputs``)
+    carry their fields in ctx, under the location of the model that raised them."""
+    out = []
+    for err in errors:
+        fields = (err.get("ctx") or {}).get("fields") if err.get("type") == "missing" else None
+        if fields:
+            out += [{**err, "loc": (*err.get("loc", ()), f), "ctx": None} for f in fields]
+        else:
+            out.append(err)
+    return out
+
+
 def _field_from_loc(loc: tuple[Any, ...] | list[Any]) -> str | None:
     parts = [str(part) for part in loc if part != "body"]
     return parts[-1] if parts else None
@@ -156,7 +176,7 @@ def _json_safe_value(value: Any) -> Any:
 def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
     """Map Pydantic errors to stable codes (including nested / period-set)."""
     issues: list[dict[str, Any]] = []
-    for err in exc.errors():
+    for err in expand_missing(exc.errors()):
         field = _field_from_loc(err.get("loc") or ())
         # Whole-model checks report the field they are about, under the model's own path
         # (e.g. partners.1.spouse_paye_income, tax_profile.partners).
@@ -338,6 +358,12 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             issues.append(
                 issue(INVALID_TYPE, text, field="shocks_from_month", details={"reason": "incomplete_period"})
             )
+        elif text == "unit_held_value is only for mature breeding stock":
+            issues.append(issue(INVALID_TYPE, text, field=at("unit_held_value"), details={"reason": "held_value_not_used"}))
+        elif text.startswith("no livestock valuation rule for"):
+            issues.append(issue(INVALID_TYPE, text, field=at("year"), details={"reason": "rule_not_available"}))
+        elif text == "cf_months must cover the same months as pl_months":
+            issues.append(issue(INVALID_TYPE, text, field=at("cf_months"), details={"reason": "periods_misaligned"}))
         elif text == "cf_months must end in the same month as pl_months":
             issues.append(issue(INVALID_TYPE, text, field="cf_months", details={"reason": "periods_misaligned"}))
         elif text == "projected months must be after the reporting period":
@@ -386,6 +412,8 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             "the successor needs at least a 20% profit share",
         ):
             issues.append(issue(INVALID_TYPE, text, field=at("succession"), details={"reason": "succession_invalid"}))
+        elif text == "send flat_rate_addition in base_pl_months or a tax_profile, not both":
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_profile"), details={"reason": "fra_conflict"}))
         elif text == "send assumptions.tax or tax_profile, not both":
             issues.append(issue(INVALID_TYPE, text, field=at("tax_profile"), details={"reason": "tax_conflict"}))
         elif text in (
@@ -393,6 +421,65 @@ def map_validation_error(exc: ValidationError) -> list[dict[str, Any]]:
             "marital status, enhanced stock relief, State aid and averaging are for individuals",
         ):
             issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
+        elif text == "losses_forward is for individuals (company losses are not modelled)":
+            issues.append(issue(INVALID_TYPE, text, field=at("losses_forward"), details={"reason": "regime_not_available"}))
+        elif text == "pension relief is for individuals (company pension contributions are not modelled)":
+            issues.append(
+                issue(INVALID_TYPE, text, field=at("pension_contributions"), details={"reason": "regime_not_available"})
+            )
+        elif text in ("birth_year only used with pension_contributions", "birth_year is after the tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("birth_year"), details={"reason": "birth_year_invalid"}))
+        elif text == "spouse income needs marital_status married":
+            issues.append(issue(INVALID_TYPE, text, field=at("marital_status"), details={"reason": "spouse_needs_married"}))
+        elif text == "spouse_farm_wages are wages a sole trader pays the spouse":
+            issues.append(issue(INVALID_TYPE, text, field=at("spouse_farm_wages"), details={"reason": "regime_not_available"}))
+        elif text == "home_carer needs marital_status married":
+            issues.append(issue(INVALID_TYPE, text, field=at("home_carer"), details={"reason": "spouse_needs_married"}))
+        elif text.startswith("no home carer credit rule for tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
+        elif text in ("last_step_out_year only used with step_out", "step_out needs income_averaging"):
+            issues.append(issue(INVALID_TYPE, text, field=at("step_out"), details={"reason": "needs_income_averaging"}))
+        elif text.startswith("no step-out within"):
+            issues.append(issue(INVALID_TYPE, text, field=at("last_step_out_year"), details={"reason": "step_out_too_soon"}))
+        elif text.startswith("no step-out rule for tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
+        elif text == "income averaging is for individuals, not companies":
+            issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
+        elif text.endswith("only used with income_averaging"):
+            issues.append(
+                issue(INVALID_TYPE, text, field=at("income_averaging"), details={"reason": "needs_income_averaging"})
+            )
+        elif text.startswith("prior_assessed_profits needs the"):
+            issues.append(
+                issue(INVALID_TYPE, text, field=at("prior_assessed_profits"), details={"reason": "averaging_years_invalid"})
+            )
+        elif "prior_farming_profits needs the" in text:
+            # The message starts with the list's own path (e.g. partners.1.prior_farming_profits).
+            issues.append(
+                issue(INVALID_TYPE, text, field=at(text.split(" needs the")[0]), details={"reason": "averaging_years_invalid"})
+            )
+        elif text == "tax_source needs tax":
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_source"), details={"reason": "needs_tax"}))
+        elif text in ("filed_years must not repeat a tax year", "filed_years need 12 months to compare a year with a year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("filed_years"), details={"reason": "filed_years_invalid"}))
+        elif text.startswith("tax_profile.tax_history needs"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_profile.tax_history"), details={"reason": "tax_history_invalid"}))
+        elif text == "preliminary tax timing is for individuals":
+            issues.append(issue(INVALID_TYPE, text, field=at("business_type"), details={"reason": "regime_not_available"}))
+        elif text.startswith("no preliminary tax rules for tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
+        elif text == "direct_debit_start_month needs direct_debit":
+            issues.append(
+                issue(INVALID_TYPE, text, field=at("direct_debit_start_month"), details={"reason": "needs_direct_debit"})
+            )
+        elif text == "the 105% basis is only for direct debit":
+            issues.append(issue(INVALID_TYPE, text, field=at("preliminary_basis"), details={"reason": "needs_direct_debit"}))
+        elif text == "the 105% basis is not available when that year's tax was nil":
+            issues.append(
+                issue(INVALID_TYPE, text, field=at("preliminary_basis"), details={"reason": "basis_not_available"})
+            )
+        elif text.startswith("no income averaging rule for tax year"):
+            issues.append(issue(INVALID_TYPE, text, field=at("tax_year"), details={"reason": "rule_not_available"}))
         elif text == "spouse_paye_income needs marital_status married":
             issues.append(issue(INVALID_TYPE, text, field=at("spouse_paye_income"), details={"reason": "spouse_needs_married"}))
         elif text.startswith("no capital allowance rule for"):

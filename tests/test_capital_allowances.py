@@ -41,7 +41,7 @@ def test_reference_year():
     assert body["by_type"] == {"plant": 5_000, "farm_buildings": 9_000, "slurry_storage": 15_000, "farm_safety": 1_000}
     assert body["total"]["allowance"] == 30_000
     assert body["profit_bridge"] == {
-        "accounting_profit": 40_000, "add_back_depreciation": 12_000, "flat_rate_addition": 0,
+        "accounting_profit": 40_000, "add_back_depreciation": 12_000,
         "capital_allowances": 30_000, "taxable_profit": 22_000,
     }
     assert body["caps_not_applied"] == ["ca_accelerated_cap"]
@@ -100,8 +100,9 @@ def test_http_matches_runner():
     assert client.post("/v1/functions/tax.capital_allowances/run", json=BASE).json() == _run()
 
 
-def test_flat_rate_addition_is_taxable_income():
-    assert _ok(flat_rate_addition=5_000)["profit_bridge"]["taxable_profit"] == 27_000
+def test_flat_rate_addition_comes_through_the_pl_not_the_bridge():
+    """ADR-0055: the addition is a pl.* line, so accounting_profit already holds it."""
+    assert _run(flat_rate_addition=5_000)["status"] == "error"
 
 
 def test_slurry_equipment_falls_back_to_plant_not_buildings():

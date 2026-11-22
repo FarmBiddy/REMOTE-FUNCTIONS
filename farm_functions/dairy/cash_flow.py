@@ -31,6 +31,8 @@ CASH_FLOW_CATALOGUE: dict[tuple[CashActivity, CashDirection], tuple[str, ...]] =
         "cattle_sales",
         "land_leasing_income",
         "other",
+        # Flat-rate VAT addition paid with the milk / cattle cheque (ADR-0055).
+        "flat_rate_addition",
     ),
     ("operating", "out"): OPERATING_COST_CATEGORIES,
     ("investing", "in"): ("asset_disposal_proceeds",),
@@ -38,7 +40,9 @@ CASH_FLOW_CATALOGUE: dict[tuple[CashActivity, CashDirection], tuple[str, ...]] =
     ("financing", "in"): ("loan_proceeds",),
     # Household drawings: owner's family living money out of the farm account
     # (ADR-0030). Financing, never an operating cost, never on the P&L.
-    ("financing", "out"): ("loan_principal_repayments", "interest_paid", "household_drawings"),
+    # Tax payments: the gross amount paid to Revenue in the month (preliminary
+    # tax and last year's balance, ADR-0055); like drawings, never on the P&L.
+    ("financing", "out"): ("loan_principal_repayments", "interest_paid", "household_drawings", "tax_payments"),
 }
 
 CASH_FLOW_LINES = tuple(name for names in CASH_FLOW_CATALOGUE.values() for name in names)

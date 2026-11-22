@@ -66,12 +66,23 @@ PAYLOADS = {
         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
     "vat.flat_rate": {"months": joe.ACTUAL},
     "tax.capital_allowances": {"tax_year": 2026, "period_end_month": 9, "assets": joe.ASSETS},
-    "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married"},
+    "tax.estimate": {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 60_000, "marital_status": "married", "income_averaging": False},
+    # Milk is paid a month late: what is owed for September supply, at both ends.
+    "cf.reconcile": {"pl_months": joe.ACTUAL, "cf_months": joe.CASH,
+                     "milk_debtors_opening": round(joe.PRIOR[-1]["milk_litres"] * joe.PRIOR[-1]["milk_price"], 2),
+                     "milk_debtors_closing": round(joe.ACTUAL[-1]["milk_litres"] * joe.ACTUAL[-1]["milk_price"], 2),
+                     **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
+                     "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
+    # Joe leaves averaging after 2026: his four averaged years topped up to 2026's average.
+    "tax.averaging_exit": {"final_averaged_year": 2026, "final_averaged_profit": 54_000,
+                           "prior_assessed_profits": [41_000, 44_500, 50_200, 56_100]},
+    "tax.payments": {"tax_year": 2026, "current_year_tax": 12_000, "preceding_year_tax": 15_000,
+                     "preceding_year_preliminary_paid": 13_500, "preliminary_basis": "prior_100"},
     "tax.company_extraction": {"tax_year": 2026, "trading_profit": 60_000, "salary": 30_000, "dividends": 15_000,
                                "marital_status": "married", "spouse_paye_income": 32_000},
     "tax.partnership": {"tax_year": 2026, "period_end_month": 9, "trading_profit": 60_000,
-                        "partners": [{"label": "Joe", "profit_share_pct": 70, "marital_status": "married"},
-                                     {"label": "Mark", "profit_share_pct": 30, "young_trained_farmer_first_year": 2026}],
+                        "partners": [{"label": "Joe", "profit_share_pct": 70, "marital_status": "married", "income_averaging": False},
+                                     {"label": "Mark", "profit_share_pct": 30, "young_trained_farmer_first_year": 2026, "income_averaging": False}],
                         "succession": {"registered_year": 2026, "successor_birth_year": 2001, "successor": 1},
                         **{k: joe.VALUES[k] for k in ("livestock_opening_value", "stock_opening_value")},
                         "livestock_closing_value": joe.VALUES["livestock"], "stock_closing_value": joe.VALUES["stock"]},
@@ -93,6 +104,13 @@ PAYLOADS = {
                                   {"max_k": 400, "adjustment_c": 0}, {"adjustment_c": -1}],
                     "tbc_bands": [{"max_k": 10, "adjustment_c": 0.2}, {"adjustment_c": 0}]},
     },
+    # Joe's herd at the Sep 2026 year end: 100 cows held at 2,400 (market 2,600),
+    # 30 in-calf heifers 2,000, 35 calves 600 (Revenue practice 60%).
+    "herd.valuation": {"year": 2026, "month": 9, "groups": [
+        {"category": "dairy_cows", "head": 100, "unit_market_value": 2_600, "unit_held_value": 2_400},
+        {"category": "heifers", "head": 30, "unit_market_value": 2_000},
+        {"category": "calves", "head": 35, "unit_market_value": 600},
+    ]},
     "bs.summary": {"year": 2026, "month": 9, "loans": joe.LOANS, "assets": joe.ASSETS,
                    **{k: joe.VALUES[k] for k in ("debtors", "stock", "livestock", "land", "creditors")}},
     "pl.compare": {"actual": joe.ACTUAL, "comparison": joe.PRIOR},
@@ -306,19 +324,40 @@ def test_full_tax_chain_into_debt_capacity(results):
         **PAYLOADS["tax.estimate"], "taxable_profit": relief["profit_after_relief"], "stock_relief": relief["relief"],
     })["result"]
     assert tax["assessment"] == "joint" and 0 < tax["total_tax"] < relief["profit_after_relief"]
-    capacity = run_function("debt.capacity", {**PAYLOADS["debt.capacity"], "tax": tax["total_tax"]})["result"]
+    capacity = run_function("debt.capacity", {**PAYLOADS["debt.capacity"], "tax": tax["total_tax"], "tax_source": "estimate"})["result"]
     assert capacity["tax"] == tax["total_tax"]
+    # The same estimate sets this year's preliminary tax (ADR-0055): paid with last year's balance.
+    payments = run_function("tax.payments", {
+        **PAYLOADS["tax.payments"], "current_year_tax": tax["total_tax"], "preliminary_basis": "current_90",
+    })["result"]
+    assert payments["preliminary"]["amount"] == round(tax["total_tax"] * 0.9, 2)
+    assert payments["due_on_pay_date"] == round(payments["preliminary"]["amount"] + 1_500, 2)
 
 
 def test_projection_estimates_tax_each_year():
     """Joe and his wife, jointly assessed, averaging with four past years (ADR-0053)."""
     profile = {"business_type": "sole_trader", "marital_status": "married", "spouse_paye_income": 32_000,
-               "income_averaging": True, "prior_farming_profits": [41_000, 38_000, 62_000, 55_000]}
+               "income_averaging": True, "prior_farming_profits": [41_000, 38_000, 62_000, 55_000],
+               # ADR-0055: Joe's year ends in September, so October 2026 falls in plan year 1:
+               # preliminary 2026 = 90% × 10,000 = 9,000 + 2025 balance 9,000 − 8,000 = 10,000 paid.
+               "preliminary_basis": "current_90",
+               "tax_history": [{"tax_year": 2025, "liability": 9_000, "preliminary_paid": 8_000},
+                               {"tax_year": 2026, "liability": 10_000}]}
     years = run_function("plan.projection", {**PAYLOADS["plan.projection"], "tax_profile": profile})["result"]["years"]
     assert [y["tax"]["tax_year"] for y in years] == [2027, 2028, 2029, 2030, 2031]
     assert {y["tax"]["averaging"] for y in years} == {"applied"}
     assert [y["tax"]["rules_basis"] for y in years][:2] == ["in_force", "latest_held_constant"]
-    assert all(y["cash"]["tax"] == y["tax"]["total_tax"] > 0 for y in years)
+    first, second = years[0], years[1]
+    assert first["tax"]["payments"]["pay_year"] == 2026 and first["cash"]["tax"] == 10_000
+    # 2026's balance and all of 2027's tax are owed at the end of September 2027.
+    assert first["balance_sheet"]["tax_owed"] == pytest.approx(1_000 + first["tax"]["total_tax"], abs=0.01)
+    # Review fix: 2026's preliminary is paid inside the plan, so a figure for it is refused.
+    paid_2026 = {**profile, "tax_history": [profile["tax_history"][0], {"tax_year": 2026, "liability": 10_000,
+                                                                          "preliminary_paid": 5_000}]}
+    refused = run_function("plan.projection", {**PAYLOADS["plan.projection"], "tax_profile": paid_2026})
+    assert refused["errors"][0]["details"]["reason"] == "tax_history_invalid"
+    # October 2027: 90% of 2027 + 2026's balance of 1,000.
+    assert second["cash"]["tax"] == pytest.approx(round(0.9 * first["tax"]["total_tax"], 2) + 1_000, abs=0.01)
 
 
 def test_succession_partnership_with_his_son(results):
@@ -339,3 +378,15 @@ def test_company_route_compared_with_sole_trader(results):
     sole = results["tax.estimate"]
     assert company["director"]["assessment"] == sole["assessment"] == "joint"
     assert company["household"]["total_tax"] > 0 and sole["total_tax"] > 0
+
+
+def test_reconcile_explains_the_milk_cheque_lag(results):
+    """ADR-0055: Joe's cash months pay last month's milk; the money owed for
+    September supply at both ends explains the gap to the P&L exactly."""
+    body = results["cf.reconcile"]
+    assert body["operating_surplus"] == results["pl.net"]["operating_surplus"]
+    assert body["accounts_operating_profit"] == results["pl.net"]["adjusted_surplus"]
+    assert body["actual_operating_cash"] == pytest.approx(
+        sum(m["operating"]["net"] for m in results["cf.months"]["months"]), abs=CENT
+    )
+    assert body["unexplained"] == pytest.approx(0, abs=CENT)

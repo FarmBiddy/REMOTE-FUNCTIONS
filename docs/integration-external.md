@@ -348,6 +348,23 @@ for % repaid). Use `total_balance` / `total_monthly_payment` for the card header
 Family living money taken from the farm account goes in `household_drawings`
 (cash only, financing outflow; recurs in `cf.forecast`; ADR-0030).
 
+Money paid to Revenue (preliminary tax and last year's balance, usually
+October / November) goes in `tax_payments`: the gross amount paid that month,
+cash only, financing outflow, never on the P&L. `cf.forecast` never projects it:
+send the expected payment for the forecast month (from `tax.payments`) and show
+it as approximate (ADR-0055).
+
+`tax.payments` gives that payment: send this year's `total_tax` (or the
+accountant's figure), last year's and the preliminary paid for it, and the
+basis the farmer uses (`preliminary_basis`). Put `due_on_pay_date` in October
+(or November when filing on ROS) and, by direct debit, each instalment in its
+month. Label it approximate until the accountant confirms the figure.
+
+In `plan.projection`, an individual's `tax_profile` needs `preliminary_basis`
+and `tax_history` (the engine names the years it needs). `cash.tax` is then
+what is paid that year and `balance_sheet.tax_owed` what is still owed: show
+both, the second as "tax owed at year end (approx.)".
+
 Projected months (ADR-0026): call `pl.forecast` / `cf.forecast` with the actual
 months (incl. the same months last year) and the months to project, adding any
 known values (co-op price, scheme payments, `loan.schedule` rows). Chart the
@@ -397,9 +414,15 @@ Flat-rate VAT addition (ADR-0053, Ireland): most dairy farmers are not
 VAT-registered and receive the flat-rate addition on top of milk and cattle
 sales (4.5% in 2026, 4.8% announced for 2027). Keep `milk_price` / `cattle_sales`
 ex-VAT and gross of co-op deductions, as today, and call `vat.flat_rate` with the
-same months plus `vat_registered` from the farm profile. Show `total.addition`
-as an income line and `rules_applied[].status` ("announced" = Budget figure, not
-yet law). The engine picks the rate for each month.
+same months plus `vat_registered` from the farm profile. Then send each
+month's `addition` as `flat_rate_addition` on the same `pl.*` months (it is farm
+income in the accounts and lands in `revenue.other`) and on the `cf.*` months
+when the co-op / mart pays it (ADR-0055). Show `rules_applied[].status`
+("announced" = Budget figure, not yet law). The engine picks the rate for each
+month. In `plan.projection`, send it in `base_pl_months` or
+`assumptions.lines_amount` only without a `tax_profile`; with one, the engine
+adds it itself (`fra_conflict` otherwise). It is not a scenario line: shock
+milk and cattle and it follows.
 
 Stock relief (ADR-0053, Ireland): call `tax.stock_relief` for the accounting
 period with the same opening / closing livestock and stock valuations sent to
@@ -418,9 +441,8 @@ buildings → `farm_buildings`, other → `none`; `slurry_storage` / `farm_safet
 for the accelerated schemes, which need the DAFM certificate). Call
 `tax.capital_allowances` per tax year with `accounting_profit` = `pl.net`
 `net_profit_before_tax` **with** depreciation deducted, and that same
-`depreciation`. For a farmer who is not VAT-registered, also pass
-`flat_rate_addition` (`vat.flat_rate` `total.addition` for the period): it is
-taxable income that `pl.net` leaves out. `profit_bridge.taxable_profit` is the
+`depreciation`. The flat-rate addition is already in `pl.net` (a P&L line,
+ADR-0055): the bridge no longer takes it. `profit_bridge.taxable_profit` is the
 `trading_profit` for `tax.stock_relief`.
 
 Tax estimate (ADR-0053, Ireland): call `tax.estimate` with
@@ -432,7 +454,9 @@ and `state_aid_used` (young farmer aid already received, or partnership de
 minimis aid in the previous two years). Show `total_tax` with the breakdown and
 pass it as `tax` to `debt.capacity` (partnerships: see below); there `off_farm_income` should then be
 gross, since the household tax already includes the spouse's PAYE. If the
-accountant gives a tax figure, send theirs instead.
+accountant gives a tax figure, send theirs instead, with `tax_source:
+"accountant"` (else `"estimate"`): the source is required with `tax` and is
+echoed so reports say whose figure it is (ADR-0055).
 
 Partnerships (ADR-0053, Ireland): for a registered or succession farm
 partnership call `tax.partnership` once with the partnership's
@@ -486,7 +510,28 @@ same register as `assets.schedule`. The Engine splits loans and values assets.
 "How much can I borrow?" (ADR-0036): call `debt.capacity` with 12 months
 (actual or projected), the household `drawings`, `tax`, `off_farm_income`, and
 the loan's `annual_rate`, `term_months` and the lender's `min_cover` (e.g. 1.25).
-Show `new_loan.max_principal` and `repayment_cover`.
+Show `new_loan.max_principal` and `repayment_cover`. Banks read the last three
+years of filed accounts: send them as `filed_years` (`net_profit`,
+`depreciation`, `interest`, `total_tax` from the accounts and returns) and show
+`filed` next to the current figures, labelled "on your filed accounts"; the
+engine does not choose between them (ADR-0055). Same in `report.bank`.
+
+Herd values (ADR-0055): at each year end, call `herd.valuation` with the head
+count per group (from ICBF / the farmer's stock take) and the market value per
+head (Platform data: mart reports, the farmer, the accountant). For mature
+breeding stock also send the value per head held since they matured (Platform
+history). Send `total.revenue_practice_value` as the livestock value to
+`pl.net` / `tax.stock_relief` (accounts and tax) and show
+`total.market_value` next to it for a bank; label which is which.
+
+Profit to cash (ADR-0055): accounts are on an accruals basis (milk paid a
+month later, merchant credit, stock), the monthly figures on cash. Before a
+bank or accountant relies on the monthly figures, call `cf.reconcile` with the
+same `pl.*` and `cf.*` months and the balances at both ends: milk / co-op money
+owed to the farm, other debtors, merchant credit (often 40–50k on a dairy
+farm), other creditors, and the herd / stock values sent to `pl.net`. Show the
+bridge and `unexplained`; the threshold that counts as "reconciled" is the
+Platform's or the accountant's.
 
 Variance (ADR-0035): "vs last year" / "vs budget" columns call `pl.compare` or
 `cf.compare` with the two sets of months. Show `milk.volume_effect` /

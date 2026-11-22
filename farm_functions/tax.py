@@ -22,6 +22,18 @@ from typing import Any
 from farm_functions.core.ratios import per_unit
 from farm_functions.core.rounding import round_margin_pct, round_money
 from farm_functions.ie import capital_allowances as ca
+from farm_functions.ie import home_carer as carer
+from farm_functions.ie import pensions
+from farm_functions.ie import preliminary as prelim
+from farm_functions.ie.averaging import (
+    averaged_profit,
+    averaging_rule,
+    exit_top_ups,
+    step_out_due_years,
+    step_out_rules,
+)
+from farm_functions.ie.losses import PRSI_TREATMENT as LOSS_PRSI_TREATMENT
+from farm_functions.ie.losses import apply_losses
 from farm_functions.ie.partnership import (
     SUCCESSION_CREDIT,
     SUCCESSION_CREDIT_YEARS,
@@ -121,9 +133,9 @@ def tax_capital_allowances(
     period_end_month: int = 12,
     accounting_profit: float | None = None,
     depreciation: float = 0.0,
-    flat_rate_addition: float = 0.0,
 ) -> dict[str, Any]:
-    """``tax.capital_allowances``: allowances for one tax year per asset (input order)."""
+    """``tax.capital_allowances``: allowances for one tax year per asset (input order).
+    The flat-rate VAT addition is already in ``accounting_profit`` (a P&L line, ADR-0055)."""
     rows, rules, caps = [], {}, set()
     for asset in assets:
         requested = asset.get("tax_allowance") or ca.DEFAULT_FOR_CATEGORY[asset["category"]]
@@ -153,9 +165,8 @@ def tax_capital_allowances(
         bridge = {
             "accounting_profit": round_money(accounting_profit),
             "add_back_depreciation": round_money(depreciation),
-            "flat_rate_addition": round_money(flat_rate_addition),
             "capital_allowances": total,
-            "taxable_profit": round_money(accounting_profit + depreciation + flat_rate_addition - total),
+            "taxable_profit": round_money(accounting_profit + depreciation - total),
         }
     return {
         "currency": "EUR",
@@ -191,38 +202,71 @@ def _individual(
     spouse: float,
     extra_credit: float = 0.0,
     paye: float = 0.0,
+    it_deduction: float = 0.0,
+    home_carer_credit: float = 0.0,
+    spouse_self_employed: float = 0.0,
+    spouse_farm_wages: float = 0.0,
 ) -> dict:
     """Joint assessment when married: one band and credit set for the couple;
-    USC and PRSI per person. Farm losses count as nil (no loss relief)."""
+    USC and PRSI per person. Farm losses count as nil (no loss relief).
+    ``it_deduction`` (pension relief) reduces income for income tax only.
+    ``home_carer_credit`` (already tapered) replaces the second-earner band
+    increase when that gives less tax, as Revenue applies it (s.466A).
+    The spouse's income (ADR-0055): ``spouse`` PAYE pay (employee credit, Class
+    A), ``spouse_self_employed`` their own trade (earned income credit, Class S,
+    non-PAYE for USC) and ``spouse_farm_wages`` paid by the farmer (earned income
+    credit, no employee credit, PAYE for USC, no PRSI: excepted employment)."""
     earned = max(farm_profit, 0.0)
     farmer = earned + other_income
+    spouse_paye, spouse = spouse, spouse + spouse_self_employed + spouse_farm_wages
     if married:
-        band = v["it_band_married_one_income"] + min(v["it_band_married_second_income_max"], farmer, spouse)
+        one_income = v["it_band_married_one_income"]
+        band = one_income + min(v["it_band_married_second_income_max"], farmer, spouse)
         personal = v["it_credit_personal_married"]
     else:
         band, personal = v["it_band_single"], v["it_credit_personal_single"]
     total = farmer + spouse
-    at_standard = min(total, band)
-    gross = banded(total, (band,), (v["it_rate_standard"], v["it_rate_higher"]))
+    it_income = max(total - it_deduction, 0.0)
+    # Employee and earned income credits share one cap per person (s.472AB).
+    spouse_credits = min(
+        v["it_credit_employee"],
+        min(v["it_credit_employee"], spouse_paye * v["it_rate_standard"] / 100)
+        + min(v["it_credit_earned_income"], (spouse_self_employed + spouse_farm_wages) * v["it_rate_standard"] / 100),
+    )
     credits = (
         personal
         + min(v["it_credit_earned_income"], earned * v["it_rate_standard"] / 100)
-        + min(v["it_credit_employee"], spouse * v["it_rate_standard"] / 100)
+        + spouse_credits
         + extra_credit
     )
-    prsi_farmer = 0.0 if farmer < v["prsi_s_threshold"] else max(farmer * v["prsi_s_rate"] / 100, v["prsi_s_minimum"])
-    prsi_spouse = 0.0 if spouse / 52 <= v["prsi_a_weekly_exemption"] else spouse * v["prsi_a_rate"] / 100
-    return {
-        "income": {"farmer": farmer, "spouse": spouse, "total": total},
-        "income_tax": {
+
+    def income_tax(band: float, credits: float) -> dict[str, float]:
+        at_standard = min(it_income, band)
+        gross = banded(it_income, (band,), (v["it_rate_standard"], v["it_rate_higher"]))
+        return {
             "standard_rate_band": band,
             "at_standard_rate": at_standard,
-            "at_higher_rate": total - at_standard,
+            "at_higher_rate": it_income - at_standard,
             "gross": gross,
             "credits": credits,
             "net": max(gross - credits, 0.0),
-        },
-        "usc": {"farmer": _usc(v, farmer, farmer - paye), "spouse": _usc(v, spouse, 0.0)},
+        }
+
+    it, home_carer = income_tax(band, credits), None
+    if married and home_carer_credit:
+        with_credit = income_tax(one_income, credits + home_carer_credit)
+        home_carer = "credit" if with_credit["net"] < it["net"] else "band_increase"
+        if home_carer == "credit":
+            it = with_credit
+    prsi_farmer = 0.0 if farmer < v["prsi_s_threshold"] else max(farmer * v["prsi_s_rate"] / 100, v["prsi_s_minimum"])
+    prsi_spouse = 0.0 if spouse_paye / 52 <= v["prsi_a_weekly_exemption"] else spouse_paye * v["prsi_a_rate"] / 100
+    if spouse_self_employed >= v["prsi_s_threshold"]:
+        prsi_spouse += max(spouse_self_employed * v["prsi_s_rate"] / 100, v["prsi_s_minimum"])
+    return {
+        "income": {"farmer": farmer, "spouse": spouse, "total": total},
+        "income_tax": it,
+        "home_carer": home_carer,
+        "usc": {"farmer": _usc(v, farmer, farmer - paye), "spouse": _usc(v, spouse, spouse_self_employed)},
         "prsi": {"farmer": prsi_farmer, "spouse": prsi_spouse},
     }
 
@@ -236,10 +280,142 @@ def _rounded(lines: dict[str, float]) -> dict[str, float]:
     return {**out, "total": round_money(sum(out.values()))}
 
 
-def tax_estimate(*, tax_year: int, **inputs: Any) -> dict[str, Any]:
+def averaging_view(
+    tax_year: int, profit_before_allowances: float, prior_farming_profits: list[float], capital_allowances: float
+) -> tuple[float, dict[str, Any], Rule]:
+    """Income averaging for one year (s.657, ADR-0055): this year's profit before
+    capital allowances joins the previous years, the average is assessed and the
+    year's own allowances are then deducted. Returns the assessable profit, the
+    published view and the rule."""
+    rule = averaging_rule(tax_year)
+    years = int(rule.value)
+    profits = [*prior_farming_profits, profit_before_allowances]
+    averaged = averaged_profit(profits, years)
+    assessable = averaged - capital_allowances
+    view = {
+        "years": years,
+        "profits_before_allowances": [round_money(p) for p in profits[-years:]],
+        "averaged_profit": round_money(averaged),
+        "capital_allowances": round_money(capital_allowances),
+        "assessable_profit": round_money(assessable),
+    }
+    return assessable, view, rule
+
+
+def _estimate_year(
+    *,
+    tax_year: int,
+    taxable_profit: float,
+    stock_relief: float = 0.0,
+    income_averaging: bool | None = None,
+    prior_farming_profits: list[float] | None = None,
+    capital_allowances: float | None = None,
+    losses_forward: float = 0.0,
+    pension_contributions: float = 0.0,
+    birth_year: int | None = None,
+    home_carer: bool = False,
+    **inputs: Any,
+) -> dict[str, Any]:
     """``tax.estimate``: tax for one year on taxable farming profit (after capital
-    allowances and stock relief), applying the stock relief caps on tax value."""
-    return estimate_with_rules(year_rules(tax_year), tax_year=tax_year, **inputs)
+    allowances and stock relief), applying the stock relief caps on tax value.
+    With income averaging the averaged profit is assessed, and this year's stock
+    relief counts a fifth towards its cap (it moves the average by a fifth).
+    Individuals' losses brought forward (s.382) then reduce the profit charged;
+    pension contributions are relieved against income tax only, up to the age %
+    of net relevant earnings (the assessable farm profit, the Engine's reading)."""
+    averaging = rule = None
+    relief_effect = stock_relief
+    if income_averaging:
+        taxable_profit, averaging, rule = averaging_view(
+            tax_year, taxable_profit + capital_allowances, prior_farming_profits, capital_allowances
+        )
+        relief_effect = stock_relief / averaging["years"]
+    losses = None
+    # Without the relief (for its caps): this year's profit + the relief counted, then
+    # the same losses and pension limit applied to that higher profit.
+    without_profit = taxable_profit + relief_effect
+    if inputs["business_type"] != "company":
+        taxable_profit, used = apply_losses(taxable_profit, losses_forward, stock_relief > 0)
+        losses = {k: round_money(v) for k, v in used.items()} | {"prsi_treatment": LOSS_PRSI_TREATMENT}
+        without_profit, _ = apply_losses(without_profit, losses_forward, False)
+    pension, pension_rules, without_pension = None, [], 0.0
+    if pension_contributions:
+        age = tax_year - birth_year
+        pct_rule, cap_rule = pensions.age_band_rule(age, tax_year), pensions.earnings_cap_rule(tax_year)
+        earnings = max(taxable_profit, 0.0)
+        relieved = pensions.relief(pension_contributions, earnings, pct_rule.value, cap_rule.value)
+        pension = {
+            "contributions": round_money(pension_contributions),
+            "age": age,
+            "age_pct": pct_rule.value,
+            "net_relevant_earnings": round_money(earnings),
+            "earnings_basis": "assessable_farm_profit",
+            "limit": round_money(pct_rule.value / 100 * min(earnings, cap_rule.value)),
+            "relief": round_money(relieved),
+            "unrelieved": round_money(pension_contributions - relieved),
+        }
+        pension_rules = [pct_rule.as_dict(), cap_rule.as_dict()]
+        without_pension = pensions.relief(
+            pension_contributions, max(without_profit, 0.0), pct_rule.value, cap_rule.value
+        )
+    carer_credit, carer_rules = 0.0, []
+    if home_carer:
+        credit_rule, limit_rule = carer.home_carer_rules(tax_year)
+        carer_income = sum(
+            inputs.get(k, 0.0) for k in ("spouse_paye_income", "spouse_self_employed_income", "spouse_farm_wages")
+        )
+        carer_credit = carer.home_carer_credit(credit_rule.value, limit_rule.value, carer_income)
+        carer_rules = [credit_rule.as_dict(), limit_rule.as_dict()]
+    result = estimate_with_rules(
+        year_rules(tax_year), tax_year=tax_year, taxable_profit=taxable_profit, stock_relief=relief_effect,
+        pension_relief=0.0 if pension is None else pension["relief"], home_carer_credit=carer_credit,
+        without_relief_profit=without_profit, without_relief_pension=without_pension, **inputs,
+    )
+    if home_carer:
+        result["home_carer"] = {"credit_after_taper": round_money(carer_credit),
+                                "applied": (result["home_carer"] or {}).get("applied", "band_increase")}
+        result["rules_applied"] += carer_rules
+    if rule is not None:
+        result["rules_applied"].append(rule.as_dict())
+    result["rules_applied"] += pension_rules
+    return {**result, "averaging": averaging, "losses": losses, "pension": pension}
+
+
+def tax_estimate(
+    *, step_out: bool = False, last_step_out_year: int | str | None = None, **inputs: Any
+) -> dict[str, Any]:
+    """``tax.estimate``. A step-out year (s.657(6A), averaging on) is taxed on
+    actual profit; the income tax it saves against the averaged figure is
+    deferred and paid in equal yearly instalments from two years on."""
+    if not step_out:
+        return {**_estimate_year(**inputs), "step_out": None}
+    averaged = _estimate_year(**inputs)
+    actual = _estimate_year(**{**inputs, "income_averaging": False, "prior_farming_profits": None, "capital_allowances": None})
+    tax_year = inputs["tax_year"]
+    count_rule, gap_rule = step_out_rules(tax_year)
+    on_average, on_actual = averaged["income_tax"]["net"], actual["income_tax"]["net"]
+    deferred = round_money(max(on_average - on_actual, 0.0))
+    count = int(count_rule.value)
+    cents = prelim.instalments(round(deferred * 100), count)
+    due = [
+        {"due": date(y, prelim.PAY_MONTH, prelim.STATUTORY_DAY_OF_OCTOBER).isoformat(), "amount": c / 100}
+        for y, c in zip(step_out_due_years(tax_year, count), cents)
+    ]
+    averaging_rules = [r for r in averaged["rules_applied"] if r["rule_id"] == "income_averaging_years"]
+    rules = [*actual["rules_applied"], *averaging_rules, count_rule.as_dict(), gap_rule.as_dict()]
+    return {
+        **actual,
+        # The averaged figure the deferred tax is measured on; this year is taxed on actual.
+        "averaging": averaged["averaging"],
+        "rules_applied": rules,
+        "step_out": {
+            "income_tax_on_average": on_average,
+            "income_tax_on_actual": on_actual,
+            "deferred_income_tax": deferred,
+            "instalments": due,
+            "last_step_out_year": last_step_out_year,
+        },
+    }
 
 
 def estimate_with_rules(
@@ -255,7 +431,17 @@ def estimate_with_rules(
     stock_relief_regime: str = "general",
     state_aid_used: float = 0.0,
     extra_credit: float = 0.0,
+    pension_relief: float = 0.0,
+    home_carer_credit: float = 0.0,
+    spouse_self_employed_income: float = 0.0,
+    spouse_farm_wages: float = 0.0,
+    without_relief_profit: float | None = None,
+    without_relief_pension: float | None = None,
 ) -> dict[str, Any]:
+    """Tax for one taxpayer on the given rules. The stock relief caps compare
+    with the tax had there been no relief: ``without_relief_profit`` /
+    ``without_relief_pension`` give that case when losses or the pension limit
+    depend on the profit (default: profit + relief, same pension relief)."""
     v = {k: r.value for k, r in rules.items()}
     used: list[str]
     income_tax = usc = prsi = corporation = cap = None
@@ -265,15 +451,27 @@ def estimate_with_rules(
             "trading": max(taxable_profit, 0.0) * v["ct_rate_trading"] / 100,
             "non_trading": other_income * v["ct_rate_non_trading"] / 100,
         })
-        income = {"farm_profit": taxable_profit, "other_income": other_income, "spouse_paye_income": 0.0}
+        income = {"farm_profit": taxable_profit, "other_income": other_income, "spouse_paye_income": 0.0,
+                  "spouse_self_employed_income": 0.0, "spouse_farm_wages": 0.0}
         total_tax = corporation["total"]
     else:
         used = [k for k in RULES if k.startswith(("it_", "usc_", "prsi_"))]
         married = marital_status == "married"
-        person = _individual(v, taxable_profit, other_income, married, spouse_paye_income, extra_credit)
+        person = _individual(
+            v, taxable_profit, other_income, married, spouse_paye_income, extra_credit,
+            it_deduction=pension_relief, home_carer_credit=home_carer_credit,
+            spouse_self_employed=spouse_self_employed_income, spouse_farm_wages=spouse_farm_wages,
+        )
         clawback = 0.0
         if stock_relief_regime != "general" and stock_relief > 0:
-            without = _individual(v, taxable_profit + stock_relief, other_income, married, spouse_paye_income, extra_credit)
+            without = _individual(
+                v,
+                taxable_profit + stock_relief if without_relief_profit is None else without_relief_profit,
+                other_income, married, spouse_paye_income, extra_credit,
+                it_deduction=pension_relief if without_relief_pension is None else without_relief_pension,
+                home_carer_credit=home_carer_credit,
+                spouse_self_employed=spouse_self_employed_income, spouse_farm_wages=spouse_farm_wages,
+            )
             tax_value = _it_usc(without) - _it_usc(person)
             if stock_relief_regime == "young_trained_farmer":
                 used += ["stock_relief_ytf_cap", "state_aid_young_farmer_lifetime"]
@@ -293,10 +491,22 @@ def estimate_with_rules(
         income_tax = {k: round_money(x) for k, x in it.items()}
         usc = _rounded(person["usc"])
         prsi = _rounded(person["prsi"])
-        income = {"farm_profit": taxable_profit, "other_income": other_income, "spouse_paye_income": spouse_paye_income}
+        income = {
+            "farm_profit": taxable_profit, "other_income": other_income, "spouse_paye_income": spouse_paye_income,
+            "spouse_self_employed_income": spouse_self_employed_income, "spouse_farm_wages": spouse_farm_wages,
+        }
         total_tax = round_money(income_tax["net"] + usc["total"] + prsi["total"] + round_money(clawback))
+    home_carer_view = None
+    if business_type != "company" and home_carer_credit:
+        home_carer_view = {
+            "credit_after_taper": round_money(home_carer_credit),
+            "applied": person["home_carer"],
+        }
     income = {k: round_money(x) for k, x in income.items()}
-    income["total"] = round_money(max(income["farm_profit"], 0.0) + income["other_income"] + income["spouse_paye_income"])
+    income["total"] = round_money(
+        max(income["farm_profit"], 0.0) + income["other_income"] + income["spouse_paye_income"]
+        + income["spouse_self_employed_income"] + income["spouse_farm_wages"]
+    )
     rate = per_unit(total_tax, income["total"])
     return {
         "currency": "EUR",
@@ -313,6 +523,11 @@ def estimate_with_rules(
         "total_tax": total_tax,
         "effective_rate_pct": None if rate is None else round_margin_pct(rate * 100),
         "rules_applied": [rules[k].as_dict() for k in used],
+        "averaging": None,
+        "losses": None,
+        "pension": None,
+        "home_carer": None if income_tax is None else home_carer_view,
+        "step_out": None,
     }
 
 
@@ -385,9 +600,10 @@ def projected_tax(
         history.append(own_profit - relief)
         averaged, relief_effect = history[-1], relief
         if profile["income_averaging"]:
-            if len(history) >= 5:
-                # This year's relief moves the 5-year average by a fifth only.
-                averaged, averaging, relief_effect = sum(history[-5:]) / 5, "applied", relief / 5
+            years = int(averaging_rule(basis_year).value)
+            if len(history) >= years:
+                # This year's relief moves the average by 1/years only.
+                averaged, averaging, relief_effect = averaged_profit(history, years), "applied", relief / years
             else:
                 averaging = "insufficient_history"
         given = state["given"][i]
@@ -446,6 +662,160 @@ def projected_tax(
     }
 
 
+def tax_averaging_exit(
+    *,
+    final_averaged_year: int,
+    final_averaged_profit: float,
+    prior_assessed_profits: list[float],
+    deferred_step_out_tax: float = 0.0,
+) -> dict[str, Any]:
+    """``tax.averaging_exit`` (s.657(8); ADR-0055): leaving averaging after the
+    final averaged year. Each of the years before it is raised to at least the
+    final averaged profit (before capital allowances); the year after is taxed
+    on the normal basis; deferred step-out tax falls due at once. The tax on
+    each top-up is ``tax.estimate`` for that year (or the accountant's)."""
+    rule = averaging_rule(final_averaged_year)
+    first = final_averaged_year - len(prior_assessed_profits)
+    extra = exit_top_ups(final_averaged_profit, prior_assessed_profits)
+    years = [
+        {
+            "tax_year": first + i,
+            "assessed": round_money(a),
+            "topped_up_to": round_money(a + e),
+            "additional_assessable": round_money(e),
+        }
+        for i, (a, e) in enumerate(zip(prior_assessed_profits, extra))
+    ]
+    return {
+        "currency": "EUR",
+        "jurisdiction": "IE",
+        "final_averaged_year": final_averaged_year,
+        "final_averaged_profit": round_money(final_averaged_profit),
+        "years": years,
+        "total_additional_assessable": round_money(sum(r["additional_assessable"] for r in years)),
+        "normal_basis_from": final_averaged_year + 1,
+        "deferred_step_out_tax_due_now": round_money(deferred_step_out_tax),
+        "rules_applied": [rule.as_dict()],
+    }
+
+
+def tax_payments(
+    *,
+    tax_year: int,
+    current_year_tax: float,
+    preceding_year_tax: float,
+    preceding_year_preliminary_paid: float,
+    preliminary_basis: str,
+    pre_preceding_year_tax: float | None = None,
+    direct_debit: bool = False,
+    direct_debit_start_month: int | None = None,
+) -> dict[str, Any]:
+    """``tax.payments`` (ADR-0055): what is paid to Revenue for a tax year and
+    when. Preliminary tax on each safe-harbour basis (the Platform chooses one),
+    last year's balance, and the gross total due on the pay date (31 October,
+    or the ROS date Revenue announced). By direct debit the preliminary tax is
+    paid in monthly instalments instead, so only the balance is due that day."""
+    bases = {
+        "current_90": current_year_tax,
+        "prior_100": preceding_year_tax,
+        "pre_preceding_105_dd": pre_preceding_year_tax,
+    }
+    options, rules = [], []
+    for basis in prelim.BASES:
+        rule = prelim.safe_harbour_rule(basis, tax_year)
+        rules.append(rule.as_dict())
+        base = bases[basis]
+        dd_only = basis == prelim.DIRECT_DEBIT_BASIS
+        # The 105% basis: direct debit only, and not when that year's tax was nil.
+        available = base is not None and (not dd_only or (direct_debit and base > 0))
+        options.append(
+            {
+                "basis": basis,
+                "rate_pct": rule.value,
+                "base_tax": None if base is None else round_money(base),
+                "amount": None if base is None else round_money(base * rule.value / 100),
+                "requires_direct_debit": dd_only,
+                "available": available,
+            }
+        )
+    safe = [o for o in options if o["available"]]
+    lowest = min(safe, key=lambda o: o["amount"])
+    chosen = next(o for o in options if o["basis"] == preliminary_basis)
+    preliminary = chosen["amount"]
+
+    balance = round_money(preceding_year_tax - preceding_year_preliminary_paid)
+    balance_due, overpaid = max(balance, 0.0), max(-balance, 0.0)
+    ros = prelim.ROS_PAY_AND_FILE.get(tax_year)
+    plan = None
+    if direct_debit:
+        months = list(range(direct_debit_start_month, 13))
+        cents = prelim.instalments(round(preliminary * 100), len(months))
+        plan = [
+            {"year": tax_year, "month": m, "day": prelim.DIRECT_DEBIT_DAY, "amount": c / 100}
+            for m, c in zip(months, cents)
+        ]
+    return {
+        "currency": "EUR",
+        "jurisdiction": "IE",
+        "tax_year": tax_year,
+        "options": options,
+        "lowest_safe": {"basis": lowest["basis"], "amount": lowest["amount"]},
+        "preliminary": {"basis": preliminary_basis, "amount": preliminary},
+        "preceding_year": {
+            "tax_year": tax_year - 1,
+            "liability": round_money(preceding_year_tax),
+            "preliminary_paid": round_money(preceding_year_preliminary_paid),
+            "balance_due": round_money(balance_due),
+            "overpaid": round_money(overpaid),
+        },
+        "pay_date": {
+            "statutory": date(tax_year, prelim.PAY_MONTH, prelim.STATUTORY_DAY_OF_OCTOBER).isoformat(),
+            "ros": None if ros is None else ros[0].isoformat(),
+            "ros_source": None if ros is None else ros[1],
+        },
+        # Gross: an overpayment of last year is shown, never netted here.
+        "due_on_pay_date": round_money(balance_due + (0.0 if direct_debit else preliminary)),
+        "direct_debit_instalments": plan,
+        # This year's tax against the preliminary, settled with next year's return:
+        # gross, a balance due or an overpayment, never one signed figure.
+        "next_year": {
+            "balance_due": round_money(max(current_year_tax - preliminary, 0.0)),
+            "overpaid": round_money(max(preliminary - current_year_tax, 0.0)),
+        },
+        "rules_applied": rules,
+    }
+
+
+def projected_payments(
+    basis: str,
+    pay_year: int,
+    tax_year: int,
+    liabilities: dict[int, float],
+    preliminary_paid: dict[int, float],
+) -> dict[str, Any]:
+    """Tax paid in one ``plan.projection`` year (ADR-0055): on the October pay
+    date inside the year, preliminary tax for ``pay_year`` plus the balance of
+    the year before. ``liabilities`` and ``preliminary_paid`` are by tax year
+    (history, then projected); this year's preliminary is recorded for the next.
+    Years after the last rules year use that year's rates."""
+    rule = prelim.safe_harbour_rule(basis, min(pay_year, LAST_TAX_YEAR))
+    amount = round_money(prelim.preliminary_amount(basis, rule.value, liabilities, pay_year))
+    balance = round_money(liabilities[pay_year - 1] - preliminary_paid[pay_year - 1])
+    preliminary_paid[pay_year] = amount
+    balance_due, refund = max(balance, 0.0), max(-balance, 0.0)
+    return {
+        "pay_year": pay_year,
+        "preliminary_basis": basis,
+        "preliminary": amount,
+        "balance_previous_year": balance_due,
+        "refund_previous_year": refund,
+        "paid": round_money(balance_due + amount),
+        # Accrued and not yet paid at the year end: this pay year's balance, plus a
+        # later tax year whose pay date falls after the year (non-calendar year ends).
+        "owed_at_year_end": round_money(sum(liabilities[y] for y in range(pay_year, tax_year + 1)) - amount),
+    }
+
+
 def succession_credit_amount(succession: dict[str, Any] | None, tax_year: int) -> tuple[float, Rule | None]:
     """Total succession partnership credit for the year (0 outside its 5 years or
     once the successor is 40 on 1 January), with the rule fixed at registration."""
@@ -471,9 +841,12 @@ def tax_partnership(
     livestock_closing_value: float = 0.0,
     stock_opening_value: float = 0.0,
     stock_closing_value: float = 0.0,
+    capital_allowances: float | None = None,
 ) -> dict[str, Any]:
     """``tax.partnership``: split taxable profit and the stock increase by profit
-    share, then stock relief, succession credit and tax for each partner."""
+    share, then stock relief, succession credit and tax for each partner. A
+    partner in income averaging is assessed on the average of their own share
+    (before their share of the allowances) over the averaging period (ADR-0055)."""
     rules = year_rules(tax_year)
     increase = (livestock_closing_value + stock_closing_value) - (livestock_opening_value + stock_opening_value)
     credit_total, credit_rule = succession_credit_amount(succession, tax_year)
@@ -486,20 +859,29 @@ def tax_partnership(
         rule = rule_at(table, date(tax_year, period_end_month, 1))
         relief = stock_relief(increase * pct / 100, rule.value, profit)
         taxable = profit - relief
-        credit = succession_credit(credit_total, pct, taxable)
+        assessable, relief_effect, averaging, averaging_rule_used = taxable, relief, None, None
+        if partner["income_averaging"]:
+            own_allowances = capital_allowances * pct / 100
+            assessable, averaging, averaging_rule_used = averaging_view(
+                tax_year, taxable + own_allowances, partner["prior_farming_profits"], own_allowances
+            )
+            relief_effect = relief / averaging["years"]
+        credit = succession_credit(credit_total, pct, assessable)
         tax = estimate_with_rules(
             rules,
             business_type="partnership",
             tax_year=tax_year,
-            taxable_profit=taxable,
+            taxable_profit=assessable,
             other_income=partner["other_income"],
             marital_status=partner["marital_status"],
             spouse_paye_income=partner["spouse_paye_income"],
-            stock_relief=relief,
+            stock_relief=relief_effect,
             stock_relief_regime=regime,
             state_aid_used=partner["state_aid_used"],
             extra_credit=credit,
         )
+        if averaging_rule_used is not None:
+            tax = {**tax, "averaging": averaging, "rules_applied": [*tax["rules_applied"], averaging_rule_used.as_dict()]}
         for r in [rule.as_dict(), *tax["rules_applied"]]:
             applied[(r["rule_id"], r["from"])] = r
         rows.append(
@@ -622,13 +1004,16 @@ def tax_company_extraction(
 
 __all__ = [
     "estimate_with_rules",
+    "tax_averaging_exit",
     "tax_company_extraction",
     "succession_credit_amount",
     "tax_partnership",
+    "projected_payments",
     "projected_tax",
     "resolve_allowance",
     "stock_relief_regime",
     "tax_capital_allowances",
     "tax_estimate",
+    "tax_payments",
     "tax_stock_relief",
 ]

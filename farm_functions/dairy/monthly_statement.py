@@ -24,6 +24,7 @@ def monthly_pl_summary(
     cattle_sales: float = 0,
     land_leasing_income: float = 0,
     other: float = 0,
+    flat_rate_addition: float = 0,
     feed: float = 0,
     fertiliser: float = 0,
     vet: float = 0,
@@ -48,7 +49,9 @@ def monthly_pl_summary(
     """
     milk = milk_revenue_from_litres(milk_litres, milk_price)
     schemes = scheme_revenue(biss, acres, other_grants)
-    other_income = other_revenue(cattle_sales, land_leasing_income, other)
+    # The flat-rate VAT addition is farm income in the accounts (ADR-0055); its
+    # amount comes from the jurisdiction layer, not from here.
+    other_income = sum_amounts(other_revenue(cattle_sales, land_leasing_income, other), flat_rate_addition)
     revenue = sum_amounts(milk, schemes, other_income)
     cost_lines = {
         "feed": float(feed),

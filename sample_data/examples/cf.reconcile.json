@@ -1,0 +1,65 @@
+{
+  "pl_months": [
+    {
+      "year": 2026,
+      "month": 1,
+      "milk_litres": 6000,
+      "milk_price": 0.45,
+      "feed": 6000,
+      "fertiliser": 1500,
+      "labour": 2500
+    },
+    {
+      "year": 2026,
+      "month": 2,
+      "milk_litres": 24000,
+      "milk_price": 0.45,
+      "feed": 8000,
+      "fertiliser": 1500,
+      "labour": 2500
+    },
+    {
+      "year": 2026,
+      "month": 3,
+      "milk_litres": 50000,
+      "milk_price": 0.45,
+      "feed": 9000,
+      "fertiliser": 1500,
+      "labour": 2500
+    }
+  ],
+  "cf_months": [
+    {
+      "year": 2026,
+      "month": 1,
+      "milk": 3150,
+      "feed": 2000,
+      "fertiliser": 0,
+      "labour": 2500
+    },
+    {
+      "year": 2026,
+      "month": 2,
+      "milk": 2700,
+      "feed": 5000,
+      "fertiliser": 0,
+      "labour": 2500
+    },
+    {
+      "year": 2026,
+      "month": 3,
+      "milk": 10800,
+      "feed": 6000,
+      "fertiliser": 4500,
+      "labour": 2500
+    }
+  ],
+  "milk_debtors_opening": 3150,
+  "milk_debtors_closing": 22500,
+  "merchant_credit_opening": 38000,
+  "merchant_credit_closing": 48000,
+  "livestock_opening_value": 330000,
+  "livestock_closing_value": 336000,
+  "stock_opening_value": 9000,
+  "stock_closing_value": 7000
+}

@@ -37,6 +37,7 @@ EXPECTED_PUBLIC_IDS = (
     "kpi.summary",
     "pl.net",
     "bs.summary",
+    "herd.valuation",
     "milk.quality",
     "vat.flat_rate",
     "tax.stock_relief",
@@ -44,8 +45,11 @@ EXPECTED_PUBLIC_IDS = (
     "tax.estimate",
     "tax.partnership",
     "tax.company_extraction",
+    "tax.averaging_exit",
+    "tax.payments",
     "pl.compare",
     "cf.compare",
+    "cf.reconcile",
     "risk.sensitivity",
     "risk.tornado",
     "decision.partial_budget",
@@ -151,12 +155,16 @@ def _happy_payload(calculation_id: str) -> dict:
             "opening_cash": 0,
             "milking_cows": 100,
         }
+    if calculation_id == "tax.averaging_exit":
+        return {"final_averaged_year": 2026, "final_averaged_profit": 17_380, "prior_assessed_profits": [12_000, 12_400, 12_467, 12_850]}
+    if calculation_id == "tax.payments":
+        return {"tax_year": 2026, "current_year_tax": 20_000, "preceding_year_tax": 30_000, "preceding_year_preliminary_paid": 25_000, "preliminary_basis": "current_90"}
     if calculation_id == "tax.company_extraction":
         return {"tax_year": 2026, "trading_profit": 80_000, "salary": 30_000}
     if calculation_id == "tax.partnership":
-        return {"tax_year": 2026, "trading_profit": 60_000, "partners": [{"profit_share_pct": 60}, {"profit_share_pct": 40}]}
+        return {"tax_year": 2026, "trading_profit": 60_000, "partners": [{"profit_share_pct": 60, "income_averaging": False}, {"profit_share_pct": 40, "income_averaging": False}]}
     if calculation_id == "tax.estimate":
-        return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 40_000}
+        return {"business_type": "sole_trader", "tax_year": 2026, "taxable_profit": 40_000, "income_averaging": False}
     if calculation_id == "tax.capital_allowances":
         return {"tax_year": 2026, "assets": [{"cost": 8_000, "year": 2026, "month": 2, "life_months": 96}]}
     if calculation_id == "tax.stock_relief":
@@ -166,10 +174,14 @@ def _happy_payload(calculation_id: str) -> dict:
     if calculation_id == "milk.quality":
         return {"months": [{"year": 2026, "month": 3, "milk_litres": 1_000, "fat_pct": 4.2,
                             "protein_pct": 3.5, "scc_k": 120, "tbc_k": 10}]}
+    if calculation_id == "herd.valuation":
+        return {"year": 2026, "month": 12, "groups": [{"category": "calves", "head": 10, "unit_market_value": 300}, {"category": "dairy_cows", "head": 2, "unit_market_value": 1_500, "unit_held_value": 1_200}]}
     if calculation_id == "bs.summary":
         return {"year": 2026, "month": 12, "cash": 1_000, "land": 10_000}
     if calculation_id == "pl.compare":
         return {"actual": [dict(MONTHLY_REFERENCE)], "comparison": [dict(MONTHLY_REFERENCE)]}
+    if calculation_id == "cf.reconcile":
+        return {"pl_months": [{"year": 2026, "month": 3, "milk_litres": 1_000, "milk_price": 0.4}], "cf_months": [{"year": 2026, "month": 3, "milk": 400}]}
     if calculation_id == "cf.compare":
         month = {"year": 2026, "month": 3, "milk": 1}
         return {"actual": [month], "comparison": [month]}
@@ -190,8 +202,8 @@ def _happy_payload(calculation_id: str) -> dict:
 
 def test_exactly_thirty_seven_unique_public_calculation_ids() -> None:
     assert PUBLIC_CALCULATION_IDS == EXPECTED_PUBLIC_IDS
-    assert len(PUBLIC_CALCULATION_IDS) == 37
-    assert len(set(PUBLIC_CALCULATION_IDS)) == 37
+    assert len(PUBLIC_CALCULATION_IDS) == 41
+    assert len(set(PUBLIC_CALCULATION_IDS)) == 41
     assert tuple(c.id for c in CALCULATION_CATALOGUE) == EXPECTED_PUBLIC_IDS
     assert set(FUNCTIONS) == set(EXPECTED_PUBLIC_IDS)
 

@@ -147,17 +147,30 @@ class NewLoanResult(_Out):
     monthly_payment_at_max: float
 
 
+class FiledCapacity(_Out):
+    """Capacity on the filed accounts (ADR-0055): averages of the years sent."""
+
+    tax_years: list[int]
+    average_surplus: float
+    average_tax: float
+    repayment_capacity: float
+    repayment_cover: float | None
+    new_loan: NewLoanResult
+
+
 class DebtCapacityResult(Span):
     currency: Currency
     operating_surplus: float
     off_farm_income: float
     drawings: float
     tax: float
+    tax_source: Literal["accountant", "estimate"] | None
     repayment_capacity: float
     debt_service: float
     repayment_cover: float | None
     min_cover: float
     new_loan: NewLoanResult | None
+    filed: FiledCapacity | None
 
 
 # --- KPIs, net profit, balance sheet ----------------------------------------
@@ -584,7 +597,10 @@ class ProjectionCash(_Out):
     flat_rate_addition: float
     off_farm_income: float
     drawings: float
+    # Paid to Revenue in the year (ADR-0055): with a tax profile for individuals,
+    # preliminary tax + last year's balance; else the year's tax.
     tax: float
+    tax_refund: float
     interest: float
     principal: float
     capex: float
@@ -606,6 +622,8 @@ class ProjectionBalanceSheet(_Out):
     land: float
     livestock: float
     debt: float
+    # Tax accrued and not yet paid at the year end (negative = overpaid).
+    tax_owed: float
     net_worth: float
 
 
@@ -631,6 +649,16 @@ class ProjectionPartnerTax(_Out):
     total_tax: float
 
 
+class ProjectionTaxPayments(_Out):
+    pay_year: int
+    preliminary_basis: Literal["current_90", "prior_100"]
+    preliminary: float
+    balance_previous_year: float
+    refund_previous_year: float
+    paid: float
+    owed_at_year_end: float
+
+
 class ProjectionTax(_Out):
     tax_year: int
     rules_basis: Literal["in_force", "latest_held_constant"]
@@ -647,6 +675,7 @@ class ProjectionTax(_Out):
     total_tax: float
     effective_rate_pct: float | None
     partners: list[ProjectionPartnerTax] | None
+    payments: ProjectionTaxPayments | None
 
 
 class ProjectionYear(_Out):
@@ -759,7 +788,7 @@ class RuleApplied(_Out):
     from_: str = Field(alias="from")
     to: str | None
     legal_ref: str
-    status: Literal["enacted", "announced"]
+    status: Literal["enacted", "announced", "practice"]
 
 
 class VatMonth(_Out):
@@ -836,7 +865,6 @@ class AllowanceByType(_Out):
 class ProfitBridge(_Out):
     accounting_profit: float
     add_back_depreciation: float
-    flat_rate_addition: float
     capital_allowances: float
     taxable_profit: float
 
@@ -858,6 +886,8 @@ class TaxIncome(_Out):
     farm_profit: float
     other_income: float
     spouse_paye_income: float
+    spouse_self_employed_income: float
+    spouse_farm_wages: float
     total: float
 
 
@@ -890,6 +920,65 @@ class StockReliefCap(_Out):
     clawback: float
 
 
+class AveragingDetail(_Out):
+    """Income averaging for the year (s.657, ADR-0055): the profits averaged
+    (oldest first, before capital allowances), then this year's allowances."""
+
+    years: int
+    profits_before_allowances: list[float]
+    averaged_profit: float
+    capital_allowances: float
+    assessable_profit: float
+
+
+class LossesForward(_Out):
+    """Losses brought forward and what happened to them (s.382, ADR-0055)."""
+
+    brought_forward: float
+    used: float
+    lost_by_stock_relief: float
+    this_year_loss: float
+    carried_forward: float
+    prsi_treatment: Literal["reduced_unconfirmed"]
+
+
+class PensionRelief(_Out):
+    """Pension contribution relief, income tax only (s.787, ADR-0055)."""
+
+    contributions: float
+    age: int
+    age_pct: float
+    net_relevant_earnings: float
+    earnings_basis: Literal["assessable_farm_profit"]
+    limit: float
+    relief: float
+    unrelieved: float
+
+
+class HomeCarer(_Out):
+    """Home carer credit (s.466A, ADR-0055): after the income taper, and whether
+    it or the second-earner band increase was given (the better one)."""
+
+    credit_after_taper: float
+    applied: Literal["credit", "band_increase"]
+
+
+class StepOutInstalment(_Out):
+    due: str
+    amount: float
+
+
+class StepOut(_Out):
+    """Step-out year (s.657(6A), ADR-0055): taxed on actual profit, the income tax
+    saved against the averaged figure paid later in instalments."""
+
+    income_tax_on_average: float
+    income_tax_on_actual: float
+    deferred_income_tax: float
+    instalments: list[StepOutInstalment]
+    last_step_out_year: int | Literal["never"]
+
+
 class TaxEstimateResult(_Out):
     currency: Currency
     jurisdiction: Literal["IE"]
@@ -905,6 +994,11 @@ class TaxEstimateResult(_Out):
     total_tax: float
     effective_rate_pct: float | None
     rules_applied: list[RuleApplied]
+    averaging: AveragingDetail | None
+    losses: LossesForward | None
+    pension: PensionRelief | None
+    home_carer: HomeCarer | None
+    step_out: StepOut | None
 
 
 class ExtractionCompany(_Out):
@@ -938,6 +1032,129 @@ class ExtractionHousehold(_Out):
     income_after_tax: float
     total_tax: float
     effective_rate_pct: float | None
+
+
+class PaymentOption(_Out):
+    basis: Literal["current_90", "prior_100", "pre_preceding_105_dd"]
+    rate_pct: float
+    base_tax: float | None
+    amount: float | None
+    requires_direct_debit: bool
+    available: bool
+
+
+class ChosenPayment(_Out):
+    basis: Literal["current_90", "prior_100", "pre_preceding_105_dd"]
+    amount: float
+
+
+class PrecedingYearTax(_Out):
+    tax_year: int
+    liability: float
+    preliminary_paid: float
+    balance_due: float
+    overpaid: float
+
+
+class PayDate(_Out):
+    statutory: str
+    ros: str | None
+    ros_source: str | None
+
+
+class DirectDebitInstalment(_Out):
+    year: int
+    month: int
+    day: int
+    amount: float
+
+
+class HerdGroupValue(_Out):
+    label: str
+    category: str
+    head: float
+    unit_market_value: float
+    market_value: float
+    unit_revenue_practice_value: float
+    revenue_practice_value: float
+    revenue_practice_basis: Literal["deemed_cost_pct", "held_value", "written_down_to_market"]
+
+
+class HerdTotal(_Out):
+    head: float
+    market_value: float
+    revenue_practice_value: float
+
+
+class HerdValuationResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    as_of: MonthlyPeriodIdentity
+    groups: list[HerdGroupValue]
+    total: HerdTotal
+    rules_applied: list[RuleApplied]
+
+
+class ReconcileBridge(_Out):
+    herd_value_change: float
+    stock_value_change: float
+    milk_debtors: float
+    other_debtors: float
+    merchant_credit: float
+    other_creditors: float
+
+
+class CfReconcileResult(Span):
+    """Profit to cash (ADR-0055): bridge lines are signed as they move cash."""
+
+    currency: Currency
+    revenue: float
+    operating_surplus: float
+    accounts_operating_profit: float
+    bridge: ReconcileBridge
+    expected_operating_cash: float
+    actual_operating_cash: float
+    unexplained: float
+    unexplained_pct_of_revenue: float | None
+
+
+class ExitYear(_Out):
+    tax_year: int
+    assessed: float
+    topped_up_to: float
+    additional_assessable: float
+
+
+class TaxAveragingExitResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    final_averaged_year: int
+    final_averaged_profit: float
+    years: list[ExitYear]
+    total_additional_assessable: float
+    normal_basis_from: int
+    deferred_step_out_tax_due_now: float
+    rules_applied: list[RuleApplied]
+
+
+class NextYearSettlement(_Out):
+    balance_due: float
+    overpaid: float
+
+
+class TaxPaymentsResult(_Out):
+    currency: Currency
+    jurisdiction: Literal["IE"]
+    tax_year: int
+    options: list[PaymentOption]
+    lowest_safe: ChosenPayment
+    preliminary: ChosenPayment
+    preceding_year: PrecedingYearTax
+    pay_date: PayDate
+    due_on_pay_date: float
+    direct_debit_instalments: list[DirectDebitInstalment] | None
+    next_year: NextYearSettlement
+    rules_applied: list[RuleApplied]
 
 
 class TaxCompanyExtractionResult(_Out):
@@ -1075,7 +1292,11 @@ OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "tax.estimate": TaxEstimateResult,
     "tax.partnership": TaxPartnershipResult,
     "tax.company_extraction": TaxCompanyExtractionResult,
+    "tax.averaging_exit": TaxAveragingExitResult,
+    "tax.payments": TaxPaymentsResult,
+    "cf.reconcile": CfReconcileResult,
     "bs.summary": BsSummaryResult,
+    "herd.valuation": HerdValuationResult,
     "pl.compare": PlCompareResult,
     "cf.compare": CfCompareResult,
     "risk.sensitivity": RiskSensitivityResult,
